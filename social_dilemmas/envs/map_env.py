@@ -8,11 +8,12 @@ import six
 
 class MapEnv(Env):
 
-    def __init__(self, row_size, col_size, map, num_agents=1):
+    def __init__(self, row_size, col_size, ascii_map, num_agents=1):
         self.row_size = row_size
         self.col_size = col_size
         self.num_agents = num_agents
-        self.map = map
+        self.ascii_map = ascii_map
+        self.map = self.setup_map()
         self.agents = []
         for i in range(self.num_agents):
             self.agents.append(self.create_agent('agent-'+str(i)))
@@ -43,6 +44,9 @@ class MapEnv(Env):
             space
         """
         raise NotImplementedError
+
+    def setup_map(self):
+        return self.ascii_to_matrix(self.ascii_map)
 
     def ascii_to_matrix(self, ascii_map):
         """Construct a numpy array of dtype `uint8` from an ASCII art diagram.
@@ -94,7 +98,7 @@ class MapEnv(Env):
             observations[agent.agent_id] = agent.get_state()
             rewards[agent.agent_id] = agent.get_state()
             dones[agent.agent_id] = agent.get_done()
-        return observations, rewards, done, info
+        return observations, rewards, dones, info
 
     def reset(self):
         """Reset the environment.
@@ -108,13 +112,20 @@ class MapEnv(Env):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
-        pass
+        self.setup_map()
+        observations = {}
+        for agent in self.agents:
+            observations[agent.agent_id] = agent.get_state()
+        return observations
+
 
     def update_map(self, agent_actions):
         """Takes in a list of agent_action tuples and returns a new map """
-        pass
+        raise NotImplementedError
 
     def create_agent(self, agent_id):
         raise NotImplementedError
 
-
+    def return_view(self, agent_pos, row_size, col_size):
+        """Given an agent position and view window, returns correct map part"""
+        pass
