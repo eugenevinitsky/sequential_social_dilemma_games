@@ -3,9 +3,12 @@
 
 class Agent(object):
 
-    def __init__(self, agent_id, grid_pos):
+    def __init__(self, agent_id, start_pos, grid, row_size, col_size):
         self.agent_id = agent_id
-        self.grid_pos = grid_pos
+        self.grid_pos = start_pos
+        self.grid = grid
+        self.row_size = row_size
+        self.col_size = col_size
 
     def action_map(self, action_number):
         """Maps action_number to a desired action in the maps"""

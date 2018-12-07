@@ -16,7 +16,7 @@ class MapEnv(Env):
         self.map = self.setup_map()
         self.agents = []
         for i in range(self.num_agents):
-            self.agents.append(self.create_agent('agent-'+str(i)))
+            self.agents.append(self.create_agent('agent-' + str(i)))
 
     @property
     def action_space(self):
@@ -61,17 +61,22 @@ class MapEnv(Env):
           TypeError: self.amp was not a list of strings.
         """
         error_text = (
-            'the argument to ascii_art_to_uint8_nparray must be a list (or tuple) '
-            'of strings containing the same number of strictly-ASCII characters.')
+            'the argument to ascii_art_to_uint8_nparray must be '
+            'a list (or tuple) of strings containing the same number '
+            'of strictly-ASCII characters.')
         try:
-            mat = np.vstack(np.fromstring(line, dtype=np.uint8) for line in ascii_map)
+            mat = np.vstack(np.fromstring(line, dtype=np.uint8)
+                            for line in ascii_map)
         except ValueError as e:
-            raise ValueError('{} (original error from numpy: {})'.format(error_text, e))
+            raise ValueError('{} (original error from numpy: '
+                             '{})'.format(error_text, e))
         except TypeError as e:
             if isinstance(self.map, (list, tuple)) and not all(
                     isinstance(row, six.string_types) for row in ascii_map):
-                error_text += ' Did you pass a list of list of single characters?'
-            raise TypeError('{} (original error from numpy: {})'.format(error_text, e))
+                error_text += ' Did you pass a list of list ' \
+                              'of single characters?'
+            raise TypeError('{} (original error from numpy: '
+                            '{})'.format(error_text, e))
         if np.any(self.map > 127): raise ValueError(error_text)
         return mat
 
@@ -118,14 +123,50 @@ class MapEnv(Env):
             observations[agent.agent_id] = agent.get_state()
         return observations
 
-
     def update_map(self, agent_actions):
-        """Takes in a list of agent_action tuples and returns a new map """
+        """Takes in a list of agent_action tuples and returns updated map """
         raise NotImplementedError
 
-    def create_agent(self, agent_id):
+    def create_agent(self, agent_id, *args):
+        """Takes an agent id and agents args and returns an agent"""
         raise NotImplementedError
 
     def return_view(self, agent_pos, row_size, col_size):
-        """Given an agent position and view window, returns correct map part"""
-        pass
+        """Given an agent position and view window, returns correct map part
+
+        Note, if the agent asks for a view that exceeds the map bounds,
+        it is padded with zeros
+
+        Parameters
+        ----------
+
+        Returns
+        -------
+        view: (np.ndarray) - a slice of the map for the agent to see
+        """
+        x, y = agent_pos
+        left_edge = x - col_size
+        right_edge = x + col_size
+        top_edge = y - row_size
+        bot_edge = y + row_size
+        pad_mat = self.pad_matrix(left_edge, right_edge,
+                                 top_edge, bot_edge, self.map)
+        view = pad_mat[x - col_size: x + col_size + 1,
+               y - row_size: y + row_size + 1]
+        return view
+
+    def pad_matrix(self, left_edge, right_edge, top_edge, bot_edge, matrix):
+        row_dim = matrix.shape[0]
+        col_dim = matrix.shape[0]
+        left_pad, right_pad, top_pad, bot_pad = 0, 0, 0, 0
+        if left_edge < 0:
+            left_pad = abs(left_edge)
+        if right_edge > col_dim:
+            right_pad = right_edge - col_dim
+        if top_edge < 0:
+            top_pad = abs(top_edge)
+        if bot_edge > row_dim:
+            bot_pad = bot_edge - row_dim
+        pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
+                         'constant', constant_values=(0,0))
+        return pad_mat
