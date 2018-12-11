@@ -1,22 +1,40 @@
-"""Base map class that defines the rendering process"""
+"""Base map class that defines the rendering process
+
+
+Code partially adapted from PyColab: https://github.com/deepmind/pycolab
+"""
 
 from gym.spaces import Box
 from gym import Env
 import numpy as np
+from renderer import CursesUi
 import six
 
 
 class MapEnv(Env):
 
-    def __init__(self, row_size, col_size, ascii_map, num_agents=1):
-        self.row_size = row_size
-        self.col_size = col_size
+    def __init__(self, ascii_map, num_agents=1, render=True):
+        """
+
+        Parameters
+        ----------
+        ascii_map: np.ndarray of strings
+            Specify what the map should look like. Look at constant.py for
+            further explanation
+        num_agents: int
+            Number of agents to have in the system.
+            # FIXME(ev) figure out how to have heterogeneous agents
+        render: bool
+            Whether to render the environment
+        """
         self.num_agents = num_agents
         self.ascii_map = ascii_map
         self.map = self.setup_map()
-        self.agents = []
-        for i in range(self.num_agents):
-            self.agents.append(self.create_agent('agent-' + str(i)))
+        self.agents = {}
+        self.render = render
+        self.setup_agents()
+        if render:
+            self.renderer = CursesUi({}, 1)
 
     @property
     def action_space(self):
@@ -94,14 +112,17 @@ class MapEnv(Env):
         for agent, action in zip(self.agents, actions):
             agent_action = agent.action_map(action)
             agent_actions.append((agent.agent_id, agent_action))
-        self.update_map(agent_actions)
+        new_map, agent_pos = self.update_map(agent_actions)
+        self.map = new_map
+        for key, val in agent_pos:
+            self.agents[key].update_pos(val)
         observations = {}
         rewards = {}
         dones = {}
         info = {}
         for agent in self.agents:
             observations[agent.agent_id] = agent.get_state()
-            rewards[agent.agent_id] = agent.get_state()
+            rewards[agent.agent_id] = agent.get_reward()
             dones[agent.agent_id] = agent.get_done()
         return observations, rewards, dones, info
 
@@ -123,8 +144,22 @@ class MapEnv(Env):
             observations[agent.agent_id] = agent.get_state()
         return observations
 
+    def render(self, mode='human'):
+        if self.render:
+            pass
+
     def update_map(self, agent_actions):
-        """Takes in a list of agent_action tuples and returns updated map """
+        """Converts agent action tuples into a new map and new agewnt positions
+
+        Returns
+        -------
+        new_map: numpy ndarray
+            the updated map to store
+        agent_pos: dict of tuples with keys as agent ids
+        """
+        raise NotImplementedError
+
+    def setup_agents(self):
         raise NotImplementedError
 
     def create_agent(self, agent_id, *args):
@@ -150,14 +185,14 @@ class MapEnv(Env):
         top_edge = y - row_size
         bot_edge = y + row_size
         pad_mat = self.pad_matrix(left_edge, right_edge,
-                                 top_edge, bot_edge, self.map)
+                                  top_edge, bot_edge, self.map)
         view = pad_mat[x - col_size: x + col_size + 1,
                y - row_size: y + row_size + 1]
         return view
 
     def pad_matrix(self, left_edge, right_edge, top_edge, bot_edge, matrix):
         row_dim = matrix.shape[0]
-        col_dim = matrix.shape[0]
+        col_dim = matrix.shape[1]
         left_pad, right_pad, top_pad, bot_pad = 0, 0, 0, 0
         if left_edge < 0:
             left_pad = abs(left_edge)
@@ -168,5 +203,5 @@ class MapEnv(Env):
         if bot_edge > row_dim:
             bot_pad = bot_edge - row_dim
         pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
-                         'constant', constant_values=(0,0))
+                         'constant', constant_values=(0, 0))
         return pad_mat
