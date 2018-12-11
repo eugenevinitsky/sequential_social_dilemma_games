@@ -18,7 +18,7 @@ class MapEnv(Env):
 
         Parameters
         ----------
-        ascii_map: np.ndarray of strings
+        base_map: np.ndarray of strings
             Specify what the map should look like. Look at constant.py for
             further explanation
         color_map: dict
@@ -30,9 +30,9 @@ class MapEnv(Env):
             Whether to render the environment
         """
         self.num_agents = num_agents
-        self.ascii_map = ascii_map
+        self.base_map = ascii_map
         # FIXME(ev) is this needed, can't we just use the ascii map?
-        self.map = ascii_map #self.setup_map()
+        self.map = np.zeros(ascii_map.shape) #self.setup_map() # the actual active map of the system
         self.agents = {}
         self.render = render
         self.color_map = color_map
@@ -40,67 +40,8 @@ class MapEnv(Env):
         if render:
             self.renderer = CursesUi({}, 1)
 
-    @property
-    def action_space(self):
-        """Identify the dimensions and bounds of the action space.
-
-        MUST BE implemented in new environments.
-
-        Returns
-        -------
-        gym Box, Discrete, or Tuple type
-            a bounded box depicting the shape and bounds of the action space
-        """
-        raise NotImplementedError
-
-    @property
-    def observation_space(self):
-        """Identify the dimensions and bounds of the observation space.
-
-        MUST BE implemented in new environments.
-
-        Returns
-        -------
-        gym Box, Discrete or Tuple type
-            a bounded box depicting the shape and bounds of the observation
-            space
-        """
-        raise NotImplementedError
-
     def setup_map(self):
-        return self.ascii_to_matrix(self.ascii_map)
-
-    def ascii_to_matrix(self, ascii_map):
-        """Construct a numpy array of dtype `uint8` from an ASCII art diagram.
-        This function takes ASCII art diagrams (expressed as lists or tuples of
-        equal-length strings) and derives 2-D numpy arrays with dtype `uint8`.
-        Returns:
-          A 2-D numpy array as described.
-        Raises:
-          ValueError: self.map wasn't an ASCII art diagram, as described; this could be
-            because the strings it is made of contain non-ASCII characters, or do not
-            have constant length.
-          TypeError: self.amp was not a list of strings.
-        """
-        error_text = (
-            'the argument to ascii_art_to_uint8_nparray must be '
-            'a list (or tuple) of strings containing the same number '
-            'of strictly-ASCII characters.')
-        try:
-            mat = np.vstack(np.fromstring(line, dtype=np.uint8)
-                            for line in ascii_map)
-        except ValueError as e:
-            raise ValueError('{} (original error from numpy: '
-                             '{})'.format(error_text, e))
-        except TypeError as e:
-            if isinstance(self.map, (list, tuple)) and not all(
-                    isinstance(row, six.string_types) for row in ascii_map):
-                error_text += ' Did you pass a list of list ' \
-                              'of single characters?'
-            raise TypeError('{} (original error from numpy: '
-                            '{})'.format(error_text, e))
-        if np.any(self.map > 127): raise ValueError(error_text)
-        return mat
+        raise NotImplementedError
 
     def step(self, actions):
         """Takes in a list of actions and converts them to a map update

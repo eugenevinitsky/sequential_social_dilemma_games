@@ -1,5 +1,7 @@
 """Base class for an agent that defines the possible actions. """
 
+from gym.spaces import Box
+from gym.spaces import Discrete
 
 class Agent(object):
 
@@ -11,6 +13,33 @@ class Agent(object):
         self.grid = grid
         self.row_size = row_size
         self.col_size = col_size
+
+    @property
+    def action_space(self):
+        """Identify the dimensions and bounds of the action space.
+
+        MUST BE implemented in new environments.
+
+        Returns
+        -------
+        gym Box, Discrete, or Tuple type
+            a bounded box depicting the shape and bounds of the action space
+        """
+        raise NotImplementedError
+
+    @property
+    def observation_space(self):
+        """Identify the dimensions and bounds of the observation space.
+
+        MUST BE implemented in new environments.
+
+        Returns
+        -------
+        gym Box, Discrete or Tuple type
+            a bounded box depicting the shape and bounds of the observation
+            space
+        """
+        raise NotImplementedError
 
     def action_map(self, action_number):
         """Maps action_number to a desired action in the map"""
@@ -29,12 +58,22 @@ class Agent(object):
     def update_pos(self, new_pos):
         self.pos = new_pos
 
+    def get_pos(self):
+        return self.pos
 
 class HarvestAgent(Agent):
 
     def __init__(self, agent_id, start_pos, grid):
         # FIXME(ev) put in the right sizes
         super.__init__(agent_id, start_pos, grid, 10, 10)
+
+    @property
+    def action_space(self):
+        return Discrete(9)
+
+    @property
+    def observation_space(self):
+        return Box(low=0.0, high=0.0, shape=(10, 10, 3), dtype=np.float32)
 
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
