@@ -1,8 +1,19 @@
 from gym.spaces import Box
 import numpy as np
 import six
-from social_dilemmas.envs.map_env import MapEnv
+
+from social_dilemmas.envs.agent import HarvestAgent
 from social_dilemmas.constants import HARVEST_MAP
+from social_dilemmas.envs.map_env import MapEnv
+
+
+APPLE_RADIUS = 2
+
+COLOURS = {' ': [0, 0, 0],        # Black background
+           '@': [764, 0, 999],    # Board walls
+           'A': [0, 999, 0],      # Green apples
+           'P': [0, 999, 999]}    # Player
+
 
 class HarvestEnv(MapEnv):
 
@@ -33,13 +44,19 @@ class HarvestEnv(MapEnv):
         """
 
         # Move the agents
+        base_map = self.ascii_map
+
 
         # spawn the apples
         raise NotImplementedError
 
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent"""
-        raise NotImplementedError
+        return HarvestAgent(agent_id, )
 
     def spawn_apples(self):
         raise NotImplementedError
+
+    def spawn_point(self):
+        """Returns a randomly selected spawn point"""
+        pass

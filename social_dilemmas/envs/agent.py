@@ -31,6 +31,11 @@ class Agent(object):
 
 
 class HarvestAgent(Agent):
+
+    def __init__(self, agent_id, start_pos, grid):
+        # FIXME(ev) put in the right sizes
+        super.__init__(agent_id, start_pos, grid, 10, 10)
+
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
 

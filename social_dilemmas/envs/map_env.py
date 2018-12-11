@@ -13,7 +13,7 @@ import six
 
 class MapEnv(Env):
 
-    def __init__(self, ascii_map, num_agents=1, render=True):
+    def __init__(self, ascii_map, color_map, num_agents=1, render=True):
         """
 
         Parameters
@@ -21,6 +21,8 @@ class MapEnv(Env):
         ascii_map: np.ndarray of strings
             Specify what the map should look like. Look at constant.py for
             further explanation
+        color_map: dict
+            Specifies how to convert between ascii chars and colors
         num_agents: int
             Number of agents to have in the system.
             # FIXME(ev) figure out how to have heterogeneous agents
@@ -29,9 +31,11 @@ class MapEnv(Env):
         """
         self.num_agents = num_agents
         self.ascii_map = ascii_map
-        self.map = self.setup_map()
+        # FIXME(ev) is this needed, can't we just use the ascii map?
+        self.map = ascii_map #self.setup_map()
         self.agents = {}
         self.render = render
+        self.color_map = color_map
         self.setup_agents()
         if render:
             self.renderer = CursesUi({}, 1)
@@ -121,7 +125,8 @@ class MapEnv(Env):
         dones = {}
         info = {}
         for agent in self.agents:
-            observations[agent.agent_id] = agent.get_state()
+            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
+            observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.get_reward()
             dones[agent.agent_id] = agent.get_done()
         return observations, rewards, dones, info
@@ -141,8 +146,17 @@ class MapEnv(Env):
         self.setup_map()
         observations = {}
         for agent in self.agents:
-            observations[agent.agent_id] = agent.get_state()
+            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
+            observations[agent.agent_id] = rgb_arr
         return observations
+
+    def map_to_colors(self, map, color_map):
+        """Converts a map to an array of RGB values"""
+        rgb_arr = np.zeros(map.shape[0], map.shape[1], 3)
+        for row_elem in range(map.shape[0]):
+            for col_elem in range(map.shape[1]):
+                rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
+        return rgb_arr
 
     def render(self, mode='human'):
         if self.render:
@@ -166,6 +180,10 @@ class MapEnv(Env):
         """Takes an agent id and agents args and returns an agent"""
         raise NotImplementedError
 
+    ########################################
+    # Utility methods, move these eventually
+    ########################################
+
     def return_view(self, agent_pos, row_size, col_size):
         """Given an agent position and view window, returns correct map part
 
@@ -179,6 +197,7 @@ class MapEnv(Env):
         -------
         view: (np.ndarray) - a slice of the map for the agent to see
         """
+        # FIXME(ev) this might be transposed
         x, y = agent_pos
         left_edge = x - col_size
         right_edge = x + col_size
