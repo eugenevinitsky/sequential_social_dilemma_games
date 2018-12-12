@@ -1,0 +1,6 @@
+name: causal
+
+dependencies:
+    - python==3.5.2
+    - numpy==1.14.0
+    - six==1.11.0

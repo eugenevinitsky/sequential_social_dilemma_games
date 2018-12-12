@@ -1,0 +1,109 @@
+"""Base class for an agent that defines the possible actions. """
+
+from gym.spaces import Box
+from gym.spaces import Discrete
+import numpy as np
+
+class Agent(object):
+
+    def __init__(self, agent_id, start_pos, start_orientation, grid, row_size, col_size):
+        """Superclass for all agents.
+
+        Parameters
+        ----------
+        agent_id: (str)
+            a unique id allowing the map to identify the agents
+        start_pos: (list of ints)
+            a 2d array indicating the x-y position of the agents
+        start_orientation: (list of ints)
+            a 2d array containing a unit vector indicating the agent direction
+        grid: (MapEnv)
+            a reference to the containing environment
+        row_size: (int)
+            how many rows up and down the agent can look
+        col_size: (int)
+            how many columns left and right the agent can look
+        """
+        self.agent_id = agent_id
+        self.pos = start_pos
+        self.orientation = start_orientation
+        self.grid = grid
+        self.row_size = row_size
+        self.col_size = col_size
+
+    @property
+    def action_space(self):
+        """Identify the dimensions and bounds of the action space.
+
+        MUST BE implemented in new environments.
+
+        Returns
+        -------
+        gym Box, Discrete, or Tuple type
+            a bounded box depicting the shape and bounds of the action space
+        """
+        raise NotImplementedError
+
+    @property
+    def observation_space(self):
+        """Identify the dimensions and bounds of the observation space.
+
+        MUST BE implemented in new environments.
+
+        Returns
+        -------
+        gym Box, Discrete or Tuple type
+            a bounded box depicting the shape and bounds of the observation
+            space
+        """
+        raise NotImplementedError
+
+    def action_map(self, action_number):
+        """Maps action_number to a desired action in the map"""
+        raise NotImplementedError
+
+    def possible_actions(self):
+        """Returns a mapping between numbers and """
+        pass
+
+    def get_state(self):
+        raise NotImplementedError
+
+    def compute_reward(self):
+        raise NotImplementedError
+
+    def update_pos(self, new_pos):
+        self.pos = new_pos
+
+    def get_pos(self):
+        return self.pos
+
+    def update_orientation(self, new_orientation):
+        self.orientation = new_orientation
+
+    def get_orientation(self):
+        return self.orientation
+
+class HarvestAgent(Agent):
+
+    def __init__(self, agent_id, start_pos, start_orientation, grid):
+        # FIXME(ev) put in the right sizes
+        super().__init__(agent_id, start_pos, start_orientation, grid, 10, 10)
+
+    @property
+    def action_space(self):
+        return Discrete(9)
+
+    @property
+    def observation_space(self):
+        return Box(low=0.0, high=0.0, shape=(10, 10, 3), dtype=np.float32)
+
+    def get_state(self):
+        return self.grid.return_view(self.pos, self.row_size, self.col_size)
+
+    def compute_reward(self):
+        # FIXME(ev) put in the actual reward
+        return 1
+
+class CleanupAgent(Agent):
+    pass
