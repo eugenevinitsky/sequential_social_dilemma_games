@@ -4,11 +4,9 @@
 Code partially adapted from PyColab: https://github.com/deepmind/pycolab
 """
 
-from gym.spaces import Box
 from gym import Env
 import numpy as np
 from renderer import CursesUi
-import six
 
 
 class MapEnv(Env):
@@ -150,7 +148,7 @@ class MapEnv(Env):
                y - row_size: y + row_size + 1]
         return view
 
-    def pad_matrix(self, left_edge, right_edge, top_edge, bot_edge, matrix):
+    def pad_if_needed(self, left_edge, right_edge, top_edge, bot_edge, matrix):
         row_dim = matrix.shape[0]
         col_dim = matrix.shape[1]
         left_pad, right_pad, top_pad, bot_pad = 0, 0, 0, 0
@@ -162,6 +160,10 @@ class MapEnv(Env):
             top_pad = abs(top_edge)
         if bot_edge > row_dim:
             bot_pad = bot_edge - row_dim
+
+        return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0)
+
+    def pad_matrix(self, left_pad, right_pad, top_pad, bot_pad, matrix, const_val):
         pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
-                         'constant', constant_values=(0, 0))
+                         'constant', constant_values=(const_val, const_val))
         return pad_mat

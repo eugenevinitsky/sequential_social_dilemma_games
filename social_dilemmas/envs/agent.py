@@ -2,14 +2,31 @@
 
 from gym.spaces import Box
 from gym.spaces import Discrete
+import numpy as np
 
 class Agent(object):
 
-    def __init__(self, agent_id, start_pos, grid, row_size, col_size):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, row_size, col_size):
+        """Superclass for all agents.
+
+        Parameters
+        ----------
+        agent_id: (str)
+            a unique id allowing the map to identify the agents
+        start_pos: (list of ints)
+            a 2d array indicating the x-y position of the agents
+        start_orientation: (list of ints)
+            a 2d array containing a unit vector indicating the agent direction
+        grid: (MapEnv)
+            a reference to the containing environment
+        row_size: (int)
+            how many rows up and down the agent can look
+        col_size: (int)
+            how many columns left and right the agent can look
+        """
         self.agent_id = agent_id
         self.pos = start_pos
-        # FIXME(ev) who should hold positions, grid or agent?
-        # There's an argument for both sides
+        self.orientation = start_orientation
         self.grid = grid
         self.row_size = row_size
         self.col_size = col_size
@@ -61,11 +78,17 @@ class Agent(object):
     def get_pos(self):
         return self.pos
 
+    def update_orientation(self, new_orientation):
+        self.orientation = new_orientation
+
+    def get_orientation(self):
+        return self.orientation
+
 class HarvestAgent(Agent):
 
-    def __init__(self, agent_id, start_pos, grid):
+    def __init__(self, agent_id, start_pos, start_orientation, grid):
         # FIXME(ev) put in the right sizes
-        super.__init__(agent_id, start_pos, grid, 10, 10)
+        super().__init__(agent_id, start_pos, start_orientation, grid, 10, 10)
 
     @property
     def action_space(self):

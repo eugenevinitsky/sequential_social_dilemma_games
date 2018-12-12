@@ -12,26 +12,25 @@ APPLE_RADIUS = 2
 COLOURS = {' ': [0, 0, 0],        # Black background
            '@': [764, 0, 999],    # Board walls
            'A': [0, 999, 0],      # Green apples
-           'P': [0, 999, 999],    # Player
+           'P': [0, 999, 999],    # Player #FIXME(ev) agents need to have different colors
            'F': [999, 999, 0]}    # Yellow firing beam
 
 # use keyword names so that it's easy to understand what the agent is calling
-ACTIONS = {'MOVE_LEFT':  [-1, 0],  # Move left
-           'MOVE_RIGHT': [1, 0],   # Move right
-           'MOVE_UP':    [0, 1],   # Move up
-           'MOVE_DOWN':  [0, -1],  # Move down
-           'STAY':       [0, 0],   # don't move
-           'FIRE_LEFT':  [-1, 0],  # Move left
-           'FIRE_RIGHT': [1, 0],   # Move right
-           'FIRE_UP':    [0, 1],   # Move up
-           'FIRE_DOWN':  [0, -1],  # Move down
-}
+ACTIONS = {'MOVE_LEFT':             [-1, 0],  # Move left
+           'MOVE_RIGHT':            [1, 0],   # Move right
+           'MOVE_UP':               [0, 1],   # Move up
+           'MOVE_DOWN':             [0, -1],  # Move down
+           'STAY':                  [0, 0],   # don't move
+           'TURN_CLOCKWISE':        [[0, 1], [-1, 0]],  # Rotate counter clockwise
+           'TURN_COUNTERCLOCKWISE': [[0, -1], [1, 0]],   # Move right
+           'FIRE': 5}               # Fire 5 squares forward #FIXME(ev) is the firing in a straight line?
 
+spawn_prob = {1: }
 
 class HarvestEnv(MapEnv):
 
     def __init__(self, ascii_map=HARVEST_MAP, num_agents=1, render=False):
-        super.__init__(ascii_map, num_agents, render)
+        super().__init__(ascii_map, COLOURS, num_agents, render)
 
     @property
     def action_space(self):
@@ -48,7 +47,7 @@ class HarvestEnv(MapEnv):
 
     def setup_map(self):
         self.spawn_apples()
-        self.place_agents()
+        # self.place_agents()
         # FIXME(eugene) move what is below into place agents
         for agent in self.agents.values():
             new_pos = self.spawn_point()
@@ -69,14 +68,18 @@ class HarvestEnv(MapEnv):
         for agent_id, action in agent_actions.items():
             agent = self.agents[agent_id]
             selected_action = ACTIONS[action]
-            # TODO(ev) updating the agents has to be synchronous
+            # TODO(ev) updating the agents has to be synchronous? I think?
             # TODO(ev) do we overlay firing over the agent or what?
             if 'MOVE' or 'STAY' in action:
                 new_pos = agent.get_pos() + selected_action
                 self.update_map_agent_pos(agent.get_pos(), new_pos)
                 self.agents[agent_id].update_pos(new_pos)
+            elif 'TURN' in action:
+                agent_rot = agent.get_orientation()
+                new_rot = list(np.dot(ACTIONS[action], agent_rot).tolist())
+                self.update_map_agent_rot(agent.get_pos, new_rot)
             else:
-                self.update_map_fire(agent.get_pos(), selected_action)
+                self.update_map_fire(agent.get_pos(), agent.get_orientation())
 
         # spawn the apples
         # FIXME(ev) there should be an empty map that we add all new actions to
@@ -89,16 +92,36 @@ class HarvestEnv(MapEnv):
         return HarvestAgent(agent_id, self.spawn_point(), self.map)
 
     def spawn_apples(self):
-        raise NotImplementedError
+        # iterate over the spawn points in self.ascii_map and compare it with
+        # current points in self.map
+
+        # first pad the matrix so that we can iterate through nicely
+        # FIXME(ev) magic number
+        l2_dist = 2
+        pad_mat = self.pad_matrix(2, 2, 2, 2, self.base_map, ' ')
+        for row in enumerate(self.base_map.shape[0]):
+            for col in enumerate(self.base_map.shape[1]):
+                pass
 
     def spawn_point(self):
         """Returns a randomly selected spawn point"""
         pass
 
     def update_map_agent_pos(self, old_pos, new_pos):
-        pass
+        self.map[old_pos] = ' '
+        self.map[new_pos] = 'P'
+
+    def update_map_agent_rot(self, old_pos, new_rot):
+        self.map[old_pos] = ' '
+        # FIXME(ev) once we have a color scheme worked out we need to do this bit
+        self.map[old_pos] = 'P'
 
     def update_map_fire(self, firing_pos, firing_direction):
-        pass
+        num_fire_cells = 5
+        start_pos = np.asarray(firing_pos)
+        for i in range(num_fire_cells):
+            # FIXME(ev) this needs to be passed a set of indices
+            self.map[start_pos + firing_direction] = 'F'
+            start_pos += firing_direction
 
     def update_map_apples(self, new_apple_map):
