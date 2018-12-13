@@ -3,19 +3,19 @@
 from social_dilemmas.envs.harvest import HarvestEnv
 
 MINI_HARVEST_MAP = [
-'@@@@@@'
-'@ P  @'
-'@  A @'
-'@ AAA@'
-'@  AP@'
-'@@@@@@'
+'@@@@@@',
+'@ P  @',
+'@  A @',
+'@ AAA@',
+'@  AP@',
+'@@@@@@',
 ]
 
 
 import unittest
 
 class TestHarvestEnv(unittest.TestCase):
-    def test_setup(self):
+    def setUp(self):
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=1)
 
     def test_step(self):

@@ -28,16 +28,26 @@ class MapEnv(Env):
             Whether to render the environment
         """
         self.num_agents = num_agents
-        self.base_map = ascii_map
-        self.map = self.setup_map() # the actual active map of the system
+        self.base_map = self.ascii_to_numpy(ascii_map)
+        # FIXME(ev) you need to create the map before you call setup_map
+        self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.agents = {}
         self.render = render
         self.color_map = color_map
-        self.setup_agents()
         if render:
             self.renderer = CursesUi({}, 1)
 
-    def setup_map(self):
+    # FIXME(ev) move this to a utils eventually
+    def ascii_to_numpy(self, ascii_matrix):
+        """converts a list of strings into a numpy array"""
+        # FIXME(ev) there has to be a faster way to do this (of course, doesn't really matter)
+        arr = np.full((len(ascii_matrix), len(ascii_matrix[0])), ' ')
+        for row in range(arr.shape[0]):
+            for col in range(arr.shape[1]):
+                arr[row, col] = ascii_matrix[row][col]
+        return arr
+
+    def reset_map(self):
         raise NotImplementedError
 
     def step(self, actions):
@@ -81,9 +91,11 @@ class MapEnv(Env):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
-        self.setup_map()
+        self.reset_map()
+        self.setup_agents()
         observations = {}
-        for agent in self.agents:
+        for agent in self.agents.values():
+            import ipdb; ipdb.set_trace()
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
         return observations
@@ -162,7 +174,7 @@ class MapEnv(Env):
 
         return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0)
 
-    def pad_matrix(self, left_pad, right_pad, top_pad, bot_pad, matrix, const_val):
+    def pad_matrix(self, left_pad, right_pad, top_pad, bot_pad, matrix, const_val=1):
         pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
                          'constant', constant_values=(const_val, const_val))
         return pad_mat

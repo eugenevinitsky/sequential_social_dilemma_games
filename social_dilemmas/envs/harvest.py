@@ -60,7 +60,7 @@ class HarvestEnv(MapEnv):
             agent_id = 'agent-' + str(i)
             self.agents[agent_id] = self.create_agent(agent_id)
 
-    def setup_map(self):
+    def reset_map(self):
         self.spawn_apples()
         # self.place_agents()
         # FIXME(eugene) move what is below into place agents
@@ -91,7 +91,7 @@ class HarvestEnv(MapEnv):
                 # rotate the selected action appropriately
                 rot_action = self.rotate_action(selected_action, agent.get_orientation())
                 new_pos = agent.get_pos() + rot_action
-                self.update_map_agent_pos(agent.get_pos(), new_pos)
+                new_pos = self.update_map_agent_pos(agent.get_pos(), new_pos)
                 self.agents[agent_id].update_pos(new_pos)
             elif 'TURN' in action:
                 agent_rot = ORIENTATIONS[agent.get_orientation()]
@@ -110,7 +110,7 @@ class HarvestEnv(MapEnv):
 
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent"""
-        return HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation, self.map)
+        return HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation, self)
 
     def spawn_apples(self):
         # iterate over the spawn points in self.ascii_map and compare it with
@@ -119,16 +119,16 @@ class HarvestEnv(MapEnv):
         # FIXME(ev) magic number
         l2_dist = 2
         # first pad the matrix so that we can iterate through nicely
-        pad_mat = self.pad_matrix(2, 2, 2, 2, self.map, ' ')
+        pad_mat = self.pad_matrix(2, 2, 2, 2, self.map)
         new_map = np.zeros(self.map.shape)
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            window = pad_mat[row - l2_dist + 1:row + l2_dist,
+            window = pad_mat[row - l2_dist:row + l2_dist,
                      col - l2_dist + 1:col + l2_dist]
             # compute how many apples are in window
             unique, counts = np.unique(window, return_counts=True)
             counts_dict = dict(zip(unique, counts))
-            num_apples = counts_dict['A']
+            num_apples = counts_dict.get('A', 0)
             spawn_prob = SPAWN_PROB[min(num_apples, 3)]
             rand_num = np.random.rand(1)[0]
             if rand_num < spawn_prob:
@@ -156,8 +156,12 @@ class HarvestEnv(MapEnv):
         return list(ORIENTATIONS.keys())[rand_int]
 
     def update_map_agent_pos(self, old_pos, new_pos):
-        self.map[old_pos] = ' '
-        self.map[new_pos] = 'P'
+        if self.map[new_pos] == '@':
+            new_pos = old_pos
+        else:
+            self.map[old_pos] = ' '
+            self.map[new_pos] = 'P'
+        return new_pos
 
     def update_map_agent_rot(self, old_pos, new_rot):
         self.map[old_pos] = ' '
