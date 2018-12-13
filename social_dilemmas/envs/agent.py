@@ -69,13 +69,13 @@ class Agent(object):
     def compute_reward(self):
         raise NotImplementedError
 
-    def update_pos(self, new_pos):
+    def set_pos(self, new_pos):
         self.pos = new_pos
 
     def get_pos(self):
         return self.pos
 
-    def update_orientation(self, new_orientation):
+    def set_orientation(self, new_orientation):
         self.orientation = new_orientation
 
     def get_orientation(self):

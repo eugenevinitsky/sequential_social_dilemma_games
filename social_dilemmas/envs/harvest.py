@@ -65,8 +65,11 @@ class HarvestEnv(MapEnv):
         # self.place_agents()
         # FIXME(eugene) move what is below into place agents
         for agent in self.agents.values():
+            # FIXME(ev) inelegant
             new_pos = self.spawn_point()
+            new_rot = self.spawn_rotation()
             agent.set_pos(new_pos)
+            agent.set_orientation(new_rot)
 
     def update_map(self, agent_actions):
         """Converts agent action tuples into a new map and new agent positions
@@ -135,9 +138,16 @@ class HarvestEnv(MapEnv):
     def spawn_point(self):
         """Returns a randomly selected spawn point"""
 
+        not_occupied = False
+        rand_int = 0
         # select a spawn point
-        num_ints = len(self.spawn_points)
-        rand_int = np.random.randint(num_ints)
+        while not not_occupied:
+            num_ints = len(self.spawn_points)
+            rand_int = np.random.randint(num_ints)
+            spawn_point = self.spawn_points[rand_int]
+            # FIXME(ev) this will break when we implement rotation colors
+            if self.map[spawn_point[0], spawn_point[1]] != 'P':
+                not_occupied = True
         return self.spawn_points[rand_int]
 
     def spawn_rotation(self):
@@ -160,7 +170,6 @@ class HarvestEnv(MapEnv):
         start_pos = np.asarray(firing_pos)
         firing_direction = ORIENTATIONS[firing_orientation]
         for i in range(num_fire_cells):
-            # FIXME(ev) this needs to be passed a set of indices
             next_cell = start_pos + firing_direction
             self.map[next_cell[0], next_cell[1]] = 'F'
             start_pos += firing_direction
