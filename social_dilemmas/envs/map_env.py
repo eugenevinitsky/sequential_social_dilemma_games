@@ -29,8 +29,7 @@ class MapEnv(Env):
         """
         self.num_agents = num_agents
         self.base_map = ascii_map
-        # FIXME(ev) is this needed, can't we just use the ascii map?
-        self.map = np.zeros(ascii_map.shape) #self.setup_map() # the actual active map of the system
+        self.map = self.setup_map() # the actual active map of the system
         self.agents = {}
         self.render = render
         self.color_map = color_map

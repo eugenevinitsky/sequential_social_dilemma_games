@@ -4,6 +4,7 @@ from gym.spaces import Box
 from gym.spaces import Discrete
 import numpy as np
 
+
 class Agent(object):
 
     def __init__(self, agent_id, start_pos, start_orientation, grid, row_size, col_size):
@@ -62,10 +63,6 @@ class Agent(object):
         """Maps action_number to a desired action in the map"""
         raise NotImplementedError
 
-    def possible_actions(self):
-        """Returns a mapping between numbers and """
-        pass
-
     def get_state(self):
         raise NotImplementedError
 
@@ -84,6 +81,17 @@ class Agent(object):
     def get_orientation(self):
         return self.orientation
 
+
+# use keyword names so that it's easy to understand what the agent is calling
+HARVEST_ACTIONS = {0: 'MOVE_LEFT',  # Move left
+                   1: 'MOVE_RIGHT',  # Move right
+                   2: 'MOVE_UP',  # Move up
+                   3: 'MOVE_DOWN',  # Move down
+                   4: 'STAY',  # don't move
+                   5: 'TURN_CLOCKWISE',  # Rotate counter clockwise
+                   6: 'TURN_COUNTERCLOCKWISE',  # Rotate clockwise
+                   7: 'FIRE'}  # Fire forward
+
 class HarvestAgent(Agent):
 
     def __init__(self, agent_id, start_pos, start_orientation, grid):
@@ -92,7 +100,13 @@ class HarvestAgent(Agent):
 
     @property
     def action_space(self):
-        return Discrete(9)
+        return Discrete(8)
+
+    # Ugh, this is gross, this leads to the actions basically being
+    # defined in two places
+    def action_map(self, action_number):
+        """Maps action_number to a desired action in the map"""
+        return HARVEST_ACTIONS[action_number]
 
     @property
     def observation_space(self):
@@ -105,6 +119,7 @@ class HarvestAgent(Agent):
     def compute_reward(self):
         # FIXME(ev) put in the actual reward
         return 1
+
 
 class CleanupAgent(Agent):
     pass
