@@ -13,9 +13,9 @@ class Agent(object):
         ----------
         agent_id: (str)
             a unique id allowing the map to identify the agents
-        start_pos: (list of ints)
+        start_pos: (np.ndarray)
             a 2d array indicating the x-y position of the agents
-        start_orientation: (list of ints)
+        start_orientation: (np.ndarray)
             a 2d array containing a unit vector indicating the agent direction
         grid: (MapEnv)
             a reference to the containing environment
@@ -96,6 +96,7 @@ class HarvestAgent(Agent):
 
     @property
     def observation_space(self):
+        # FIXME(ev) put in the right sizes
         return Box(low=0.0, high=0.0, shape=(10, 10, 3), dtype=np.float32)
 
     def get_state(self):
