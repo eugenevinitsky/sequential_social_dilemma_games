@@ -1,7 +1,6 @@
 '''Unit tests for all of the envs'''
 
 from social_dilemmas.envs.harvest import HarvestEnv
-from social_dilemmas.envs.harvest import COLOURS
 
 MINI_HARVEST_MAP = [
 '@@@@@@'
