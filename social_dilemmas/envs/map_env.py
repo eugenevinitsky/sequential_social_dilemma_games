@@ -16,20 +16,18 @@ class MapEnv(Env):
 
         Parameters
         ----------
-        base_map: np.ndarray of strings
+        ascii_map: list of strings
             Specify what the map should look like. Look at constant.py for
             further explanation
         color_map: dict
             Specifies how to convert between ascii chars and colors
         num_agents: int
             Number of agents to have in the system.
-            # FIXME(ev) figure out how to have heterogeneous agents
         render: bool
             Whether to render the environment
         """
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
-        # FIXME(ev) you need to create the map before you call setup_map
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.agents = {}
         self.render = render
@@ -38,13 +36,24 @@ class MapEnv(Env):
             self.renderer = CursesUi({}, 1)
 
     # FIXME(ev) move this to a utils eventually
-    def ascii_to_numpy(self, ascii_matrix):
-        """converts a list of strings into a numpy array"""
-        # FIXME(ev) there has to be a faster way to do this (of course, doesn't really matter)
-        arr = np.full((len(ascii_matrix), len(ascii_matrix[0])), ' ')
+    def ascii_to_numpy(self, ascii_list):
+        """converts a list of strings into a numpy array
+
+
+        Parameters
+        ----------
+        ascii_list: list of strings
+            List describing what the map should look like
+        Returns
+        -------
+        arr: np.ndarray
+            numpy array describing the map with ' ' indicating an empty space
+        """
+
+        arr = np.full((len(ascii_list), len(ascii_list[0])), ' ')
         for row in range(arr.shape[0]):
             for col in range(arr.shape[1]):
-                arr[row, col] = ascii_matrix[row][col]
+                arr[row, col] = ascii_list[row][col]
         return arr
 
     def reset_map(self):
@@ -64,11 +73,14 @@ class MapEnv(Env):
         for agent, action in zip(self.agents.values(), actions.values()):
             agent_action = agent.action_map(action)
             agent_actions.append((agent.agent_id, agent_action))
+
         agent_pos, agent_rot = self.update_map(agent_actions)
+
         for key, val in agent_pos.items():
             self.agents[key].set_pos(val)
         for key, val in agent_rot.items():
             self.agents[key].set_orientation(val)
+
         observations = {}
         rewards = {}
         dones = {}
@@ -92,8 +104,12 @@ class MapEnv(Env):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
-        self.reset_map()
-        self.setup_agents()
+        agent_pos, agent_rot = self.reset_map()
+        # TODO(ev) the agent pos and orientation setting code is duplicated
+        for key, val in agent_pos.items():
+            self.agents[key].set_pos(val)
+        for key, val in agent_rot.items():
+            self.agents[key].set_orientation(val)
         observations = {}
         for agent in self.agents.values():
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
@@ -157,7 +173,6 @@ class MapEnv(Env):
                                   top_edge, bot_edge, self.map)
         x += left_pad
         y += top_pad
-        # FIXME(ev) you actually need to step in by the padding
         view = pad_mat[x - col_size: x + col_size + 1,
                y - row_size: y + row_size + 1]
         return view

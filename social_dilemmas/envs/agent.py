@@ -81,6 +81,9 @@ class Agent(object):
     def get_orientation(self):
         return self.orientation
 
+    def get_map(self):
+        return self.grid.map
+
 
 # use keyword names so that it's easy to understand what the agent is calling
 HARVEST_ACTIONS = {0: 'MOVE_LEFT',  # Move left
