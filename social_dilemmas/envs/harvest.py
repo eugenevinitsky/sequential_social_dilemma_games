@@ -59,11 +59,13 @@ class HarvestEnv(MapEnv):
     def observation_space(self):
         pass
 
+    # TODO(ev) this can probably be moved into the superclass
     def setup_agents(self):
         for i in range(self.num_agents):
             agent_id = 'agent-' + str(i)
             self.agents[agent_id] = self.create_agent(agent_id)
 
+    # TODO(ev) this can probably be moved into the superclass
     def reset_map(self):
         self.spawn_apples()
         # self.place_agents()
@@ -75,6 +77,7 @@ class HarvestEnv(MapEnv):
             agent.set_pos(new_pos)
             agent.set_orientation(new_rot)
 
+    # FIXME(ev) most of this is general and can be moved, only apples need to be done here
     def update_map(self, agent_actions):
         """Converts agent action tuples into a new map and new agent positions
 
@@ -154,9 +157,9 @@ class HarvestEnv(MapEnv):
                 new_map[row, col] = 'A'
         return new_map
 
+    # FIXME(ev) this is probably shared by every env
     def spawn_point(self):
         """Returns a randomly selected spawn point"""
-
         not_occupied = False
         rand_int = 0
         # select a spawn point
@@ -198,7 +201,6 @@ class HarvestEnv(MapEnv):
         start_pos = np.asarray(firing_pos)
         firing_direction = ORIENTATIONS[firing_orientation]
         for i in range(num_fire_cells):
-            # FIXME(ev) you need to stop at the edges of the map
             next_cell = start_pos + firing_direction
             if self.test_if_in_bounds(next_cell):
                 self.map[next_cell[0], next_cell[1]] = 'F'
@@ -213,6 +215,7 @@ class HarvestEnv(MapEnv):
                     # FIXME(ev) what if a firing beam is here at this time?
                     self.map[row, col] = 'A'
 
+    # FIXME(ev) this can be a general property of map_env
     def rotate_action(self, action_vec, orientation):
         # WARNING: Note, we adopt the physics convention that \theta=0 is in the +y direction
         if orientation == 'UP':
@@ -230,6 +233,7 @@ class HarvestEnv(MapEnv):
     def rotate_right(self, action_vec):
         return np.dot(ACTIONS['TURN_CLOCKWISE'], action_vec)
 
+    # FIXME(ev) this should be an agent property
     def update_rotation(self, action, curr_orientation):
         if action == 'TURN_COUNTERCLOCKWISE':
             if curr_orientation == 'LEFT':
