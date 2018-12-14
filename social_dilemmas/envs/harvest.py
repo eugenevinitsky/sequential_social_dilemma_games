@@ -67,7 +67,8 @@ class HarvestEnv(MapEnv):
 
     # TODO(ev) this can probably be moved into the superclass
     def reset_map(self):
-        self.spawn_apples()
+        # FIXME(ev) this doesn't currently do anything
+        apple_map = self.spawn_apples()
         # self.place_agents()
         # FIXME(eugene) move what is below into place agents
         for agent in self.agents.values():
@@ -76,6 +77,9 @@ class HarvestEnv(MapEnv):
             new_rot = self.spawn_rotation()
             agent.set_pos(new_pos)
             agent.set_orientation(new_rot)
+            # FIXME(ev) now you actually have to place the agents
+
+        # FIXME(ev) now you have to build the walls into the map
 
     # FIXME(ev) most of this is general and can be moved, only apples need to be done here
     def update_map(self, agent_actions):
@@ -104,13 +108,8 @@ class HarvestEnv(MapEnv):
                 new_pos = self.update_map_agent_pos(agent.get_pos(), new_pos)
                 new_agent_pos[agent_id] = new_pos
             elif 'TURN' in action:
-                try:
-                    # FIXME(ev) move into a utility method
-                    new_rot = self.update_rotation(action, agent.get_orientation())
-                    # FIXME(ev) convert back into left or right.
-                    # FIXME(ev) actually, this dot product is silly. Just handle the rotations
-                except:
-                    import ipdb; ipdb.set_trace()
+                # FIXME(ev) move into a utility method
+                new_rot = self.update_rotation(action, agent.get_orientation())
                 self.update_map_agent_rot(agent.get_pos(), new_rot)
                 new_agent_rots[agent_id] = new_rot
             else:
@@ -142,19 +141,20 @@ class HarvestEnv(MapEnv):
         new_map = np.zeros(self.map.shape)
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            row += l2_dist
-            row += l2_dist
-            # FIXME(ev) this padding probably needs to be moved into a method
-            window = pad_mat[row - l2_dist:row + l2_dist,
-                     col - l2_dist:col + l2_dist]
-            # compute how many apples are in window
-            unique, counts = np.unique(window, return_counts=True)
-            counts_dict = dict(zip(unique, counts))
-            num_apples = counts_dict.get('A', 0)
-            spawn_prob = SPAWN_PROB[min(num_apples, 3)]
-            rand_num = np.random.rand(1)[0]
-            if rand_num < spawn_prob:
-                new_map[row, col] = 'A'
+            if self.base_map[row, col] == 'A':
+                row += l2_dist
+                row += l2_dist
+                # FIXME(ev) this padding probably needs to be moved into a method
+                window = pad_mat[row - l2_dist:row + l2_dist,
+                         col - l2_dist:col + l2_dist]
+                # compute how many apples are in window
+                unique, counts = np.unique(window, return_counts=True)
+                counts_dict = dict(zip(unique, counts))
+                num_apples = counts_dict.get('A', 0)
+                spawn_prob = SPAWN_PROB[min(num_apples, 3)]
+                rand_num = np.random.rand(1)[0]
+                if rand_num < spawn_prob:
+                    new_map[row, col] = 'A'
         return new_map
 
     # FIXME(ev) this is probably shared by every env
