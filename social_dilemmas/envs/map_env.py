@@ -28,17 +28,26 @@ class MapEnv(Env):
             Whether to render the environment
         """
         self.num_agents = num_agents
-        self.base_map = ascii_map
-        # FIXME(ev) is this needed, can't we just use the ascii map?
-        self.map = np.zeros(ascii_map.shape) #self.setup_map() # the actual active map of the system
+        self.base_map = self.ascii_to_numpy(ascii_map)
+        # FIXME(ev) you need to create the map before you call setup_map
+        self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.agents = {}
         self.render = render
         self.color_map = color_map
-        self.setup_agents()
         if render:
             self.renderer = CursesUi({}, 1)
 
-    def setup_map(self):
+    # FIXME(ev) move this to a utils eventually
+    def ascii_to_numpy(self, ascii_matrix):
+        """converts a list of strings into a numpy array"""
+        # FIXME(ev) there has to be a faster way to do this (of course, doesn't really matter)
+        arr = np.full((len(ascii_matrix), len(ascii_matrix[0])), ' ')
+        for row in range(arr.shape[0]):
+            for col in range(arr.shape[1]):
+                arr[row, col] = ascii_matrix[row][col]
+        return arr
+
+    def reset_map(self):
         raise NotImplementedError
 
     def step(self, actions):
@@ -52,18 +61,19 @@ class MapEnv(Env):
         info: dict to pass extra info to gym
         """
         agent_actions = []
-        for agent, action in zip(self.agents, actions):
+        for agent, action in zip(self.agents.values(), actions.values()):
             agent_action = agent.action_map(action)
             agent_actions.append((agent.agent_id, agent_action))
-        new_map, agent_pos = self.update_map(agent_actions)
-        self.map = new_map
-        for key, val in agent_pos:
-            self.agents[key].update_pos(val)
+        agent_pos, agent_rot = self.update_map(agent_actions)
+        for key, val in agent_pos.items():
+            self.agents[key].set_pos(val)
+        for key, val in agent_rot.items():
+            self.agents[key].set_orientation(val)
         observations = {}
         rewards = {}
         dones = {}
         info = {}
-        for agent in self.agents:
+        for agent in self.agents.values():
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.get_reward()
@@ -82,16 +92,17 @@ class MapEnv(Env):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
-        self.setup_map()
+        self.reset_map()
+        self.setup_agents()
         observations = {}
-        for agent in self.agents:
+        for agent in self.agents.values():
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
         return observations
 
     def map_to_colors(self, map, color_map):
         """Converts a map to an array of RGB values"""
-        rgb_arr = np.zeros(map.shape[0], map.shape[1], 3)
+        rgb_arr = np.zeros((map.shape[0], map.shape[1], 3))
         for row_elem in range(map.shape[0]):
             for col_elem in range(map.shape[1]):
                 rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
@@ -142,8 +153,11 @@ class MapEnv(Env):
         right_edge = x + col_size
         top_edge = y - row_size
         bot_edge = y + row_size
-        pad_mat = self.pad_matrix(left_edge, right_edge,
+        pad_mat, left_pad, top_pad = self.pad_if_needed(left_edge, right_edge,
                                   top_edge, bot_edge, self.map)
+        x += left_pad
+        y += top_pad
+        # FIXME(ev) you actually need to step in by the padding
         view = pad_mat[x - col_size: x + col_size + 1,
                y - row_size: y + row_size + 1]
         return view
@@ -161,9 +175,10 @@ class MapEnv(Env):
         if bot_edge > row_dim:
             bot_pad = bot_edge - row_dim
 
-        return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0)
+        return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, \
+            top_pad
 
-    def pad_matrix(self, left_pad, right_pad, top_pad, bot_pad, matrix, const_val):
+    def pad_matrix(self, left_pad, right_pad, top_pad, bot_pad, matrix, const_val=1):
         pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
                          'constant', constant_values=(const_val, const_val))
         return pad_mat
