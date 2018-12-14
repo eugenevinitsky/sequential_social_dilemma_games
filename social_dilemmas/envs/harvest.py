@@ -198,9 +198,13 @@ class HarvestEnv(MapEnv):
         start_pos = np.asarray(firing_pos)
         firing_direction = ORIENTATIONS[firing_orientation]
         for i in range(num_fire_cells):
+            # FIXME(ev) you need to stop at the edges of the map
             next_cell = start_pos + firing_direction
-            self.map[next_cell[0], next_cell[1]] = 'F'
-            start_pos += firing_direction
+            if self.test_if_in_bounds(next_cell):
+                self.map[next_cell[0], next_cell[1]] = 'F'
+                start_pos += firing_direction
+            else:
+                break
 
     def update_map_apples(self, new_apple_map):
         for row in range(self.map.shape[0]):
@@ -245,3 +249,13 @@ class HarvestEnv(MapEnv):
                 return 'DOWN'
             else:
                 return 'LEFT'
+
+    # FIXME(ev) this definitely should go into utils or the general agent class
+    def test_if_in_bounds(self, pos):
+        """Checks if a selected cell is outside the range of the map"""
+        if pos[0] < 0 or pos[0] >= self.map.shape[0]:
+            return False
+        elif pos[1] < 0 or pos[1] >= self.map.shape[1]:
+            return False
+        else:
+            return True
