@@ -102,7 +102,7 @@ class MapEnv(Env):
 
     def map_to_colors(self, map, color_map):
         """Converts a map to an array of RGB values"""
-        rgb_arr = np.zeros(map.shape[0], map.shape[1], 3)
+        rgb_arr = np.zeros((map.shape[0], map.shape[1], 3))
         for row_elem in range(map.shape[0]):
             for col_elem in range(map.shape[1]):
                 rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
@@ -153,8 +153,11 @@ class MapEnv(Env):
         right_edge = x + col_size
         top_edge = y - row_size
         bot_edge = y + row_size
-        pad_mat = self.pad_matrix(left_edge, right_edge,
+        pad_mat, left_pad, top_pad = self.pad_if_needed(left_edge, right_edge,
                                   top_edge, bot_edge, self.map)
+        x += left_pad
+        y += top_pad
+        # FIXME(ev) you actually need to step in by the padding
         view = pad_mat[x - col_size: x + col_size + 1,
                y - row_size: y + row_size + 1]
         return view
@@ -172,7 +175,8 @@ class MapEnv(Env):
         if bot_edge > row_dim:
             bot_pad = bot_edge - row_dim
 
-        return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0)
+        return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, \
+            top_pad
 
     def pad_matrix(self, left_pad, right_pad, top_pad, bot_pad, matrix, const_val=1):
         pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),

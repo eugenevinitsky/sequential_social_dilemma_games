@@ -9,6 +9,7 @@ from social_dilemmas.envs.map_env import MapEnv
 APPLE_RADIUS = 2
 
 COLOURS = {' ': [0, 0, 0],  # Black background
+           '': [764, 0, 999],  # Board walls
            '@': [764, 0, 999],  # Board walls
            'A': [0, 999, 0],  # Green apples
            'P': [0, 999, 999],  # Player #FIXME(ev) agents need to have different colors
@@ -30,6 +31,8 @@ ORIENTATIONS = {'LEFT': [-1, 0],
                 'RIGHT': [1, 0],
                 'UP': [0, 1],
                 'DOWN': [0, -1]}
+
+# FIXME(ev) this whole thing is in serious need of some abstraction
 
 
 class HarvestEnv(MapEnv):
@@ -81,6 +84,7 @@ class HarvestEnv(MapEnv):
         agent_pos: dict of tuples with keys as agent ids
         """
 
+        # FIXME(ev) walls are not showing up in the map
         # Move the agents
         for agent_id, action in agent_actions.items():
             agent = self.agents[agent_id]
@@ -119,12 +123,17 @@ class HarvestEnv(MapEnv):
         # FIXME(ev) magic number
         l2_dist = 2
         # first pad the matrix so that we can iterate through nicely
-        pad_mat = self.pad_matrix(2, 2, 2, 2, self.map)
+        # FIXME(ev) you shouldn't be doing the padding yourself here, this should be done
+        # by a utility method
+        pad_mat= self.pad_matrix(l2_dist, l2_dist, l2_dist, l2_dist, self.map)
         new_map = np.zeros(self.map.shape)
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
+            row += l2_dist
+            row += l2_dist
+            # FIXME(ev) this padding probably needs to be moved into a method
             window = pad_mat[row - l2_dist:row + l2_dist,
-                     col - l2_dist + 1:col + l2_dist]
+                     col - l2_dist:col + l2_dist]
             # compute how many apples are in window
             unique, counts = np.unique(window, return_counts=True)
             counts_dict = dict(zip(unique, counts))

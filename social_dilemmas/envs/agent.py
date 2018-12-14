@@ -96,7 +96,8 @@ class HarvestAgent(Agent):
 
     def __init__(self, agent_id, start_pos, start_orientation, grid):
         # FIXME(ev) put in the right sizes
-        super().__init__(agent_id, start_pos, start_orientation, grid, 10, 10)
+        # FIXME(ev) magic number bruh
+        super().__init__(agent_id, start_pos, start_orientation, grid, 3, 3)
 
     @property
     def action_space(self):
@@ -111,7 +112,7 @@ class HarvestAgent(Agent):
     @property
     def observation_space(self):
         # FIXME(ev) put in the right sizes
-        return Box(low=0.0, high=0.0, shape=(10, 10, 3), dtype=np.float32)
+        return Box(low=0.0, high=0.0, shape=(3, 3, 3), dtype=np.float32)
 
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
