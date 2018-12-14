@@ -56,7 +56,6 @@ class HarvestEnv(MapEnv):
         self.setup_agents()
 
 
-
     # FIXME(ev) action_space should really be defined in the agents
     @property
     def action_space(self):
@@ -165,7 +164,7 @@ class HarvestEnv(MapEnv):
     def build_walls(self):
         for i in range(len(self.wall_points)):
             row, col = self.wall_points[i]
-            self.base_map[row, col] = '@'
+            self.map[row, col] = '@'
 
     # FIXME(ev) this is probably shared by every env
     def spawn_point(self):
@@ -197,6 +196,8 @@ class HarvestEnv(MapEnv):
         else:
             self.map[old_row, old_col] = ' '
             self.map[new_row, new_col] = 'P'
+
+            # TODO(ev) if you move over an apple it should show up in the reward function
         return new_pos
 
     def update_map_agent_rot(self, old_pos, new_rot):
@@ -227,7 +228,7 @@ class HarvestEnv(MapEnv):
                     # FIXME(ev) what if a firing beam is here at this time?
                     self.map[row, col] = 'A'
 
-    # FIXME(ev) this can be a general property of map_env
+    # FIXME(ev) this can be a general property of map_env or a util
     def rotate_action(self, action_vec, orientation):
         # WARNING: Note, we adopt the physics convention that \theta=0 is in the +y direction
         if orientation == 'UP':
