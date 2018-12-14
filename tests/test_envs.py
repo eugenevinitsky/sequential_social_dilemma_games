@@ -19,7 +19,10 @@ class TestHarvestEnv(unittest.TestCase):
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=1)
 
     def test_step(self):
-        pass
+        self.env.reset()
+        # FIXME(ev) magic number
+        for i in range(8):
+            self.env.step({'agent-0': i})
 
     def test_reset(self):
         self.env.reset()

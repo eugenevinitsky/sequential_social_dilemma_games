@@ -16,14 +16,14 @@ COLOURS = {' ': [0, 0, 0],  # Black background
            'F': [999, 999, 0]}  # Yellow firing beam
 
 # use keyword names so that it's easy to understand what the agent is calling
-ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
-           'MOVE_RIGHT': [1, 0],  # Move right
-           'MOVE_UP': [0, 1],  # Move up
-           'MOVE_DOWN': [0, -1],  # Move down
-           'STAY': [0, 0],  # don't move
-           'TURN_CLOCKWISE': [[0, 1], [-1, 0]],  # Rotate counter clockwise
-           'TURN_COUNTERCLOCKWISE': [[0, -1], [1, 0]],  # Rotate clockwise
-           'FIRE': 5}  # Fire 5 squares forward #FIXME(ev) is the firing in a straight line?
+ACTIONS = {'MOVE_LEFT':             [-1, 0],  # Move left
+           'MOVE_RIGHT':            [1, 0],   # Move right
+           'MOVE_UP':               [0, 1],   # Move up
+           'MOVE_DOWN':             [0, -1],  # Move down
+           'STAY':                  [0, 0],   # don't move
+           'TURN_CLOCKWISE':        [[0, 1], [-1, 0]],  # Rotate counter clockwise
+           'TURN_COUNTERCLOCKWISE': [[0, -1], [1, 0]],   # Move right
+           'FIRE': 5}               # Fire 5 squares forward #FIXME(ev) is the firing in a straight line?
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
@@ -33,6 +33,7 @@ ORIENTATIONS = {'LEFT': [-1, 0],
                 'DOWN': [0, -1]}
 
 # FIXME(ev) this whole thing is in serious need of some abstraction
+# FIXME(ev) switching betewen types and lists in a pretty arbitrary manner
 
 
 class HarvestEnv(MapEnv):
@@ -81,26 +82,34 @@ class HarvestEnv(MapEnv):
         -------
         new_map: numpy ndarray
             the updated map to store
-        agent_pos: dict of tuples with keys as agent ids
+        agent_pos: list of tuples with keys as agent ids
         """
 
         # FIXME(ev) walls are not showing up in the map
         # Move the agents
-        for agent_id, action in agent_actions.items():
+        new_agent_pos = {}
+        new_agent_rots = {}
+        for agent_id, action in agent_actions:
             agent = self.agents[agent_id]
             selected_action = ACTIONS[action]
             # TODO(ev) updating the agents has to be synchronous? I think?
             # TODO(ev) do we overlay firing over the agent or what?
-            if 'MOVE' or 'STAY' in action:
+            if 'MOVE' in action or 'STAY' in action:
                 # rotate the selected action appropriately
                 rot_action = self.rotate_action(selected_action, agent.get_orientation())
                 new_pos = agent.get_pos() + rot_action
                 new_pos = self.update_map_agent_pos(agent.get_pos(), new_pos)
-                self.agents[agent_id].update_pos(new_pos)
+                new_agent_pos[agent_id] = new_pos
             elif 'TURN' in action:
-                agent_rot = ORIENTATIONS[agent.get_orientation()]
-                new_rot = np.dot(ACTIONS[action], agent_rot)
-                self.update_map_agent_rot(agent.get_pos, new_rot)
+                try:
+                    # FIXME(ev) move into a utility method
+                    new_rot = self.update_rotation(action, agent.get_orientation())
+                    # FIXME(ev) convert back into left or right.
+                    # FIXME(ev) actually, this dot product is silly. Just handle the rotations
+                except:
+                    import ipdb; ipdb.set_trace()
+                self.update_map_agent_rot(agent.get_pos(), new_rot)
+                new_agent_rots[agent_id] = new_rot
             else:
                 self.update_map_fire(agent.get_pos(), agent.get_orientation())
 
@@ -111,10 +120,11 @@ class HarvestEnv(MapEnv):
         # spawn the apples
         new_apples = self.spawn_apples()
         self.update_map_apples(new_apples)
+        return new_agent_pos, new_agent_rots
 
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent"""
-        return HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation, self)
+        return HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation(), self)
 
     def spawn_apples(self):
         # iterate over the spawn points in self.ascii_map and compare it with
@@ -157,7 +167,7 @@ class HarvestEnv(MapEnv):
             # FIXME(ev) this will break when we implement rotation colors
             if self.map[spawn_point[0], spawn_point[1]] != 'P':
                 not_occupied = True
-        return self.spawn_points[rand_int]
+        return np.array(self.spawn_points[rand_int])
 
     def spawn_rotation(self):
         """Return a randomly selected initial rotation for an agent"""
@@ -165,18 +175,23 @@ class HarvestEnv(MapEnv):
         return list(ORIENTATIONS.keys())[rand_int]
 
     def update_map_agent_pos(self, old_pos, new_pos):
-        if self.map[new_pos] == '@':
-            new_pos = old_pos
-        else:
-            self.map[old_pos] = ' '
-            self.map[new_pos] = 'P'
+        new_row, new_col = new_pos
+        old_row, old_col = old_pos
+        try:
+            if self.map[new_row, new_col] == '@':
+                new_pos = old_pos
+            else:
+                self.map[old_row, old_col] = ' '
+                self.map[new_row, new_col] = 'P'
+        except:
+            import ipdb; ipdb.set_trace()
         return new_pos
 
     def update_map_agent_rot(self, old_pos, new_rot):
-        self.map[old_pos] = ' '
         # FIXME(ev) once we have a color scheme worked out we need to convert rotation
         # into a color
-        self.map[old_pos] = 'P'
+        row, col = old_pos
+        self.map[row, col] = 'P'
 
     def update_map_fire(self, firing_pos, firing_orientation):
         num_fire_cells = 5
@@ -206,7 +221,27 @@ class HarvestEnv(MapEnv):
             return self.rotate_left(self.rotate_left(action_vec))
 
     def rotate_left(self, action_vec):
-        return np.dot(ACTIONS['ROTATE_COUNTERCLOCKWISE'], action_vec)
+        return np.dot(ACTIONS['TURN_COUNTERCLOCKWISE'], action_vec)
 
     def rotate_right(self, action_vec):
-        return np.dot(ACTIONS['ROTATE_CLOCKWISE'], action_vec)
+        return np.dot(ACTIONS['TURN_CLOCKWISE'], action_vec)
+
+    def update_rotation(self, action, curr_orientation):
+        if action == 'TURN_COUNTERCLOCKWISE':
+            if curr_orientation == 'LEFT':
+                return 'DOWN'
+            elif curr_orientation == 'DOWN':
+                return 'RIGHT'
+            elif curr_orientation == 'RIGHT':
+                return 'UP'
+            else:
+                return 'LEFT'
+        else:
+            if curr_orientation == 'LEFT':
+                return 'UP'
+            elif curr_orientation == 'UP':
+                return 'RIGHT'
+            elif curr_orientation == 'RIGHT':
+                return 'DOWN'
+            else:
+                return 'LEFT'

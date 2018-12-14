@@ -117,9 +117,13 @@ class HarvestAgent(Agent):
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
 
-    def compute_reward(self):
+    def get_reward(self):
         # FIXME(ev) put in the actual reward
         return 1
+
+    def get_done(self):
+        # FIXME(ev) put in the actual computation
+        return False
 
 
 class CleanupAgent(Agent):

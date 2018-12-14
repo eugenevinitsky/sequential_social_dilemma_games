@@ -61,18 +61,19 @@ class MapEnv(Env):
         info: dict to pass extra info to gym
         """
         agent_actions = []
-        for agent, action in zip(self.agents, actions):
+        for agent, action in zip(self.agents.values(), actions.values()):
             agent_action = agent.action_map(action)
             agent_actions.append((agent.agent_id, agent_action))
-        new_map, agent_pos = self.update_map(agent_actions)
-        self.map = new_map
-        for key, val in agent_pos:
-            self.agents[key].update_pos(val)
+        agent_pos, agent_rot = self.update_map(agent_actions)
+        for key, val in agent_pos.items():
+            self.agents[key].set_pos(val)
+        for key, val in agent_rot.items():
+            self.agents[key].set_orientation(val)
         observations = {}
         rewards = {}
         dones = {}
         info = {}
-        for agent in self.agents:
+        for agent in self.agents.values():
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.get_reward()
@@ -95,7 +96,6 @@ class MapEnv(Env):
         self.setup_agents()
         observations = {}
         for agent in self.agents.values():
-            import ipdb; ipdb.set_trace()
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
         return observations
