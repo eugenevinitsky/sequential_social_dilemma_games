@@ -182,6 +182,7 @@ class TestHarvestEnv(unittest.TestCase):
         pass
 
     def test_agent_actions(self):
+        # FIXME(ev) the axes are 10000000% rotated oddly
         # set up the map
         agent_id = 'agent-0'
         self.construct_map_1(agent_id, [2,2], 'LEFT')
@@ -227,15 +228,42 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.update_map({agent_id: 'MOVE_DOWN'})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
 
+        # quick test of stay
+        self.env.update_map({agent_id: 'STAY'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
 
         # if an agent tries to move through a wall they should stay in the same place
+        self.rotate_agent(agent_id, 'UP')
+        self.move_agent(agent_id, [2,1])
+        self.env.update_map({agent_id: 'MOVE_UP'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
 
-        # if an agent moves over an apple the apple disappears
+        # TODO(ev) if an agent moves over an apple the apple disappears
 
         # rotations correctly update the agent state
+        self.rotate_agent(agent_id, 'UP')
+        # clockwise
+        self.env.update_map({agent_id: 'TURN_CLOCKWISE'})
+        self.assertEqual('RIGHT', self.env.agents[agent_id].get_orientation())
+        self.env.update_map({agent_id: 'TURN_CLOCKWISE'})
+        self.assertEqual('DOWN', self.env.agents[agent_id].get_orientation())
+        self.env.update_map({agent_id: 'TURN_CLOCKWISE'})
+        self.assertEqual('LEFT', self.env.agents[agent_id].get_orientation())
+        self.env.update_map({agent_id: 'TURN_CLOCKWISE'})
+        self.assertEqual('UP', self.env.agents[agent_id].get_orientation())
 
-        # actions interact correctly with rotations
-        pass
+        # counterclockwise
+        self.env.update_map({agent_id: 'TURN_COUNTERCLOCKWISE'})
+        self.assertEqual('LEFT', self.env.agents[agent_id].get_orientation())
+        self.env.update_map({agent_id: 'TURN_COUNTERCLOCKWISE'})
+        self.assertEqual('DOWN', self.env.agents[agent_id].get_orientation())
+        self.env.update_map({agent_id: 'TURN_COUNTERCLOCKWISE'})
+        self.assertEqual('RIGHT', self.env.agents[agent_id].get_orientation())
+        self.env.update_map({agent_id: 'TURN_COUNTERCLOCKWISE'})
+        self.assertEqual('UP', self.env.agents[agent_id].get_orientation())
+
+        # test firing
+
 
     def test_agent_rewards(self):
         pass

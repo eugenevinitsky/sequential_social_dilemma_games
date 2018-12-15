@@ -71,7 +71,7 @@ class Agent(object):
         raise NotImplementedError
 
     def set_pos(self, new_pos):
-        self.pos = new_pos
+        self.pos = np.array(new_pos)
 
     def get_pos(self):
         return self.pos
