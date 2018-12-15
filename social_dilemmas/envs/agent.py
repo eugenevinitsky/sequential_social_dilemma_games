@@ -85,6 +85,27 @@ class Agent(object):
     def get_map(self):
         return self.grid.map
 
+    def update_map_agent_pos(self, new_pos):
+        new_row, new_col = new_pos
+        old_row, old_col = self.get_pos()
+        # you can't walk through walls or agents
+        # TODO(ev) you can walk through another agent, if it was going to move anyways
+        if self.grid.map[new_row, new_col] == '@' or self.grid.map[new_row, new_col] == 'P':
+            new_pos = self.get_pos()
+        else:
+            self.grid.map[old_row, old_col] = ' '
+            self.grid.map[new_row, new_col] = 'P'
+
+            # TODO(ev) if you move over an apple it should show up in the reward function
+        self.set_pos(new_pos)
+
+    def update_map_agent_rot(self, new_rot):
+        # FIXME(ev) once we have a color scheme worked out we need to convert rotation
+        # into a color
+        row, col = self.get_pos()
+        self.grid.map[row, col] = 'P'
+        self.set_orientation(new_rot)
+
 
 # use keyword names so that it's easy to understand what the agent is calling
 HARVEST_ACTIONS = {0: 'MOVE_LEFT',  # Move left

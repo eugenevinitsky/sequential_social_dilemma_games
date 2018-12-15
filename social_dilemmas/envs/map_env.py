@@ -60,7 +60,7 @@ class MapEnv(Env):
         raise NotImplementedError
 
     def step(self, actions):
-        """Takes in a list of actions and converts them to a map update
+        """Takes in a dict of actions and converts them to a map update
 
         Returns
         -------
@@ -69,17 +69,13 @@ class MapEnv(Env):
         dones: dict indicating whether each agent is done
         info: dict to pass extra info to gym
         """
-        agent_actions = []
-        for agent, action in zip(self.agents.values(), actions.values()):
-            agent_action = agent.action_map(action)
-            agent_actions.append((agent.agent_id, agent_action))
+        agent_actions = {}
+        for agent_id, action in actions.items():
+            agent_action = self.agents[agent_id].action_map(action)
+            agent_actions[agent_id] = agent_action
 
-        agent_pos, agent_rot = self.update_map(agent_actions)
-
-        for key, val in agent_pos.items():
-            self.agents[key].set_pos(val)
-        for key, val in agent_rot.items():
-            self.agents[key].set_orientation(val)
+        self.update_map(agent_actions)
+        self.custom_map_update()
 
         observations = {}
         rewards = {}
@@ -104,12 +100,10 @@ class MapEnv(Env):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
-        agent_pos, agent_rot = self.reset_map()
+        self.reset_map()
+        self.custom_map_update()
         # TODO(ev) the agent pos and orientation setting code is duplicated
-        for key, val in agent_pos.items():
-            self.agents[key].set_pos(val)
-        for key, val in agent_rot.items():
-            self.agents[key].set_orientation(val)
+
         observations = {}
         for agent in self.agents.values():
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
@@ -138,6 +132,10 @@ class MapEnv(Env):
         agent_pos: dict of tuples with keys as agent ids
         """
         raise NotImplementedError
+
+    def custom_map_update(self):
+        """Custom map updates that don't have to do with agent actions"""
+        pass
 
     def setup_agents(self):
         raise NotImplementedError

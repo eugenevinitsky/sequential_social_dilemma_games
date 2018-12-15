@@ -78,19 +78,18 @@ class HarvestEnv(MapEnv):
         self.build_walls()
         self.update_map_apples(self.spawn_apples())
 
-        # FIXME(eugene) move what is below into a MapEnv function, every agent and map has this
-        new_agent_pos = {}
-        new_agent_rots = {}
-        for agent_id in self.agents.keys():
-            new_agent_pos[agent_id] = self.spawn_point()
-            new_agent_rots[agent_id] = self.spawn_rotation()
-
-        return new_agent_pos, new_agent_rots
+        for agent in self.agents.values():
+            agent.update_map_agent_pos(self.spawn_point())
+            agent.update_map_agent_rot(self.spawn_rotation())
 
     # FIXME(ev) most of this is general and can be moved, only apples need to be done here
     def update_map(self, agent_actions):
         """Converts agent action tuples into a new map and new agent positions
 
+        Parameters
+        ----------
+        agent_actions: dict
+            dict with agent_id as key and action as value
         Returns
         -------
         new_map: numpy ndarray
@@ -100,24 +99,22 @@ class HarvestEnv(MapEnv):
 
         # FIXME(ev) walls are not showing up in the map
         # Move the agents
-        new_agent_pos = {}
-        new_agent_rots = {}
-        for agent_id, action in agent_actions:
+        for agent_id, action in agent_actions.items():
             agent = self.agents[agent_id]
             selected_action = ACTIONS[action]
-            # TODO(ev) updating the agents has to be synchronous? I think?
+            # TODO(ev) updating the agents has to be synchronous?
+            # TODO(ev) for example, an agent may try to walk through another agent
+            # TODO(ev) which is fine if the other agent is going to move
             # TODO(ev) do we overlay firing over the agent or what?
             if 'MOVE' in action or 'STAY' in action:
                 # rotate the selected action appropriately
                 rot_action = self.rotate_action(selected_action, agent.get_orientation())
                 new_pos = agent.get_pos() + rot_action
-                new_pos = self.update_map_agent_pos(agent.get_pos(), new_pos)
-                new_agent_pos[agent_id] = new_pos
+                agent.update_map_agent_pos(new_pos)
             elif 'TURN' in action:
                 # FIXME(ev) move into a utility method
                 new_rot = self.update_rotation(action, agent.get_orientation())
-                self.update_map_agent_rot(agent.get_pos(), new_rot)
-                new_agent_rots[agent_id] = new_rot
+                agent.update_map_agent_rot(new_rot)
             else:
                 self.update_map_fire(agent.get_pos(), agent.get_orientation())
 
@@ -125,10 +122,11 @@ class HarvestEnv(MapEnv):
         # TODO(ev) doing agents, than fire, than apples is 3x as slow
         # FIXME(EV) define a sum operation on these numpy matrices that let us "add" the strings
 
+    def custom_map_update(self):
+        "See parent class"
         # spawn the apples
         new_apples = self.spawn_apples()
         self.update_map_apples(new_apples)
-        return new_agent_pos, new_agent_rots
 
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent"""
@@ -147,9 +145,9 @@ class HarvestEnv(MapEnv):
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
             if self.base_map[row, col] == 'A':
-                row += APPLE_RADIUS
-                row += APPLE_RADIUS
                 # FIXME(ev) this padding probably needs to be moved into a method
+                row += APPLE_RADIUS
+                row += APPLE_RADIUS
                 window = pad_mat[row - APPLE_RADIUS:row + APPLE_RADIUS,
                          col - APPLE_RADIUS:col + APPLE_RADIUS]
                 # compute how many apples are in window
@@ -186,26 +184,6 @@ class HarvestEnv(MapEnv):
         """Return a randomly selected initial rotation for an agent"""
         rand_int = np.random.randint(len(ORIENTATIONS.keys()))
         return list(ORIENTATIONS.keys())[rand_int]
-
-    # TODO(ev) this might actually make more sense as an agent method
-    def update_map_agent_pos(self, old_pos, new_pos):
-        new_row, new_col = new_pos
-        old_row, old_col = old_pos
-        # you can't walk through walls
-        if self.map[new_row, new_col] == '@':
-            new_pos = old_pos
-        else:
-            self.map[old_row, old_col] = ' '
-            self.map[new_row, new_col] = 'P'
-
-            # TODO(ev) if you move over an apple it should show up in the reward function
-        return new_pos
-
-    def update_map_agent_rot(self, old_pos, new_rot):
-        # FIXME(ev) once we have a color scheme worked out we need to convert rotation
-        # into a color
-        row, col = old_pos
-        self.map[row, col] = 'P'
 
     def update_map_fire(self, firing_pos, firing_orientation):
         num_fire_cells = 5
