@@ -33,7 +33,9 @@ COLOURS = {' ': [0, 0, 0],  # Black background
 #         |
 #         ∨
 
+# Currently on the display though we are off by 90 degrees
 
+# FIXME(EV) the axes are 10000000% rotated oddly
 # use keyword names so that it's easy to understand what the agent is calling
 ACTIONS = {'MOVE_LEFT':             [-1, 0],  # Move left
            'MOVE_RIGHT':            [1, 0],   # Move right
@@ -135,7 +137,7 @@ class HarvestEnv(MapEnv):
                 new_rot = self.update_rotation(action, agent.get_orientation())
                 agent.update_map_agent_rot(new_rot)
             else:
-                self.update_map_fire(agent.get_pos(), agent.get_orientation())
+                self.update_map_fire(agent.get_pos().tolist(), agent.get_orientation())
 
         # TODO(ev) there should be an empty map that we add all new actions to
         # TODO(ev) doing agents, than fire, than apples is 3x as slow
