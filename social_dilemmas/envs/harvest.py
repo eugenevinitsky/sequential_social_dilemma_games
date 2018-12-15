@@ -132,7 +132,8 @@ class HarvestEnv(MapEnv):
 
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent"""
-        return HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation(), self)
+        # FIXME(ev) the agent window is currently a magic number
+        return HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation(), self, 3)
 
     def spawn_apples(self):
         # iterate over the spawn points in self.ascii_map and compare it with
