@@ -63,7 +63,7 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.reset()
 
         agent_id = 'agent-0'
-        self.construct_map_1(agent_id)
+        self.construct_map_1(agent_id, [3,3], 'UP')
 
         # check if the view is correct if there are no walls
         agent_view = self.env.agents[agent_id].get_state()
@@ -182,12 +182,51 @@ class TestHarvestEnv(unittest.TestCase):
         pass
 
     def test_agent_actions(self):
-        # set up the map so that we know where the agents and apples are
+        # set up the map
         agent_id = 'agent-0'
-        self.construct_map_1(agent_id)
-        self.move_agent(agent_id, [2, 2])
+        self.construct_map_1(agent_id, [2,2], 'LEFT')
+
+        # Test that all the moves and rotations work correctly
+        # test when facing left
+        self.env.update_map({agent_id: 'MOVE_LEFT'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 3])
+        self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        self.env.update_map({agent_id: 'MOVE_UP'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
+        self.env.update_map({agent_id: 'MOVE_DOWN'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        # test when facing up
+        self.rotate_agent(agent_id, 'UP')
+        self.env.update_map({agent_id: 'MOVE_LEFT'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
+        self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        self.env.update_map({agent_id: 'MOVE_UP'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
+        self.env.update_map({agent_id: 'MOVE_DOWN'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        # test when facing down
+        self.rotate_agent(agent_id, 'DOWN')
+        self.env.update_map({agent_id: 'MOVE_LEFT'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [3, 2])
+        self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        self.env.update_map({agent_id: 'MOVE_UP'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 3])
+        self.env.update_map({agent_id: 'MOVE_DOWN'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        # test when facing right
+        self.rotate_agent(agent_id, 'RIGHT')
         self.env.update_map({agent_id: 'MOVE_LEFT'})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
+        self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        self.env.update_map({agent_id: 'MOVE_UP'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [3, 2])
+        self.env.update_map({agent_id: 'MOVE_DOWN'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+
 
         # if an agent tries to move through a wall they should stay in the same place
 
@@ -211,21 +250,24 @@ class TestHarvestEnv(unittest.TestCase):
     def move_agent(self, agent_id, new_pos):
         self.env.agents[agent_id].update_map_agent_pos(new_pos)
 
+    def rotate_agent(self, agent_id, new_rot):
+        self.env.agents[agent_id].update_map_agent_rot(new_rot)
+
     # TODO(ev) test if an agent walking into another agent that is going to move is allowed
     # TODO(ev) it should be but it isn't right now
     def test_agent_conflict(self):
         pass
 
-    def construct_map_1(self, agent_id):
+    def construct_map_1(self, agent_id, start_pos, start_orientation):
         # overwrite the map
         self.env.map = TEST_MAP_1.copy()
         self.clear_agents()
 
         # TODO(ev) It seems like this map might be transposed...
         # replace the agents with agents with smaller views
-        self.add_agent(agent_id, [3, 3], 'LEFT', self.env, 2)
+        self.add_agent(agent_id, start_pos, start_orientation, self.env, 2)
         # TODO(ev) hack for now, can't call render logic or else it will spawn apples
-        self.move_agent(agent_id, [3, 3])
+        self.move_agent(agent_id, start_pos)
 
 if __name__ == '__main__':
     unittest.main()
