@@ -28,6 +28,7 @@ class Agent(object):
         self.agent_id = agent_id
         self.pos = start_pos
         self.orientation = start_orientation
+        # TODO(ev) change grid to env, this name is not very informative
         self.grid = grid
         self.row_size = row_size
         self.col_size = col_size
@@ -97,10 +98,9 @@ HARVEST_ACTIONS = {0: 'MOVE_LEFT',  # Move left
 
 class HarvestAgent(Agent):
 
-    def __init__(self, agent_id, start_pos, start_orientation, grid):
-        # FIXME(ev) put in the right sizes
-        # FIXME(ev) magic number bruh
-        super().__init__(agent_id, start_pos, start_orientation, grid, 3, 3)
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
+        self.view_len = view_len
+        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
 
     @property
     def action_space(self):
@@ -114,8 +114,7 @@ class HarvestAgent(Agent):
 
     @property
     def observation_space(self):
-        # FIXME(ev) put in the right sizes
-        return Box(low=0.0, high=0.0, shape=(3, 3, 3), dtype=np.float32)
+        return Box(low=0.0, high=0.0, shape=(self.view_len, self.view_len, 3), dtype=np.float32)
 
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
