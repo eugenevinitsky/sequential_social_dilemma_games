@@ -67,43 +67,119 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.map = TEST_MAP_1
         self.clear_agents()
 
+        # TODO(ev) It seems like this map might be transposed...
+
         # replace the agents with agents with smaller views
         self.add_agent(agent_id, [3, 3], 'LEFT', self.env, 2)
+        self.move_agent(agent_id, [3, 3])
 
         # check if the view is correct if there are no walls
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [[' '] * 5,
              [' '] * 5,
-             [' '] * 5,
+             [' '] * 2 + ['P'] + [' '] * 2,
              [' '] * 5,
              [' '] * 5]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
         # check if the view is correct if the top wall is just in view
+        self.move_agent(agent_id, [2, 3])
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [['@'] * 5,
+             [' '] * 5,
+             [' '] * 2 + ['P'] + [' '] * 2,
+             [' '] * 5,
+             [' '] * 5]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
 
         # check if if the view is correct if the view exceeds the top view
+        self.move_agent(agent_id, [1, 3])
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [[''] * 5,
+             ['@'] * 5,
+             [' '] * 2 + ['P'] + [' '] * 2,
+             [' '] * 5,
+             [' '] * 5]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
 
         # check if the view is correct if the left wall is just in view
+        self.move_agent(agent_id, [3, 2])
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [['@'] + [' '] * 4,
+             ['@'] + [' '] * 4,
+             ['@'] + [' '] + ['P'] + [' '] * 2,
+             ['@'] + [' '] * 4,
+             ['@'] + [' '] * 4]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
 
         # check if if the view is correct if the view exceeds the left view
+        self.move_agent(agent_id, [3, 1])
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [[''] + ['@'] + [' '] * 3,
+             [''] + ['@'] + [' '] * 3,
+             [''] + ['@'] + ['P'] + [' '] * 2,
+             [''] + ['@'] + [' '] * 3,
+             [''] + ['@'] + [' '] * 3]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
 
         # check if the view is correct if the bot wall is just in view
+        self.move_agent(agent_id, [4, 3])
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [[' '] * 5,
+             [' '] * 5,
+             [' '] * 2 + ['P'] + [' '] * 2,
+             [' '] * 5,
+             ['@'] * 5]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
 
         # check if if the view is correct if the view exceeds the bot view
+        self.move_agent(agent_id, [5, 3])
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [[' '] * 5,
+             [' '] * 5,
+             [' '] * 2 + ['P'] + [' '] * 2,
+             ['@'] * 5,
+             [''] * 5]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
 
         # check if the view is correct if the right wall is just in view
+        self.move_agent(agent_id, [3, 4])
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [[' '] * 4 + ['@'],
+             [' '] * 4 + ['@'],
+             [' '] * 2 + ['P'] + [' '] + ['@'],
+             [' '] * 4 + ['@'],
+             [' '] * 4 + ['@']]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
 
         # check if if the view is correct if the view exceeds the right view
+        self.move_agent(agent_id, [3, 4])
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [[' '] * 3 + ['@'] + [''],
+             [' '] * 3 + ['@'] + [''],
+             [' '] * 2 + ['P'] + ['@'] + [''],
+             [' '] * 3 + ['@'] + [''],
+             [' '] * 3 + ['@'] + ['']]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
 
-        # check if the view is correct if we are in the upper left corner
-
-        # check if the view is correct if we are in the lower left corner
-
-        # check if the view is correct if we are in the upper right corner
-
-        # check if the view is correct if we are in the lower right corner
 
     def test_apple_spawn(self):
         pass

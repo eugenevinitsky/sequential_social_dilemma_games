@@ -181,14 +181,15 @@ class MapEnv(Env):
         row_dim = matrix.shape[0]
         col_dim = matrix.shape[1]
         left_pad, right_pad, top_pad, bot_pad = 0, 0, 0, 0
+        # TODO(ev) this can be more elegantly written in terms of mins and maxes
         if left_edge < 0:
             left_pad = abs(left_edge)
-        if right_edge > col_dim:
-            right_pad = right_edge - col_dim
+        if right_edge > col_dim - 1:
+            right_pad = right_edge - (col_dim - 1)
         if top_edge < 0:
             top_pad = abs(top_edge)
-        if bot_edge > row_dim:
-            bot_pad = bot_edge - row_dim
+        if bot_edge > row_dim - 1:
+            bot_pad = bot_edge - (row_dim - 1)
 
         return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, \
             top_pad
