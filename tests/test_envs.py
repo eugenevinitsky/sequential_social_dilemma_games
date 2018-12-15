@@ -62,16 +62,8 @@ class TestHarvestEnv(unittest.TestCase):
         """Confirm that an agent placed at the right point returns the right view"""
         self.env.reset()
 
-        # overwrite the map
         agent_id = 'agent-0'
-        self.env.map = TEST_MAP_1
-        self.clear_agents()
-
-        # TODO(ev) It seems like this map might be transposed...
-
-        # replace the agents with agents with smaller views
-        self.add_agent(agent_id, [3, 3], 'LEFT', self.env, 2)
-        self.move_agent(agent_id, [3, 3])
+        self.construct_map_1(agent_id)
 
         # check if the view is correct if there are no walls
         agent_view = self.env.agents[agent_id].get_state()
@@ -169,7 +161,7 @@ class TestHarvestEnv(unittest.TestCase):
         np.testing.assert_array_equal(expected_view, agent_view)
 
         # check if if the view is correct if the view exceeds the right view
-        self.move_agent(agent_id, [3, 4])
+        self.move_agent(agent_id, [3, 5])
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [[' '] * 3 + ['@'] + [''],
@@ -182,6 +174,8 @@ class TestHarvestEnv(unittest.TestCase):
 
 
     def test_apple_spawn(self):
+        # render apples a bunch of times and check that the probabilities are within
+        # a bound of what you expect?
         pass
 
     def test_firing(self):
@@ -189,6 +183,11 @@ class TestHarvestEnv(unittest.TestCase):
 
     def test_agent_actions(self):
         # set up the map so that we know where the agents and apples are
+        agent_id = 'agent-0'
+        self.construct_map_1(agent_id)
+        self.move_agent(agent_id, [2, 2])
+        self.env.update_map({agent_id: 'MOVE_LEFT'})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
 
         # if an agent tries to move through a wall they should stay in the same place
 
@@ -210,9 +209,23 @@ class TestHarvestEnv(unittest.TestCase):
                                                  grid, view_len)
 
     def move_agent(self, agent_id, new_pos):
-        new_pos = self.env.update_map_agent_pos(self.env.agents[agent_id].get_pos(), new_pos)
-        self.env.agents[agent_id].set_pos(new_pos)
+        self.env.agents[agent_id].update_map_agent_pos(new_pos)
 
+    # TODO(ev) test if an agent walking into another agent that is going to move is allowed
+    # TODO(ev) it should be but it isn't right now
+    def test_agent_conflict(self):
+        pass
+
+    def construct_map_1(self, agent_id):
+        # overwrite the map
+        self.env.map = TEST_MAP_1.copy()
+        self.clear_agents()
+
+        # TODO(ev) It seems like this map might be transposed...
+        # replace the agents with agents with smaller views
+        self.add_agent(agent_id, [3, 3], 'LEFT', self.env, 2)
+        # TODO(ev) hack for now, can't call render logic or else it will spawn apples
+        self.move_agent(agent_id, [3, 3])
 
 if __name__ == '__main__':
     unittest.main()
