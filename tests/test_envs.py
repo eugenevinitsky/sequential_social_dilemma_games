@@ -15,16 +15,25 @@ MINI_HARVEST_MAP = [
 ]
 
 # maps used to test different spawn positions and apple positions
-TEST_MAP_1 = []
+TEST_MAP_1 = np.array(
+    [['@']*6,
+     [],
+     [],
+     [],
+     []
+     [['@']*6]]
+)
 
 
 import unittest
 
 class TestHarvestEnv(unittest.TestCase):
     def setUp(self):
+        """Construct the env"""
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=1)
 
     def test_step(self):
+        """Just check that the step method works at all for all possible actions"""
         self.env.reset()
         # FIXME(ev) magic number
         for i in range(8):
@@ -50,6 +59,37 @@ class TestHarvestEnv(unittest.TestCase):
     def test_view(self):
         """Confirm that an agent placed at the right point returns the right view"""
         self.env.reset()
+
+        # overwrite the map
+
+        # replace the agents with agents with smaller views
+
+        # check if the view is correct if there are no walls and an apple
+
+        # check if the view is correct if the top wall is just in view
+
+        # check if if the view is correct if the view exceeds the top view
+
+        # check if the view is correct if the left wall is just in view
+
+        # check if if the view is correct if the view exceeds the left view
+
+        # check if the view is correct if the bot wall is just in view
+
+        # check if if the view is correct if the view exceeds the bot view
+
+        # check if the view is correct if the right wall is just in view
+
+        # check if if the view is correct if the view exceeds the right view
+
+        # check if the view is correct if we are in the upper left corner
+
+        # check if the view is correct if we are in the lower left corner
+
+        # check if the view is correct if we are in the upper right corner
+
+        # check if the view is correct if we are in the lower right corner
+
 
     def test_apple_spawn(self):
         pass
