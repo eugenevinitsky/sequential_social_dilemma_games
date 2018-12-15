@@ -263,6 +263,33 @@ class TestHarvestEnv(unittest.TestCase):
         self.assertEqual('UP', self.env.agents[agent_id].get_orientation())
 
         # test firing
+        self.rotate_agent(agent_id, 'UP')
+        self.move_agent(agent_id, [3, 2])
+        self.env.update_map({agent_id: 'FIRE'})
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [['@'] + [' '] * 4,
+             ['@'] + [' '] * 4,
+             ['@'] + [' '] + ['P'] + ['F'] * 2,
+             ['@'] + [' '] * 4,
+             ['@'] + [' '] * 4]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
+
+        self.env.clean_firing_points()
+
+        self.rotate_agent(agent_id, 'DOWN')
+        self.move_agent(agent_id, [3, 2])
+        self.env.update_map({agent_id: 'FIRE'})
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [['@'] + [' '] * 4,
+             ['@'] + [' '] * 4,
+             ['@'] + ['F'] + ['P'] + [' '] * 2,
+             ['@'] + [' '] * 4,
+             ['@'] + [' '] * 4]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
 
 
     def test_agent_rewards(self):
@@ -284,6 +311,11 @@ class TestHarvestEnv(unittest.TestCase):
     # TODO(ev) test if an agent walking into another agent that is going to move is allowed
     # TODO(ev) it should be but it isn't right now
     def test_agent_conflict(self):
+        # test that if an agents firing beam hits another agent everything is fine
+
+        # test that agents can't walk into other agents
+
+        # test that agents can walk into other agents if moves are de-conflicting
         pass
 
     def construct_map_1(self, agent_id, start_pos, start_orientation):

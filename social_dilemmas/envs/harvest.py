@@ -65,6 +65,7 @@ class HarvestEnv(MapEnv):
         self.spawn_points = []
         self.apple_points = []
         self.wall_points = []
+        self.firing_points = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
                 if self.base_map[row, col] == 'P':
@@ -149,6 +150,22 @@ class HarvestEnv(MapEnv):
         new_apples = self.spawn_apples()
         self.update_map_apples(new_apples)
 
+        # clean firing points out
+        self.clean_firing_points()
+
+    def clean_firing_points(self):
+        agent_pos = []
+        for agent in self.agents.values():
+            agent_pos.append(agent.get_pos().tolist())
+        for i in range(len(self.firing_points)):
+            # FIXME(ev) this will clear out an agent if an agent happens to be here
+            row, col = self.firing_points[i]
+            if [row, col] not in agent_pos:
+                self.map[row, col] = ' '
+            else:
+                self.map[row, col] = 'P'
+
+
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent"""
         # FIXME(ev) the agent window is currently a magic number
@@ -212,8 +229,9 @@ class HarvestEnv(MapEnv):
         firing_direction = ORIENTATIONS[firing_orientation]
         for i in range(num_fire_cells):
             next_cell = start_pos + firing_direction
-            if self.test_if_in_bounds(next_cell):
+            if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
                 self.map[next_cell[0], next_cell[1]] = 'F'
+                self.firing_points.append([next_cell[0], next_cell[1]])
                 start_pos += firing_direction
             else:
                 break
