@@ -15,14 +15,33 @@ COLOURS = {' ': [0, 0, 0],  # Black background
            'P': [0, 999, 999],  # Player #FIXME(ev) agents need to have different colors
            'F': [999, 999, 0]}  # Yellow firing beam
 
+
+# the axes look like
+# graphic is here to help me get my head in order
+# WARNING: increasing array position in the direction of down
+# so for example if you move_left when facing left
+# your y position decreases.
+#         ^
+#         |
+#         U
+#         P
+# <--LEFT*RIGHT---->
+#         D
+#         O
+#         W
+#         N
+#         |
+#         ∨
+
+
 # use keyword names so that it's easy to understand what the agent is calling
 ACTIONS = {'MOVE_LEFT':             [-1, 0],  # Move left
            'MOVE_RIGHT':            [1, 0],   # Move right
-           'MOVE_UP':               [0, 1],   # Move up
-           'MOVE_DOWN':             [0, -1],  # Move down
+           'MOVE_UP':               [0, -1],   # Move up
+           'MOVE_DOWN':             [0, 1],  # Move down
            'STAY':                  [0, 0],   # don't move
-           'TURN_CLOCKWISE':        [[0, 1], [-1, 0]],  # Rotate counter clockwise
-           'TURN_COUNTERCLOCKWISE': [[0, -1], [1, 0]],   # Move right
+           'TURN_CLOCKWISE':        [[0, -1], [1, 0]],  # Rotate counter clockwise
+           'TURN_COUNTERCLOCKWISE': [[0, 1], [-1, 0]],   # Move right
            'FIRE': 5}               # Fire 5 squares forward #FIXME(ev) is the firing in a straight line?
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
