@@ -27,8 +27,8 @@ class Controller:
         observations = []
 
         if render_full_vid:
-            images_path = VID_PATH + 'images/'
-            if not os.path.exists(images_path): os.makedirs(images_path)
+            shape = self.env.map.shape
+            full_obs = [np.zeros((shape[0],shape[1],3), dtype=np.uint8) for i in range(horizon)]
         
         for i in range(horizon):
             # TODO: use agent policy not just random actions
@@ -43,16 +43,13 @@ class Controller:
 
             if render_full_vid:
                 rgb_arr = self.env.map_to_colors()
-                utility_funcs.save_img(rgb_arr, images_path, 'img' + str(i) + '.png')
+                full_obs[i] = rgb_arr.astype(np.uint8)
 
             observations.append(obs['agent-0'])
             rewards.append(rew['agent-0'])
 
         if render_full_vid:
-            utility_funcs.make_video_from_image_dir(VID_PATH, img_folder=images_path)
-
-            # Clean up images
-            shutil.rmtree(images_path)
+            utility_funcs.make_video_from_rgb_imgs(full_obs, VID_PATH)
 
 
 if __name__=='__main__':

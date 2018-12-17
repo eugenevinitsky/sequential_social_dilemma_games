@@ -20,7 +20,7 @@ def make_video_from_image_dir(vid_path, img_folder, video_name='trajectory', fps
     make_video_from_rgb_imgs(rgb_imgs, vid_path, video_name=video_name, fps=fps)
 
 def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory', 
-                             fps=5, format="XVID"):
+                             fps=5, format="XVID", resize=(640,480)):
     """
     Create a video from a list of rgb arrays 
     """
@@ -28,8 +28,11 @@ def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory',
     
     video_path = vid_path + video_name + '.mp4'
 
-    frame = rgb_arrs[0]
-    height, width, layers = frame.shape
+    if resize is not None:
+        width, height = resize
+    else:
+        frame = rgb_arrs[0]
+        height, width, layers = frame.shape
 
     fourcc = cv2.VideoWriter_fourcc(*format)
     video = cv2.VideoWriter(video_path, fourcc, float(fps), (width,height))
@@ -38,6 +41,8 @@ def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory',
         percent_done = int((i / len(rgb_arrs)) * 100)
         if percent_done % 20 == 0:
             print("\t...", percent_done, "% of frames rendered")
+        if resize is not None:
+            image = cv2.resize(image, resize, interpolation=cv2.INTER_NEAREST)
         video.write(image)
 
     cv2.destroyAllWindows()
