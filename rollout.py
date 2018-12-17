@@ -21,7 +21,7 @@ class Controller:
         # TODO: initialize agents here
 
     def rollout_and_render(self, horizon=50, render_frames=False, 
-                           render_full_vid=True):
+                           render_full_vid=True, vid_path=VID_PATH):
         actions = []
         rewards = []
         observations = []
@@ -49,10 +49,15 @@ class Controller:
             rewards.append(rew['agent-0'])
 
         if render_full_vid:
-            utility_funcs.make_video_from_rgb_imgs(full_obs, VID_PATH)
+            utility_funcs.make_video_from_rgb_imgs(full_obs, vid_path)
 
 
 if __name__=='__main__':
+    if len(sys.argv) > 1:
+        vid_path = sys.argv[1]
+    else:
+        vid_path = VID_PATH
+
     c = Controller()
-    c.rollout_and_render()
+    c.rollout_and_render(vid_path=vid_path)
     
