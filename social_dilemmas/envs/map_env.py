@@ -7,6 +7,7 @@ Code partially adapted from PyColab: https://github.com/deepmind/pycolab
 from gym import Env
 import numpy as np
 from renderer import CursesUi
+import matplotlib.pyplot as plt
 
 
 class MapEnv(Env):
@@ -118,9 +119,11 @@ class MapEnv(Env):
                 rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
         return rgb_arr
 
-    def render(self, mode='human'):
+    def render_map(self, mode='human'):
         if self.render:
-            pass
+            rgb_arr = self.map_to_colors(self.map, self.color_map)
+            plt.imshow(rgb_arr, interpolation='nearest')
+            plt.show()
 
     def update_map(self, agent_actions):
         """Converts agent action tuples into a new map and new agewnt positions

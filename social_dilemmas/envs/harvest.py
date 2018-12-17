@@ -9,11 +9,11 @@ from social_dilemmas.envs.map_env import MapEnv
 APPLE_RADIUS = 2
 
 COLOURS = {' ': [0, 0, 0],  # Black background
-           '': [764, 0, 999],  # Board walls
-           '@': [764, 0, 999],  # Board walls
-           'A': [0, 999, 0],  # Green apples
-           'P': [0, 999, 999],  # Player #FIXME(ev) agents need to have different colors
-           'F': [999, 999, 0]}  # Yellow firing beam
+           '': [195, 0, 255],  # Board walls
+           '@': [195, 0, 255],  # Board walls
+           'A': [0, 255, 0],  # Green apples
+           'P': [0, 255, 255],  # Player #FIXME(ev) agents need to have different colors
+           'F': [255, 255, 0]}  # Yellow firing beam
 
 
 # the axes look like
