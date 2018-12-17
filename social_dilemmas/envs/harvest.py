@@ -158,11 +158,11 @@ class HarvestEnv(MapEnv):
         for agent in self.agents.values():
             agent_pos.append(agent.get_pos().tolist())
         for i in range(len(self.firing_points)):
-            # FIXME(ev) this will clear out an agent if an agent happens to be here
             row, col = self.firing_points[i]
             if [row, col] not in agent_pos:
                 self.map[row, col] = ' '
             else:
+                # put the agent back if they were temporarily obscured by the firing beam
                 self.map[row, col] = 'P'
 
 
