@@ -111,9 +111,12 @@ class MapEnv(Env):
             observations[agent.agent_id] = rgb_arr
         return observations
 
-    def map_to_colors(self, map, color_map):
+    def map_to_colors(self, map=None, color_map=None):
         """Converts a map to an array of RGB values"""
-        rgb_arr = np.zeros((map.shape[0], map.shape[1], 3))
+        if map is None: map=self.map
+        if color_map is None: color_map = self.color_map
+            
+        rgb_arr = np.zeros((map.shape[0], map.shape[1], 3), dtype=int)
         for row_elem in range(map.shape[0]):
             for col_elem in range(map.shape[1]):
                 rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
@@ -121,7 +124,7 @@ class MapEnv(Env):
 
     def render_map(self, mode='human'):
         if self.render:
-            rgb_arr = self.map_to_colors(self.map, self.color_map)
+            rgb_arr = self.map_to_colors()
             plt.imshow(rgb_arr, interpolation='nearest')
             plt.show()
 

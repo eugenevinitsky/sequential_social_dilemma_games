@@ -1,0 +1,44 @@
+import cv2
+import os
+import matplotlib.pyplot as plt
+
+def save_img(rgb_arr, path, name):
+    plt.imshow(rgb_arr, interpolation='nearest')
+    plt.savefig(path + name)
+
+def make_video_from_image_dir(vid_path, img_folder, video_name='trajectory', fps=5):
+    """
+    Create a video from a directory of images 
+    """
+    images = [img for img in os.listdir(img_folder) if img.endswith(".png")]
+
+    rgb_imgs = []
+    for i,image in enumerate(images):
+        img = cv2.imread(os.path.join(img_folder, image))
+        rgb_imgs.append(img)
+
+    make_video_from_rgb_imgs(rgb_imgs, vid_path, video_name=video_name, fps=fps)
+
+def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory', 
+                             fps=5, format="XVID"):
+    """
+    Create a video from a list of rgb arrays 
+    """
+    print("Rendering video...")
+    
+    video_path = vid_path + video_name + '.mp4'
+
+    frame = rgb_arrs[0]
+    height, width, layers = frame.shape
+
+    fourcc = cv2.VideoWriter_fourcc(*format)
+    video = cv2.VideoWriter(video_path, fourcc, float(fps), (width,height))
+
+    for i,image in enumerate(rgb_arrs):
+        percent_done = int((i / len(rgb_arrs)) * 100)
+        if percent_done % 20 == 0:
+            print("\t...", percent_done, "% of frames rendered")
+        video.write(image)
+
+    cv2.destroyAllWindows()
+    video.release()
