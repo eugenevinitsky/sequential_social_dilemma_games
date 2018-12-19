@@ -1,4 +1,4 @@
-# gridworld-games
+# Sequential Social Dilemma Games
 Repo for reproductions of deepmind gridworld papers
 
 # Setup instructions
