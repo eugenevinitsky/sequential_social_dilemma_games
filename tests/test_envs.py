@@ -8,8 +8,8 @@ from social_dilemmas.envs.agent import HarvestAgent
 MINI_HARVEST_MAP = [
     '@@@@@@',
     '@ P  @',
-    '@  A @',
-    '@ AAA@',
+    '@  AA@',
+    '@  AA@',
     '@  AP@',
     '@@@@@@',
 ]
@@ -25,6 +25,16 @@ TEST_MAP_1 = np.array(
      ['@'] + [' '] * 5 + ['@'],
      ['@'] + [' '] * 5 + ['@'],
      ['@'] * 7]
+)
+
+# basic empty map with 1 starting apple
+TEST_MAP_2 = np.array(
+    [['@'] * 6,
+     ['@'] + [' '] * 4 + ['@'],
+     ['@'] + [' '] * 4 + ['@'],
+     ['@'] + [' '] * 4 + ['@'],
+     ['@'] + [' '] * 2 + ['A'] + [' '] + ['@'],
+     ['@'] * 6]
 )
 
 import unittest
@@ -175,11 +185,19 @@ class TestHarvestEnv(unittest.TestCase):
 
     def test_apple_spawn(self):
         # render apples a bunch of times and check that the probabilities are within
-        # a bound of what you expect?
-        pass
+        # a bound of what you expect. This test fill fail w/ <INSERT> probability
+        self.env = HarvestEnv(MINI_HARVEST_MAP, num_agents=0)
+        self.env.reset()
+        self.env.map = TEST_MAP_2.copy()
 
-    def test_firing(self):
-        pass
+        # First test, if we step 300 times, are there five apples there?
+        # This should fail maybe one in 1000000 times
+        for i in range(300):
+            self.env.step({})
+        print(self.env.map)
+        print(self.env.base_map)
+        num_apples = self.env.count_apples(self.env.map)
+        self.assertEqual(num_apples, 5)
 
     def test_agent_actions(self):
         # FIXME(ev) the axes are 10000000% rotated oddly
@@ -238,8 +256,6 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.update_map({agent_id: 'MOVE_UP'})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
 
-        # TODO(ev) if an agent moves over an apple the apple disappears
-
         # rotations correctly update the agent state
         self.rotate_agent(agent_id, 'UP')
         # clockwise
@@ -291,6 +307,19 @@ class TestHarvestEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
+        # TODO(ev) if an agent moves over an apple the apple disappears
+        self.construct_map_1(agent_id, [4, 2], 'RIGHT')
+        self.env.update_map_apples(self.env.apple_points)
+        self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [['@', ' ', ' ', 'A', 'A'],
+             ['@', ' ', ' ', 'A', 'A'],
+             ['@', ' ', 'P', ' ', ' '],
+             ['@', ' ', ' ', ' ', ' '],
+             ['@', '@', '@', '@', '@']]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
 
     def test_agent_rewards(self):
         pass

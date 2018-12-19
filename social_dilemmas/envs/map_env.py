@@ -154,8 +154,8 @@ class MapEnv(Env):
     # Utility methods, move these eventually
     ########################################
 
-    def return_view(self, agent_pos, row_size, col_size):
-        """Given an agent position and view window, returns correct map part
+    def return_view(self, pos, row_size, col_size):
+        """Given an  position and view window, returns correct map part
 
         Note, if the agent asks for a view that exceeds the map bounds,
         it is padded with zeros
@@ -168,7 +168,7 @@ class MapEnv(Env):
         view: (np.ndarray) - a slice of the map for the agent to see
         """
         # FIXME(ev) this might be transposed
-        x, y = agent_pos
+        x, y = pos
         left_edge = x - col_size
         right_edge = x + col_size
         top_edge = y - row_size

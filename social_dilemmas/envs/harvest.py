@@ -175,28 +175,23 @@ class HarvestEnv(MapEnv):
         # iterate over the spawn points in self.ascii_map and compare it with
         # current points in self.map
 
-        # first pad the matrix so that we can iterate through nicely
-        # FIXME(ev) you shouldn't be doing the padding yourself here, this should be done
-        # by a utility method
-        pad_mat= self.pad_matrix(*[APPLE_RADIUS]*4, self.map)
-        new_map = np.zeros(self.map.shape)
+        new_apple_points = []
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            if self.base_map[row, col] == 'A':
-                # FIXME(ev) this padding probably needs to be moved into a method
-                row += APPLE_RADIUS
-                row += APPLE_RADIUS
-                window = pad_mat[row - APPLE_RADIUS:row + APPLE_RADIUS,
-                         col - APPLE_RADIUS:col + APPLE_RADIUS]
-                # compute how many apples are in window
-                unique, counts = np.unique(window, return_counts=True)
-                counts_dict = dict(zip(unique, counts))
-                num_apples = counts_dict.get('A', 0)
-                spawn_prob = SPAWN_PROB[min(num_apples, 3)]
-                rand_num = np.random.rand(1)[0]
-                if rand_num < spawn_prob:
-                    new_map[row, col] = 'A'
-        return new_map
+            window = self.return_view(self.apple_points[i], APPLE_RADIUS, APPLE_RADIUS)
+            num_apples = self.count_apples(window)
+            spawn_prob = SPAWN_PROB[min(num_apples, 3)]
+            rand_num = np.random.rand(1)[0]
+            if rand_num < spawn_prob:
+                new_apple_points.append([row, col])
+        return new_apple_points
+
+    def count_apples(self, window):
+        # compute how many apples are in window
+        unique, counts = np.unique(window, return_counts=True)
+        counts_dict = dict(zip(unique, counts))
+        num_apples = counts_dict.get('A', 0)
+        return num_apples
 
     def build_walls(self):
         for i in range(len(self.wall_points)):
@@ -239,12 +234,12 @@ class HarvestEnv(MapEnv):
     # def update_map(self, points_list):
     #     """Takes in a list of tuples consisting of ('row', 'col', 'new_ascii_char' and makes a new map"""
 
-    def update_map_apples(self, new_apple_map):
-        for row in range(self.map.shape[0]):
-            for col in range(self.map.shape[1]):
-                if new_apple_map[row, col] == 'A' and self.map[row, col] != 'P':
-                    # FIXME(ev) what if a firing beam is here at this time?
-                    self.map[row, col] = 'A'
+    def update_map_apples(self, new_apple_points):
+        for i in range(len(new_apple_points)):
+            row, col = new_apple_points[i]
+            if self.map[row, col] != 'P':
+                # FIXME(ev) what if a firing beam is here at this time?
+                self.map[row, col] = 'A'
 
     # FIXME(ev) this can be a general property of map_env or a util
     def rotate_action(self, action_vec, orientation):
