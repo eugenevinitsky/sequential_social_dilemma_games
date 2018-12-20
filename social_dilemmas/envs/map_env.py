@@ -6,7 +6,6 @@ Code partially adapted from PyColab: https://github.com/deepmind/pycolab
 
 from gym import Env
 import numpy as np
-from renderer import CursesUi
 import matplotlib.pyplot as plt
 
 
@@ -33,8 +32,6 @@ class MapEnv(Env):
         self.agents = {}
         self.render = render
         self.color_map = color_map
-        if render:
-            self.renderer = CursesUi({}, 1)
 
     # FIXME(ev) move this to a utils eventually
     def ascii_to_numpy(self, ascii_list):
@@ -113,9 +110,11 @@ class MapEnv(Env):
 
     def map_to_colors(self, map=None, color_map=None):
         """Converts a map to an array of RGB values"""
-        if map is None: map=self.map
-        if color_map is None: color_map = self.color_map
-            
+        if map is None:
+            map = self.map
+        if color_map is None:
+            color_map = self.color_map
+
         rgb_arr = np.zeros((map.shape[0], map.shape[1], 3), dtype=int)
         for row_elem in range(map.shape[0]):
             for col_elem in range(map.shape[1]):
@@ -154,8 +153,8 @@ class MapEnv(Env):
     # Utility methods, move these eventually
     ########################################
 
-    def return_view(self, agent_pos, row_size, col_size):
-        """Given an agent position and view window, returns correct map part
+    def return_view(self, pos, row_size, col_size):
+        """Given an  position and view window, returns correct map part
 
         Note, if the agent asks for a view that exceeds the map bounds,
         it is padded with zeros
@@ -168,17 +167,17 @@ class MapEnv(Env):
         view: (np.ndarray) - a slice of the map for the agent to see
         """
         # FIXME(ev) this might be transposed
-        x, y = agent_pos
+        x, y = pos
         left_edge = x - col_size
         right_edge = x + col_size
         top_edge = y - row_size
         bot_edge = y + row_size
         pad_mat, left_pad, top_pad = self.pad_if_needed(left_edge, right_edge,
-                                  top_edge, bot_edge, self.map)
+                                                        top_edge, bot_edge, self.map)
         x += left_pad
         y += top_pad
         view = pad_mat[x - col_size: x + col_size + 1,
-               y - row_size: y + row_size + 1]
+                       y - row_size: y + row_size + 1]
         return view
 
     def pad_if_needed(self, left_edge, right_edge, top_edge, bot_edge, matrix):
