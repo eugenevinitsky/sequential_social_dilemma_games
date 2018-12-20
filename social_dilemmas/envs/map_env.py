@@ -3,13 +3,12 @@
 
 Code partially adapted from PyColab: https://github.com/deepmind/pycolab
 """
-
-from gym import Env
+from ray.rllib.env import MultiAgentEnv
 import numpy as np
 from renderer import CursesUi
 
 
-class MapEnv(Env):
+class MapEnv(MultiAgentEnv):
 
     def __init__(self, ascii_map, color_map, num_agents=1, render=True):
         """

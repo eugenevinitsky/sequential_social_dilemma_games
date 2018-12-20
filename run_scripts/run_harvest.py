@@ -30,7 +30,7 @@ if __name__ == "__main__":
     run_experiments({
         "test": {
             "run": "PPO",
-            "env": "multi_cartpole",
+            "env": "havest_env",
             "stop": {
                 "training_iteration": 100
             },
