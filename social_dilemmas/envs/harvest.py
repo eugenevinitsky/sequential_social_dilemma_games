@@ -115,6 +115,9 @@ class HarvestEnv(MapEnv):
         agent_pos: list of tuples with keys as agent ids
         """
 
+        # clean firing points out
+        self.clean_firing_points()
+
         # FIXME(ev) walls are not showing up in the map
         # Move the agents
         for agent_id, action in agent_actions.items():
@@ -145,9 +148,6 @@ class HarvestEnv(MapEnv):
         # spawn the apples
         new_apples = self.spawn_apples()
         self.update_map_apples(new_apples)
-
-        # clean firing points out
-        self.clean_firing_points()
 
     def clean_firing_points(self):
         agent_pos = []
