@@ -40,5 +40,3 @@ script:
   - python setup.py install
   - nose2 --with-coverage
 
-after_success:
-  - coveralls
