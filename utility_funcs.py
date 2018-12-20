@@ -25,7 +25,8 @@ def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory',
     Create a video from a list of rgb arrays 
     """
     print("Rendering video...")
-    
+    if vid_path[-1] != '/':
+        vid_path += '/'
     video_path = vid_path + video_name + '.mp4'
 
     frame = rgb_arrs[0]

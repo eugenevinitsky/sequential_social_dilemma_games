@@ -8,8 +8,8 @@ import os
 import sys
 import shutil
 
-# TODO: Agents incorporated and controlled from here. 
 
+# TODO: Agents incorporated and controlled from here.
 
 
 class Controller(object):
@@ -21,15 +21,19 @@ class Controller(object):
         # TODO: initialize agents here
 
     def rollout_and_render(self, horizon=50, render_frames=False,
-                           render_full_vid=True):
+                           render_full_vid=True, path=None):
         actions = []
         rewards = []
         observations = []
 
         if render_full_vid:
-            path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
+            if path is None:
+                path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
+                if not os.path.exists(path):
+                    os.makedirs(path)
             images_path = path + '/images/'
-            if not os.path.exists(images_path): os.makedirs(images_path)
+            if not os.path.exists(images_path):
+                os.makedirs(images_path)
 
         for i in range(horizon):
             # TODO: use agent policy not just random actions

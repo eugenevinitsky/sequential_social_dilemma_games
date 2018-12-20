@@ -31,7 +31,6 @@ COLOURS = {' ': [0, 0, 0],  # Black background
 #         W
 #         N
 #         |
-#         ∨
 
 # Currently on the display though we are off by 90 degrees
 
