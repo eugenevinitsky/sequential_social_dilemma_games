@@ -1,6 +1,7 @@
 '''Unit tests for all of the envs'''
 
 import numpy as np
+import unittest
 
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.agent import HarvestAgent
@@ -37,8 +38,6 @@ TEST_MAP_2 = np.array(
      ['@'] * 6]
 )
 
-import unittest
-
 
 class TestHarvestEnv(unittest.TestCase):
     def setUp(self):
@@ -73,7 +72,7 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.reset()
 
         agent_id = 'agent-0'
-        self.construct_map_1(agent_id, [3,3], 'UP')
+        self.construct_map_1(agent_id, [3, 3], 'UP')
 
         # check if the view is correct if there are no walls
         agent_view = self.env.agents[agent_id].get_state()
@@ -182,7 +181,6 @@ class TestHarvestEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
-
     def test_apple_spawn(self):
         # render apples a bunch of times and check that the probabilities are within
         # a bound of what you expect. This test fill fail w/ <INSERT> probability
@@ -203,7 +201,7 @@ class TestHarvestEnv(unittest.TestCase):
         # FIXME(ev) the axes are 10000000% rotated oddly
         # set up the map
         agent_id = 'agent-0'
-        self.construct_map_1(agent_id, [2,2], 'LEFT')
+        self.construct_map_1(agent_id, [2, 2], 'LEFT')
 
         # Test that all the moves and rotations work correctly
         # test when facing left
@@ -252,7 +250,7 @@ class TestHarvestEnv(unittest.TestCase):
 
         # if an agent tries to move through a wall they should stay in the same place
         self.rotate_agent(agent_id, 'UP')
-        self.move_agent(agent_id, [2,1])
+        self.move_agent(agent_id, [2, 1])
         self.env.update_map({agent_id: 'MOVE_UP'})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
 
@@ -357,6 +355,7 @@ class TestHarvestEnv(unittest.TestCase):
         self.add_agent(agent_id, start_pos, start_orientation, self.env, 2)
         # TODO(ev) hack for now, can't call render logic or else it will spawn apples
         self.move_agent(agent_id, start_pos)
+
 
 if __name__ == '__main__':
     unittest.main()

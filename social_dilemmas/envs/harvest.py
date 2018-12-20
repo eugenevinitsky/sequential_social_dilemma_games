@@ -1,6 +1,4 @@
-from gym.spaces import Box
 import numpy as np
-import six
 
 from social_dilemmas.envs.agent import HarvestAgent
 from social_dilemmas.constants import HARVEST_MAP
@@ -14,7 +12,6 @@ COLOURS = {' ': [0, 0, 0],  # Black background
            'A': [0, 255, 0],  # Green apples
            'P': [0, 255, 255],  # Player #FIXME(ev) agents need to have different colors
            'F': [255, 255, 0]}  # Yellow firing beam
-
 
 # the axes look like
 # graphic is here to help me get my head in order
@@ -36,14 +33,14 @@ COLOURS = {' ': [0, 0, 0],  # Black background
 
 # FIXME(EV) the axes are 10000000% rotated oddly
 # use keyword names so that it's easy to understand what the agent is calling
-ACTIONS = {'MOVE_LEFT':             [-1, 0],  # Move left
-           'MOVE_RIGHT':            [1, 0],   # Move right
-           'MOVE_UP':               [0, -1],   # Move up
-           'MOVE_DOWN':             [0, 1],  # Move down
-           'STAY':                  [0, 0],   # don't move
-           'TURN_CLOCKWISE':        [[0, -1], [1, 0]],  # Rotate counter clockwise
-           'TURN_COUNTERCLOCKWISE': [[0, 1], [-1, 0]],   # Move right
-           'FIRE': 5}               # Fire 5 squares forward #FIXME(ev) is the firing in a straight line?
+ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
+           'MOVE_RIGHT': [1, 0],  # Move right
+           'MOVE_UP': [0, -1],  # Move up
+           'MOVE_DOWN': [0, 1],  # Move down
+           'STAY': [0, 0],  # don't move
+           'TURN_CLOCKWISE': [[0, -1], [1, 0]],  # Rotate counter clockwise
+           'TURN_COUNTERCLOCKWISE': [[0, 1], [-1, 0]],  # Move right
+           'FIRE': 5}  # Fire 5 squares forward #FIXME(ev) is the firing in a straight line?
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
@@ -51,6 +48,7 @@ ORIENTATIONS = {'LEFT': [-1, 0],
                 'RIGHT': [1, 0],
                 'UP': [0, 1],
                 'DOWN': [0, -1]}
+
 
 # FIXME(ev) this whole thing is in serious need of some abstraction
 # FIXME(ev) switching betewen types and lists in a pretty arbitrary manner
@@ -75,7 +73,6 @@ class HarvestEnv(MapEnv):
                     self.wall_points.append([row, col])
         # TODO(ev) this call should be in the superclass
         self.setup_agents()
-
 
     # FIXME(ev) action_space should really be defined in the agents
     @property
@@ -164,7 +161,6 @@ class HarvestEnv(MapEnv):
                 # put the agent back if they were temporarily obscured by the firing beam
                 self.map[row, col] = 'P'
 
-
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent"""
         # FIXME(ev) the agent window is currently a magic number
@@ -231,7 +227,8 @@ class HarvestEnv(MapEnv):
                 break
 
     # def update_map(self, points_list):
-    #     """Takes in a list of tuples consisting of ('row', 'col', 'new_ascii_char' and makes a new map"""
+    #     """Takes in a list of tuples consisting of ('row',
+    #  'col', 'new_ascii_char' and makes a new map"""
 
     def update_map_apples(self, new_apple_points):
         for i in range(len(new_apple_points)):

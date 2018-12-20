@@ -113,9 +113,11 @@ class MapEnv(Env):
 
     def map_to_colors(self, map=None, color_map=None):
         """Converts a map to an array of RGB values"""
-        if map is None: map=self.map
-        if color_map is None: color_map = self.color_map
-            
+        if map is None:
+            map = self.map
+        if color_map is None:
+            color_map = self.color_map
+
         rgb_arr = np.zeros((map.shape[0], map.shape[1], 3), dtype=int)
         for row_elem in range(map.shape[0]):
             for col_elem in range(map.shape[1]):
@@ -174,11 +176,11 @@ class MapEnv(Env):
         top_edge = y - row_size
         bot_edge = y + row_size
         pad_mat, left_pad, top_pad = self.pad_if_needed(left_edge, right_edge,
-                                  top_edge, bot_edge, self.map)
+                                                        top_edge, bot_edge, self.map)
         x += left_pad
         y += top_pad
         view = pad_mat[x - col_size: x + col_size + 1,
-               y - row_size: y + row_size + 1]
+                       y - row_size: y + row_size + 1]
         return view
 
     def pad_if_needed(self, left_edge, right_edge, top_edge, bot_edge, matrix):

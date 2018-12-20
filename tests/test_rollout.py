@@ -15,5 +15,6 @@ class TestRollout(unittest.TestCase):
         if os.path.exists("trajectory.mp4"):
             os.remove("trajectory.mp4")
 
+
 if __name__ == '__main__':
     unittest.main()

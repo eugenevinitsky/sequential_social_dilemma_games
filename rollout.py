@@ -22,7 +22,6 @@ class Controller(object):
 
     def rollout_and_render(self, horizon=50, render_frames=False,
                            render_full_vid=True, path=None):
-        actions = []
         rewards = []
         observations = []
 
