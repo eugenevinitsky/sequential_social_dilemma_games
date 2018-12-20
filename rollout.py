@@ -8,6 +8,7 @@ import os
 import sys
 import shutil
 
+
 class Controller(object):
 
     def __init__(self):
@@ -31,8 +32,8 @@ class Controller(object):
                 os.makedirs(images_path)
 
             shape = self.env.map.shape
-            full_obs = [np.zeros((shape[0],shape[1],3), dtype=np.uint8) for i in range(horizon)]
-        
+            full_obs = [np.zeros((shape[0], shape[1], 3), dtype=np.uint8) for i in range(horizon)]
+
         for i in range(horizon):
             # TODO: use agent policy not just random actions
             rand_action = np.random.randint(8)
@@ -52,17 +53,16 @@ class Controller(object):
             rewards.append(rew['agent-0'])
 
         if render_full_vid:
-            import ipdb; ipdb.set_trace()
             utility_funcs.make_video_from_rgb_imgs(full_obs, path)
 
             # Clean up images
             shutil.rmtree(images_path)
 
-if __name__=='__main__':
+
+if __name__ == '__main__':
     c = Controller()
     if len(sys.argv) > 1:
         vid_path = sys.argv[1]
         c.rollout_and_render(path=vid_path)
     else:
         c.rollout_and_render()
-
