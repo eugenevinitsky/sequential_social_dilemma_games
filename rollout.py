@@ -10,7 +10,7 @@ import shutil
 
 # TODO: Agents incorporated and controlled from here. 
 
-VID_PATH = "/Users/natasha/Dropbox (MIT)/Projects/AgentEmpathy/vids/"
+VID_PATH = "/home/natasha/Dropbox (MIT)/Projects/AgentEmpathy/vids/"
 
 class Controller:
 
