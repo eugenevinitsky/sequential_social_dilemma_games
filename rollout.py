@@ -8,11 +8,8 @@ import os
 import sys
 import shutil
 
-# TODO: Agents incorporated and controlled from here. 
 
-VID_PATH = "/Users/natasha/Dropbox (MIT)/Projects/AgentEmpathy/vids/"
-
-class Controller:
+class Controller(object):
 
     def __init__(self):
         self.env = HarvestEnv(num_agents=1, render=True)
@@ -20,16 +17,23 @@ class Controller:
 
         # TODO: initialize agents here
 
-    def rollout_and_render(self, horizon=50, render_frames=False, 
-                           render_full_vid=True):
-        actions = []
+    def rollout_and_render(self, horizon=50, render_frames=False,
+                           render_full_vid=True, path=None):
         rewards = []
         observations = []
 
         if render_full_vid:
-            images_path = VID_PATH + 'images/'
-            if not os.path.exists(images_path): os.makedirs(images_path)
-        
+            if path is None:
+                path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
+                if not os.path.exists(path):
+                    os.makedirs(path)
+            images_path = path + '/images/'
+            if not os.path.exists(images_path):
+                os.makedirs(images_path)
+
+            shape = self.env.map.shape
+            full_obs = [np.zeros((shape[0], shape[1], 3), dtype=np.uint8) for i in range(horizon)]
+
         for i in range(horizon):
             # TODO: use agent policy not just random actions
             rand_action = np.random.randint(8)
@@ -43,19 +47,22 @@ class Controller:
 
             if render_full_vid:
                 rgb_arr = self.env.map_to_colors()
-                utility_funcs.save_img(rgb_arr, images_path, 'img' + str(i) + '.png')
+                full_obs[i] = rgb_arr.astype(np.uint8)
 
             observations.append(obs['agent-0'])
             rewards.append(rew['agent-0'])
 
         if render_full_vid:
-            utility_funcs.make_video_from_image_dir(VID_PATH, img_folder=images_path)
+            utility_funcs.make_video_from_rgb_imgs(full_obs, path)
 
             # Clean up images
             shutil.rmtree(images_path)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     c = Controller()
-    c.rollout_and_render()
-    
+    if len(sys.argv) > 1:
+        vid_path = sys.argv[1]
+        c.rollout_and_render(path=vid_path)
+    else:
+        c.rollout_and_render()

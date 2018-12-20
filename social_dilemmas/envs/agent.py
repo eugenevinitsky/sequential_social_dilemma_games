@@ -125,6 +125,7 @@ HARVEST_ACTIONS = {0: 'MOVE_LEFT',  # Move left
                    6: 'TURN_COUNTERCLOCKWISE',  # Rotate clockwise
                    7: 'FIRE'}  # Fire forward
 
+
 class HarvestAgent(Agent):
 
     def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):

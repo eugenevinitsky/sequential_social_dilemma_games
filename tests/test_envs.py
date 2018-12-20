@@ -1,6 +1,7 @@
 '''Unit tests for all of the envs'''
 
 import numpy as np
+import unittest
 
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.agent import HarvestAgent
@@ -36,8 +37,6 @@ TEST_MAP_2 = np.array(
      ['@'] + [' '] * 2 + ['A'] + [' '] + ['@'],
      ['@'] * 6]
 )
-
-import unittest
 
 
 class TestHarvestEnv(unittest.TestCase):
