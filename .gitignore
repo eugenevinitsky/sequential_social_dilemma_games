@@ -8,6 +8,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+.idea/
 build/
 develop-eggs/
 dist/
@@ -113,3 +114,6 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# project specific
+/videos

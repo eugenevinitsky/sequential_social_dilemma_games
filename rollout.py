@@ -10,9 +10,9 @@ import shutil
 
 # TODO: Agents incorporated and controlled from here. 
 
-VID_PATH = "/Users/natasha/Dropbox (MIT)/Projects/AgentEmpathy/vids/"
 
-class Controller:
+
+class Controller(object):
 
     def __init__(self):
         self.env = HarvestEnv(num_agents=1, render=True)
@@ -20,16 +20,17 @@ class Controller:
 
         # TODO: initialize agents here
 
-    def rollout_and_render(self, horizon=50, render_frames=False, 
+    def rollout_and_render(self, horizon=50, render_frames=False,
                            render_full_vid=True):
         actions = []
         rewards = []
         observations = []
 
         if render_full_vid:
-            images_path = VID_PATH + 'images/'
+            path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
+            images_path = path + '/images/'
             if not os.path.exists(images_path): os.makedirs(images_path)
-        
+
         for i in range(horizon):
             # TODO: use agent policy not just random actions
             rand_action = np.random.randint(8)
@@ -49,13 +50,12 @@ class Controller:
             rewards.append(rew['agent-0'])
 
         if render_full_vid:
-            utility_funcs.make_video_from_image_dir(VID_PATH, img_folder=images_path)
+            utility_funcs.make_video_from_image_dir(path, img_folder=images_path)
 
             # Clean up images
             shutil.rmtree(images_path)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     c = Controller()
     c.rollout_and_render()
-    
