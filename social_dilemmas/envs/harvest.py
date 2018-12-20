@@ -98,8 +98,9 @@ class HarvestEnv(MapEnv):
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
 
         self.build_walls()
-        self.update_map_apples(self.spawn_apples())
+        self.update_map_apples(self.apple_points)
 
+        # TODO(ev) this needs to be moved into the executor as well
         for agent in self.agents.values():
             agent.update_map_agent_pos(self.spawn_point())
             agent.update_map_agent_rot(self.spawn_rotation())
@@ -124,34 +125,53 @@ class HarvestEnv(MapEnv):
         for agent_id, action in agent_actions.items():
             agent = self.agents[agent_id]
             selected_action = ACTIONS[action]
-            # TODO(ev) updating the agents has to be synchronous?
-            # TODO(ev) for example, an agent may try to walk through another agent
-            # TODO(ev) which is fine if the other agent is going to move
             # TODO(ev) do we overlay firing over the agent or what?
             if 'MOVE' in action or 'STAY' in action:
                 # rotate the selected action appropriately
                 rot_action = self.rotate_action(selected_action, agent.get_orientation())
                 new_pos = agent.get_pos() + rot_action
-                agent.update_map_agent_pos(new_pos)
+                self.reserved_slots.append((new_pos, 'P'))
             elif 'TURN' in action:
-                # FIXME(ev) move into a utility method
                 new_rot = self.update_rotation(action, agent.get_orientation())
                 agent.update_map_agent_rot(new_rot)
             else:
-                self.update_map_fire(agent.get_pos().tolist(), agent.get_orientation())
+                self.reserved_slots.append(self.update_map_fire(agent.get_pos().tolist(),
+                                                                agent.get_orientation()))
 
-        # TODO(ev) there should be an empty map that we add all new actions to
-        # TODO(ev) doing agents, than fire, than apples is 3x as slow
-        # FIXME(EV) define a sum operation on these numpy matrices that let us "add" the strings
+
+    def execute_reservations(self):
+        curr_agent_pos = [agent.get_pos() for agent in self.agents.values()]
+        # split the reservations into three
+        agent_moves = []
+        apple_pos = []
+        firing_pos = []
+        for slot in self.reserved_slots:
+            row, col = slot[0], slot[1]
+            if slot[2] == 'P':
+                agent_moves.append([row, col])
+            elif slot[2] == 'A':
+                apple_pos.append([row, col])
+            else:
+                firing_pos.append([row, col])
+        # First move the agents in a conflict-free way
+        for move in agent_moves:
+            if move in curr_agent_pos
+
+        agent.update_map_agent_pos(new_pos)
+        # Next fire the beams
+        # update the apples
+
+        self.update_map_apples(new_apples)
+
+        # clean firing points out
+        self.clean_firing_points()
+
 
     def custom_map_update(self):
         "See parent class"
         # spawn the apples
         new_apples = self.spawn_apples()
-        self.update_map_apples(new_apples)
-
-        # clean firing points out
-        self.clean_firing_points()
+        self.reserved_slots.append(new_apples)
 
     def clean_firing_points(self):
         agent_pos = []
@@ -183,7 +203,7 @@ class HarvestEnv(MapEnv):
             spawn_prob = SPAWN_PROB[min(num_apples, 3)]
             rand_num = np.random.rand(1)[0]
             if rand_num < spawn_prob:
-                new_apple_points.append([row, col])
+                new_apple_points.append((row, col, 'A'))
         return new_apple_points
 
     def count_apples(self, window):
@@ -222,14 +242,16 @@ class HarvestEnv(MapEnv):
         num_fire_cells = 5
         start_pos = np.asarray(firing_pos)
         firing_direction = ORIENTATIONS[firing_orientation]
+        firing_points = []
         for i in range(num_fire_cells):
             next_cell = start_pos + firing_direction
             if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
                 self.map[next_cell[0], next_cell[1]] = 'F'
-                self.firing_points.append([next_cell[0], next_cell[1]])
+                firing_points.append((next_cell[0], next_cell[1], 'F'))
                 start_pos += firing_direction
             else:
                 break
+        return firing_points
 
     # def update_map(self, points_list):
     #     """Takes in a list of tuples consisting of ('row', 'col', 'new_ascii_char' and makes a new map"""
