@@ -1,0 +1,45 @@
+language: python
+
+cache: pip
+
+python:
+  - "3.5"
+
+os: linux
+
+dist: trusty
+
+sudo: required
+
+before_install:
+  # Setup conda (needed for opencv, ray dependency)
+  # WARNING: enforces py3.6
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - export TEST_FLAG="True"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  - conda info -a
+  - conda install python=3.5.2
+  - python -V
+
+  # Set up requirements for flow
+  - conda env create -f environment.yml
+  - source activate causal
+
+install:
+  - pip install flake8 .
+  - pip install nose
+
+before_script:
+  - flake8 --version
+  - flake8 --show-source
+
+script:
+  - python setup.py install
+  - nose2 --with-coverage
+
+after_success:
+  - coveralls
