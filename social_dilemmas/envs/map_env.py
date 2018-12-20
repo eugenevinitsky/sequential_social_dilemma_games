@@ -6,7 +6,6 @@ Code partially adapted from PyColab: https://github.com/deepmind/pycolab
 
 from gym import Env
 import numpy as np
-from renderer import CursesUi
 import matplotlib.pyplot as plt
 
 
@@ -33,8 +32,6 @@ class MapEnv(Env):
         self.agents = {}
         self.render = render
         self.color_map = color_map
-        if render:
-            self.renderer = CursesUi({}, 1)
 
     # FIXME(ev) move this to a utils eventually
     def ascii_to_numpy(self, ascii_list):
