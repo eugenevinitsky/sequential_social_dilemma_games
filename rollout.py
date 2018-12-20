@@ -8,10 +8,6 @@ import os
 import sys
 import shutil
 
-
-# TODO: Agents incorporated and controlled from here.
-
-
 class Controller(object):
 
     def __init__(self):
@@ -34,6 +30,9 @@ class Controller(object):
             if not os.path.exists(images_path):
                 os.makedirs(images_path)
 
+            shape = self.env.map.shape
+            full_obs = [np.zeros((shape[0],shape[1],3), dtype=np.uint8) for i in range(horizon)]
+        
         for i in range(horizon):
             # TODO: use agent policy not just random actions
             rand_action = np.random.randint(8)
@@ -47,18 +46,23 @@ class Controller(object):
 
             if render_full_vid:
                 rgb_arr = self.env.map_to_colors()
-                utility_funcs.save_img(rgb_arr, images_path, 'img' + str(i) + '.png')
+                full_obs[i] = rgb_arr.astype(np.uint8)
 
             observations.append(obs['agent-0'])
             rewards.append(rew['agent-0'])
 
         if render_full_vid:
-            utility_funcs.make_video_from_image_dir(path, img_folder=images_path)
+            import ipdb; ipdb.set_trace()
+            utility_funcs.make_video_from_rgb_imgs(full_obs, path)
 
             # Clean up images
             shutil.rmtree(images_path)
 
-
-if __name__ == '__main__':
+if __name__=='__main__':
     c = Controller()
-    c.rollout_and_render()
+    if len(sys.argv) > 1:
+        vid_path = sys.argv[1]
+        c.rollout_and_render(path=vid_path)
+    else:
+        c.rollout_and_render()
+
