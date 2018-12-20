@@ -346,6 +346,7 @@ class TestHarvestEnv(unittest.TestCase):
 
     def construct_map_1(self, agent_id, start_pos, start_orientation):
         # overwrite the map
+        self.env.reset()
         self.env.map = TEST_MAP_1.copy()
         self.clear_agents()
 

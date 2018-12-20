@@ -92,6 +92,7 @@ class HarvestEnv(MapEnv):
     # TODO(ev) this can probably be moved into the superclass
     def reset_map(self):
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
+        self.firing_points = []
 
         self.build_walls()
         self.update_map_apples(self.spawn_apples())
@@ -114,6 +115,9 @@ class HarvestEnv(MapEnv):
             the updated map to store
         agent_pos: list of tuples with keys as agent ids
         """
+
+        # clean firing points out
+        self.clean_firing_points()
 
         # FIXME(ev) walls are not showing up in the map
         # Move the agents
@@ -145,9 +149,6 @@ class HarvestEnv(MapEnv):
         # spawn the apples
         new_apples = self.spawn_apples()
         self.update_map_apples(new_apples)
-
-        # clean firing points out
-        self.clean_firing_points()
 
     def clean_firing_points(self):
         agent_pos = []
