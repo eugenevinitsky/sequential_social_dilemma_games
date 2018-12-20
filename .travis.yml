@@ -30,7 +30,7 @@ before_install:
 
 install:
   - pip install flake8 .
-  - pip install nose2
+  - pip install pytest
 
 before_script:
   - flake8 --version
@@ -38,5 +38,5 @@ before_script:
 
 script:
   - python setup.py install
-  - nose2 --with-coverage
+  - python -m pytest
 

@@ -6,3 +6,4 @@ dependencies:
         - numpy==1.14.0
         - gym==0.10.5
         - matplotlib==3.0.2
+        - opencv-python

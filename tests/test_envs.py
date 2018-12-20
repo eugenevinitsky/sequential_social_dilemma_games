@@ -192,8 +192,6 @@ class TestHarvestEnv(unittest.TestCase):
         # This should fail maybe one in 1000000 times
         for i in range(300):
             self.env.step({})
-        print(self.env.map)
-        print(self.env.base_map)
         num_apples = self.env.count_apples(self.env.map)
         self.assertEqual(num_apples, 5)
 
@@ -309,6 +307,7 @@ class TestHarvestEnv(unittest.TestCase):
         self.construct_map_1(agent_id, [4, 2], 'RIGHT')
         self.env.update_map_apples(self.env.apple_points)
         self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        self.env.update_map({agent_id: 'MOVE_LEFT'})
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [['@', ' ', ' ', 'A', 'A'],
