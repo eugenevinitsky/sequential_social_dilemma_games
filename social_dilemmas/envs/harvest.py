@@ -92,6 +92,7 @@ class HarvestEnv(MapEnv):
     # TODO(ev) this can probably be moved into the superclass
     def reset_map(self):
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
+        self.firing_points = []
 
         self.build_walls()
         self.update_map_apples(self.spawn_apples())
