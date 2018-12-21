@@ -370,7 +370,28 @@ class TestHarvestEnv(unittest.TestCase):
         # TODO(ev) if a firing beam hits an apple, should the apple disappear?
 
     def test_agent_rewards(self):
-        pass
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
+        self.env.reset()
+        self.env.agents['agent-0'].update_map_agent_pos([2, 2])
+        self.env.agents['agent-1'].update_map_agent_pos([3, 2])
+        self.env.agents['agent-0'].update_map_agent_rot('UP')
+        self.env.agents['agent-1'].update_map_agent_rot('UP')
+        # walk over an apple
+        self.env.update_map({'agent-0': 'MOVE_DOWN',
+                             'agent-1': 'MOVE_DOWN'})
+        self.env.execute_reservations()
+        reward_0 = self.env.agents['agent-0'].compute_reward()
+        reward_1 = self.env.agents['agent-1'].compute_reward()
+        self.assertTrue(reward_0 == 1)
+        self.assertTrue(reward_1 == 1)
+        # fire a beam from agent 1 to 2
+        self.env.agents['agent-1'].update_map_agent_rot('LEFT')
+        self.env.update_map({'agent-1': 'FIRE'})
+        self.env.execute_reservations()
+        reward_0 = self.env.agents['agent-0'].compute_reward()
+        reward_1 = self.env.agents['agent-1'].compute_reward()
+        self.assertTrue(reward_0 == -50)
+        self.assertTrue(reward_1 == -1)
 
     def test_agent_conflict(self):
         # test that if there are two agents and two spawning points, they hit both of them
@@ -418,7 +439,6 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.execute_reservations()
 
         # test that if two agents have a conflicting move then the tie is broken randomly
-        np.random.seed(123)
         num_agent_1 = 0.0
         num_agent_2 = 0.0
         for i in range(5000):
@@ -430,7 +450,7 @@ class TestHarvestEnv(unittest.TestCase):
                 num_agent_1 += 1
             else:
                 num_agent_2 += 1
-        agent_1_percent = num_agent_1/(num_agent_1 + num_agent_2)
+        agent_1_percent = num_agent_1 / (num_agent_1 + num_agent_2)
         within_bounds = .48 < agent_1_percent and agent_1_percent < .52
         self.assertTrue(within_bounds)
 
@@ -474,7 +494,6 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.reset()
         self.clear_agents()
 
-        # TODO(ev) It seems like this map might be transposed...
         # replace the agents with agents with smaller views
         self.add_agent(agent_id, start_pos, start_orientation, self.env, 2)
         # TODO(ev) hack for now, can't call render logic or else it will spawn apples
