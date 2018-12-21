@@ -84,33 +84,10 @@ class HarvestEnv(MapEnv):
         self.update_map_apples(self.apple_points)
         self.setup_agents()
 
-    def update_map(self, agent_actions):
-        """Converts agent action tuples into a new map and new agent positions
-
-        Parameters
-        ----------
-        agent_actions: dict
-            dict with agent_id as key and action as value
-        """
-
-        # TODO(ev) split into three methods: clean(), update_map, custom_update_map
-        self.clean_firing_points()
-
-        for agent_id, action in agent_actions.items():
-            agent = self.agents[agent_id]
-            selected_action = ACTIONS[action]
-            if 'MOVE' in action or 'STAY' in action:
-                # rotate the selected action appropriately
-                rot_action = self.rotate_action(selected_action, agent.get_orientation())
-                new_pos = agent.get_pos() + rot_action
-                self.reserved_slots.append((*new_pos, 'P', agent_id))
-            elif 'TURN' in action:
-                new_rot = self.update_rotation(action, agent.get_orientation())
-                agent.update_map_agent_rot(new_rot)
-            else:
-                agent.fire_beam()
-                self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
-                                                            agent.get_orientation())
+    def custom_action(self, agent):
+        agent.fire_beam()
+        self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
+                                                    agent.get_orientation())
 
     def execute_custom_reservations(self):
         apple_pos = []
@@ -136,7 +113,7 @@ class HarvestEnv(MapEnv):
         if len(new_apples) > 0:
             self.reserved_slots += new_apples
 
-    def clean_firing_points(self):
+    def clean_map(self):
         agent_pos = []
         for agent in self.agents.values():
             agent_pos.append(agent.get_pos().tolist())

@@ -160,8 +160,41 @@ class MapEnv(Env):
         """
         raise NotImplementedError
 
+    def update_map(self, agent_actions):
+        """Converts agent action tuples into a new map and new agent positions
+
+        Parameters
+        ----------
+        agent_actions: dict
+            dict with agent_id as key and action as value
+        """
+
+        # TODO(ev) split into three methods: clean(), update_map, custom_update_map
+        self.clean_map()
+
+        for agent_id, action in agent_actions.items():
+            agent = self.agents[agent_id]
+            selected_action = ACTIONS[action]
+            # TODO(ev) these two parts of the actions
+            if 'MOVE' in action or 'STAY' in action:
+                # rotate the selected action appropriately
+                rot_action = self.rotate_action(selected_action, agent.get_orientation())
+                new_pos = agent.get_pos() + rot_action
+                self.reserved_slots.append((*new_pos, 'P', agent_id))
+            elif 'TURN' in action:
+                new_rot = self.update_rotation(action, agent.get_orientation())
+                agent.update_map_agent_rot(new_rot)
+            else:
+                self.custom_action(agent)
+
+    def custom_action(self, agent):
+        pass
+
     def custom_map_update(self):
         """Custom map updates that don't have to do with agent actions"""
+        pass
+
+    def clean_map(self):
         pass
 
     def execute_reservations(self):

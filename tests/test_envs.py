@@ -370,7 +370,7 @@ class TestHarvestEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
-        self.env.clean_firing_points()
+        self.env.clean_map()
 
         self.rotate_agent(agent_id, 'DOWN')
         self.move_agent(agent_id, [3, 2])
