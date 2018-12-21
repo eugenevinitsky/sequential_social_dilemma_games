@@ -13,22 +13,6 @@ COLOURS = {' ': [0, 0, 0],  # Black background
            'P': [0, 255, 255],  # Player #FIXME(ev) agents need to have different colors
            'F': [255, 255, 0]}  # Yellow firing beam
 
-# the axes look like
-# graphic is here to help me get my head in order
-# WARNING: increasing array position in the direction of down
-# so for example if you move_left when facing left
-# your y position decreases.
-#         ^
-#         |
-#         U
-#         P
-# <--LEFT*RIGHT---->
-#         D
-#         O
-#         W
-#         N
-#         |
-
 # Add custom actions to the agent
 ACTIONS['FIRE'] = 5
 

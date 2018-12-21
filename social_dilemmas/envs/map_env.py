@@ -21,6 +21,22 @@ ORIENTATIONS = {'LEFT': [-1, 0],
                 'UP': [0, -1],
                 'DOWN': [0, 1]}
 
+# the axes look like
+# graphic is here to help me get my head in order
+# WARNING: increasing array position in the direction of down
+# so for example if you move_left when facing left
+# your y position decreases.
+#         ^
+#         |
+#         U
+#         P
+# <--LEFT*RIGHT---->
+#         D
+#         O
+#         W
+#         N
+#         |
+
 
 class MapEnv(Env):
 
