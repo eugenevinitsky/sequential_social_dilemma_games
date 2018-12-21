@@ -60,6 +60,7 @@ class HarvestEnv(MapEnv):
             self.agents[agent_id] = agent
 
     def custom_reset(self):
+        """Initialize the walls and the apples"""
         self.firing_points = []
         self.build_walls()
         self.update_map_apples(self.apple_points)
@@ -76,6 +77,7 @@ class HarvestEnv(MapEnv):
                                                     agent.get_orientation())
 
     def execute_custom_reservations(self):
+        """Execute firing and then apple spawning"""
         apple_pos = []
         firing_pos = []
         for slot in self.reserved_slots:
@@ -100,6 +102,7 @@ class HarvestEnv(MapEnv):
             self.reserved_slots += new_apples
 
     def clean_map(self):
+        """Put back agents and apples that were hidden by the fining beam"""
         agent_pos = []
         for agent in self.agents.values():
             agent_pos.append(agent.get_pos().tolist())
@@ -117,8 +120,13 @@ class HarvestEnv(MapEnv):
         self.hidden_agents = []
 
     def spawn_apples(self):
-        # iterate over the spawn points in self.ascii_map and compare it with
-        # current points in self.map
+        """Construct the apples spawned in this step.
+
+        Returns
+        -------
+        new_apple_points: list of 2-d lists
+            a list containing lists indicating the spawn positions of new apples
+        """
 
         new_apple_points = []
         for i in range(len(self.apple_points)):
