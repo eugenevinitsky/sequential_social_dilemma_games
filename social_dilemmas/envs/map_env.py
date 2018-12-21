@@ -105,7 +105,6 @@ class MapEnv(Env):
         """
         self.reserved_slots = []
         self.reset_map()
-        import ipdb; ipdb.set_trace()
         self.custom_map_update()
         # TODO(ev) the agent pos and orientation setting code is duplicated
 

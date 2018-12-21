@@ -228,7 +228,6 @@ class HarvestEnv(MapEnv):
             spawn_prob = SPAWN_PROB[min(num_apples, 3)]
             rand_num = np.random.rand(1)[0]
             if rand_num < spawn_prob:
-                import ipdb; ipdb.set_trace()
                 new_apple_points.append((row, col, 'A'))
         return new_apple_points
 
