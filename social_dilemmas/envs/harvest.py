@@ -77,8 +77,14 @@ class HarvestEnv(MapEnv):
 
     def custom_reset(self):
         self.firing_points = []
-
+        self.build_walls()
         self.update_map_apples(self.apple_points)
+
+    # TODO(ev) this is almost certainly used by every environment
+    def build_walls(self):
+        for i in range(len(self.wall_points)):
+            row, col = self.wall_points[i]
+            self.map[row, col] = '@'
 
     def custom_action(self, agent):
         agent.fire_beam()
@@ -147,11 +153,6 @@ class HarvestEnv(MapEnv):
         counts_dict = dict(zip(unique, counts))
         num_apples = counts_dict.get('A', 0)
         return num_apples
-
-    def build_walls(self):
-        for i in range(len(self.wall_points)):
-            row, col = self.wall_points[i]
-            self.map[row, col] = '@'
 
     def update_map_fire(self, firing_pos, firing_orientation):
         num_fire_cells = 5

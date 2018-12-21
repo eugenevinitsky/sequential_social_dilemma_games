@@ -188,8 +188,10 @@ class MapEnv(Env):
     def reset_map(self):
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.setup_agents()
-        self.build_walls()
         self.custom_reset()
+
+    def custom_reset(self):
+        pass
 
     def custom_action(self, agent):
         pass
