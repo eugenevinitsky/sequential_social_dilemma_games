@@ -2,7 +2,7 @@ import numpy as np
 
 from social_dilemmas.envs.agent import HarvestAgent
 from social_dilemmas.constants import HARVEST_MAP
-from social_dilemmas.envs.map_env import MapEnv
+from social_dilemmas.envs.map_env import MapEnv, ACTIONS, ORIENTATIONS
 
 APPLE_RADIUS = 2
 
@@ -29,26 +29,10 @@ COLOURS = {' ': [0, 0, 0],  # Black background
 #         N
 #         |
 
-# Currently on the display though we are off by 90 degrees
-
-# FIXME(EV) the axes are 10000000% rotated oddly
-# use keyword names so that it's easy to understand what the agent is calling
-ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
-           'MOVE_RIGHT': [1, 0],  # Move right
-           'MOVE_UP': [0, -1],  # Move up
-           'MOVE_DOWN': [0, 1],  # Move down
-           'STAY': [0, 0],  # don't move
-           'TURN_CLOCKWISE': [[0, -1], [1, 0]],  # Rotate counter clockwise
-           'TURN_COUNTERCLOCKWISE': [[0, 1], [-1, 0]],  # Move right
-           'FIRE': 5}  # Fire 5 squares forward #FIXME(ev) is the firing in a straight line?
+# Add custom actions to the agent
+ACTIONS['FIRE'] = 5
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
-
-ORIENTATIONS = {'LEFT': [-1, 0],
-                'RIGHT': [1, 0],
-                'UP': [0, -1],
-                'DOWN': [0, 1]}
-
 
 # FIXME(ev) this whole thing is in serious need of some abstraction
 # FIXME(ev) switching betewen types and lists in a pretty arbitrary manner
@@ -59,7 +43,6 @@ class HarvestEnv(MapEnv):
     def __init__(self, ascii_map=HARVEST_MAP, num_agents=1, render=False):
         super().__init__(ascii_map, COLOURS, num_agents, render)
         # set up the list of spawn points
-        self.spawn_points = []
         self.apple_points = []
         self.wall_points = []
         self.firing_points = []
@@ -197,28 +180,6 @@ class HarvestEnv(MapEnv):
             row, col = self.wall_points[i]
             self.map[row, col] = '@'
 
-    # FIXME(ev) this is probably shared by every env
-    def spawn_point(self):
-        """Returns a randomly selected spawn point"""
-        not_occupied = False
-        rand_int = 0
-        # select a spawn point
-        # TODO(ev) though it won't ever happen, this can generate an infinite loop and is slow
-        # replace this with an operation over a set
-        while not not_occupied:
-            num_ints = len(self.spawn_points)
-            rand_int = np.random.randint(num_ints)
-            spawn_point = self.spawn_points[rand_int]
-            # FIXME(ev) this will break when we implement rotation colors
-            if self.map[spawn_point[0], spawn_point[1]] != 'P':
-                not_occupied = True
-        return np.array(self.spawn_points[rand_int])
-
-    def spawn_rotation(self):
-        """Return a randomly selected initial rotation for an agent"""
-        rand_int = np.random.randint(len(ORIENTATIONS.keys()))
-        return list(ORIENTATIONS.keys())[rand_int]
-
     def update_map_fire(self, firing_pos, firing_orientation):
         num_fire_cells = 5
         start_pos = np.asarray(firing_pos)
@@ -245,52 +206,3 @@ class HarvestEnv(MapEnv):
                 self.map[row, col] = 'A'
             elif self.map[row, col] == 'F' and [row, col] not in self.hidden_agents:
                 self.hidden_apples.append([row, col])
-
-    # TODO(ev) this can be a general property of map_env or a util
-    def rotate_action(self, action_vec, orientation):
-        # WARNING: Note, we adopt the physics convention that \theta=0 is in the +y direction
-        if orientation == 'UP':
-            return action_vec
-        elif orientation == 'LEFT':
-            return self.rotate_left(action_vec)
-        elif orientation == 'RIGHT':
-            return self.rotate_right(action_vec)
-        else:
-            return self.rotate_left(self.rotate_left(action_vec))
-
-    def rotate_left(self, action_vec):
-        return np.dot(ACTIONS['TURN_COUNTERCLOCKWISE'], action_vec)
-
-    def rotate_right(self, action_vec):
-        return np.dot(ACTIONS['TURN_CLOCKWISE'], action_vec)
-
-    # TODO(ev) this should be an agent property
-    def update_rotation(self, action, curr_orientation):
-        if action == 'TURN_COUNTERCLOCKWISE':
-            if curr_orientation == 'LEFT':
-                return 'DOWN'
-            elif curr_orientation == 'DOWN':
-                return 'RIGHT'
-            elif curr_orientation == 'RIGHT':
-                return 'UP'
-            else:
-                return 'LEFT'
-        else:
-            if curr_orientation == 'LEFT':
-                return 'UP'
-            elif curr_orientation == 'UP':
-                return 'RIGHT'
-            elif curr_orientation == 'RIGHT':
-                return 'DOWN'
-            else:
-                return 'LEFT'
-
-    # TODO(ev) this definitely should go into utils or the general agent class
-    def test_if_in_bounds(self, pos):
-        """Checks if a selected cell is outside the range of the map"""
-        if pos[0] < 0 or pos[0] >= self.map.shape[0]:
-            return False
-        elif pos[1] < 0 or pos[1] >= self.map.shape[1]:
-            return False
-        else:
-            return True

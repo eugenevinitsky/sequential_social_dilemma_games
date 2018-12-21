@@ -8,6 +8,19 @@ from gym import Env
 import numpy as np
 import matplotlib.pyplot as plt
 
+ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
+           'MOVE_RIGHT': [1, 0],  # Move right
+           'MOVE_UP': [0, -1],  # Move up
+           'MOVE_DOWN': [0, 1],  # Move down
+           'STAY': [0, 0],  # don't move
+           'TURN_CLOCKWISE': [[0, -1], [1, 0]],  # Rotate counter clockwise
+           'TURN_COUNTERCLOCKWISE': [[0, 1], [-1, 0]]}  # Move right
+
+ORIENTATIONS = {'LEFT': [-1, 0],
+                'RIGHT': [1, 0],
+                'UP': [0, -1],
+                'DOWN': [0, 1]}
+
 
 class MapEnv(Env):
 
@@ -37,6 +50,7 @@ class MapEnv(Env):
         self.pos_dict = {}
         self.render = render
         self.color_map = color_map
+        self.spawn_points = []  # where agents can appear
 
     # FIXME(ev) move this to a utils eventually
     def ascii_to_numpy(self, ascii_list):
@@ -223,6 +237,25 @@ class MapEnv(Env):
     def next_agent_pos(self, agent_pos):
         """Finds the agent at pos """
 
+    def spawn_point(self):
+        """Returns a randomly selected spawn point"""
+        not_occupied = False
+        rand_int = 0
+        # select a spawn point
+        # replace this with an operation over a set
+        while not not_occupied:
+            num_ints = len(self.spawn_points)
+            rand_int = np.random.randint(num_ints)
+            spawn_point = self.spawn_points[rand_int]
+            if self.map[spawn_point[0], spawn_point[1]] != 'P':
+                not_occupied = True
+        return np.array(self.spawn_points[rand_int])
+
+    def spawn_rotation(self):
+        """Return a randomly selected initial rotation for an agent"""
+        rand_int = np.random.randint(len(ORIENTATIONS.keys()))
+        return list(ORIENTATIONS.keys())[rand_int]
+
     ########################################
     # Utility methods, move these eventually
     ########################################
@@ -275,3 +308,52 @@ class MapEnv(Env):
         pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
                          'constant', constant_values=(const_val, const_val))
         return pad_mat
+
+    # TODO(ev) this can be a general property of map_env or a util
+    def rotate_action(self, action_vec, orientation):
+        # WARNING: Note, we adopt the physics convention that \theta=0 is in the +y direction
+        if orientation == 'UP':
+            return action_vec
+        elif orientation == 'LEFT':
+            return self.rotate_left(action_vec)
+        elif orientation == 'RIGHT':
+            return self.rotate_right(action_vec)
+        else:
+            return self.rotate_left(self.rotate_left(action_vec))
+
+    def rotate_left(self, action_vec):
+        return np.dot(ACTIONS['TURN_COUNTERCLOCKWISE'], action_vec)
+
+    def rotate_right(self, action_vec):
+        return np.dot(ACTIONS['TURN_CLOCKWISE'], action_vec)
+
+    # TODO(ev) this should be an agent property
+    def update_rotation(self, action, curr_orientation):
+        if action == 'TURN_COUNTERCLOCKWISE':
+            if curr_orientation == 'LEFT':
+                return 'DOWN'
+            elif curr_orientation == 'DOWN':
+                return 'RIGHT'
+            elif curr_orientation == 'RIGHT':
+                return 'UP'
+            else:
+                return 'LEFT'
+        else:
+            if curr_orientation == 'LEFT':
+                return 'UP'
+            elif curr_orientation == 'UP':
+                return 'RIGHT'
+            elif curr_orientation == 'RIGHT':
+                return 'DOWN'
+            else:
+                return 'LEFT'
+
+    # TODO(ev) this definitely should go into utils or the general agent class
+    def test_if_in_bounds(self, pos):
+        """Checks if a selected cell is outside the range of the map"""
+        if pos[0] < 0 or pos[0] >= self.map.shape[0]:
+            return False
+        elif pos[1] < 0 or pos[1] >= self.map.shape[1]:
+            return False
+        else:
+            return True

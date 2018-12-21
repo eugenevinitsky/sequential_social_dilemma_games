@@ -259,9 +259,7 @@ class TestHarvestEnv(unittest.TestCase):
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.map)
 
-
     def test_agent_actions(self):
-        # FIXME(ev) the axes are 10000000% rotated oddly
         # set up the map
         agent_id = 'agent-0'
         self.construct_map(TEST_MAP_1.copy(), agent_id, [2, 2], 'LEFT')
