@@ -123,8 +123,7 @@ class HarvestEnv(MapEnv):
                 agent.update_map_agent_rot(new_rot)
             else:
                 self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
-                                                                agent.get_orientation())
-
+                                                            agent.get_orientation())
 
     def execute_reservations(self):
 

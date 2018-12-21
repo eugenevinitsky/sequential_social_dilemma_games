@@ -12,7 +12,7 @@ import shutil
 class Controller(object):
 
     def __init__(self):
-        self.env = HarvestEnv(num_agents=1, render=True)
+        self.env = HarvestEnv(num_agents=2, render=True)
         self.env.reset()
 
         # TODO: initialize agents here
@@ -36,8 +36,9 @@ class Controller(object):
 
         for i in range(horizon):
             # TODO: use agent policy not just random actions
-            rand_action = np.random.randint(8)
-            obs, rew, dones, info, = self.env.step({'agent-0': rand_action})
+            rand_action = np.random.randint(8, size=2)
+            obs, rew, dones, info, = self.env.step({'agent-0': rand_action[0],
+                                                    'agent-1': rand_action[1]})
 
             print("timestep", i, "action", rand_action, "reward", rew['agent-0'])
             sys.stdout.flush()

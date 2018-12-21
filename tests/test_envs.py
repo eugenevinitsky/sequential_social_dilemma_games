@@ -367,6 +367,8 @@ class TestHarvestEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
+        # TODO(ev) if a firing beam hits an apple, should the apple disappear?
+
     def test_agent_rewards(self):
         pass
 
@@ -415,7 +417,7 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.update_map({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_LEFT'})
         self.env.execute_reservations()
 
-        #test that if two agents have a conflicting move then the tie is broken randomly
+        # test that if two agents have a conflicting move then the tie is broken randomly
         np.random.seed(123)
         num_agent_1 = 0.0
         num_agent_2 = 0.0
@@ -424,7 +426,7 @@ class TestHarvestEnv(unittest.TestCase):
             self.env.agents['agent-1'].update_map_agent_pos([3, 4])
             self.env.update_map({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_UP'})
             self.env.execute_reservations()
-            if self.env.agents['agent-0'].get_pos().tolist() == [3,3]:
+            if self.env.agents['agent-0'].get_pos().tolist() == [3, 3]:
                 num_agent_1 += 1
             else:
                 num_agent_2 += 1
