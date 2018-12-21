@@ -6,13 +6,13 @@ from ray.tune.registry import register_env
 
 from social_dilemmas.envs.harvest import HarvestEnv
 
-
 if __name__ == "__main__":
     ray.init(num_cpus=1)
 
     # Simple environment with `num_agents` independent cartpole entities
     def env_creator(_):
         return HarvestEnv()
+
     register_env("harvest_env", env_creator)
     single_env = HarvestEnv()
     obs_space = single_env.observation_space
@@ -27,7 +27,6 @@ if __name__ == "__main__":
 
     def policy_mapping_fn(_):
         return 'shared'
-
 
     run_experiments({
         "test": {
@@ -48,7 +47,7 @@ if __name__ == "__main__":
                 },
                 # FIXME(ev) magic number
                 "model": {"dim": 3, "conv_filters":
-                    [[4, [2, 2], 1]]}
+                          [[4, [2, 2], 1]]}
             },
         }
     })
