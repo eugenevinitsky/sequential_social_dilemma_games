@@ -29,6 +29,9 @@ class MapEnv(Env):
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
+        # keeps track of positions that agents have said they want to move to
+        # as well as the intended action in that slot
+        self.reserved_slots = []
         self.agents = {}
         self.render = render
         self.color_map = color_map
@@ -74,6 +77,8 @@ class MapEnv(Env):
 
         self.update_map(agent_actions)
         self.custom_map_update()
+        self.execute_reservations()
+        self.reserved_slots = []
 
         observations = {}
         rewards = {}
@@ -82,7 +87,7 @@ class MapEnv(Env):
         for agent in self.agents.values():
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
-            rewards[agent.agent_id] = agent.get_reward()
+            rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
         return observations, rewards, dones, info
 
@@ -98,6 +103,7 @@ class MapEnv(Env):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
+        self.reserved_slots = []
         self.reset_map()
         self.custom_map_update()
         # TODO(ev) the agent pos and orientation setting code is duplicated
@@ -127,8 +133,8 @@ class MapEnv(Env):
             plt.imshow(rgb_arr, interpolation='nearest')
             plt.show()
 
-    def update_map(self, agent_actions):
-        """Converts agent action tuples into a new map and new agewnt positions
+    def agent_updates(self, agent_actions):
+        """Converts agent action tuples into desired changes to the map
 
         Returns
         -------
@@ -142,12 +148,19 @@ class MapEnv(Env):
         """Custom map updates that don't have to do with agent actions"""
         pass
 
+    def execute_reservations(self):
+        # executes the queued actions and map updates
+        raise NotImplementedError
+
     def setup_agents(self):
         raise NotImplementedError
 
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent"""
         raise NotImplementedError
+
+    def next_agent_pos(self, agent_pos):
+        """Finds the agent at pos """
 
     ########################################
     # Utility methods, move these eventually

@@ -46,8 +46,8 @@ SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
 ORIENTATIONS = {'LEFT': [-1, 0],
                 'RIGHT': [1, 0],
-                'UP': [0, 1],
-                'DOWN': [0, -1]}
+                'UP': [0, -1],
+                'DOWN': [0, 1]}
 
 
 # FIXME(ev) this whole thing is in serious need of some abstraction
@@ -87,7 +87,8 @@ class HarvestEnv(MapEnv):
     def setup_agents(self):
         for i in range(self.num_agents):
             agent_id = 'agent-' + str(i)
-            self.agents[agent_id] = self.create_agent(agent_id)
+            agent = HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation(), self, 3)
+            self.agents[agent_id] = agent
 
     # TODO(ev) this can probably be moved into the superclass
     def reset_map(self):
@@ -95,13 +96,9 @@ class HarvestEnv(MapEnv):
         self.firing_points = []
 
         self.build_walls()
-        self.update_map_apples(self.spawn_apples())
+        self.update_map_apples(self.apple_points)
+        self.setup_agents()
 
-        for agent in self.agents.values():
-            agent.update_map_agent_pos(self.spawn_point())
-            agent.update_map_agent_rot(self.spawn_rotation())
-
-    # FIXME(ev) most of this is general and can be moved, only apples need to be done here
     def update_map(self, agent_actions):
         """Converts agent action tuples into a new map and new agent positions
 
@@ -109,46 +106,105 @@ class HarvestEnv(MapEnv):
         ----------
         agent_actions: dict
             dict with agent_id as key and action as value
-        Returns
-        -------
-        new_map: numpy ndarray
-            the updated map to store
-        agent_pos: list of tuples with keys as agent ids
         """
 
-        # clean firing points out
         self.clean_firing_points()
 
-        # FIXME(ev) walls are not showing up in the map
-        # Move the agents
         for agent_id, action in agent_actions.items():
             agent = self.agents[agent_id]
             selected_action = ACTIONS[action]
-            # TODO(ev) updating the agents has to be synchronous?
-            # TODO(ev) for example, an agent may try to walk through another agent
-            # TODO(ev) which is fine if the other agent is going to move
-            # TODO(ev) do we overlay firing over the agent or what?
             if 'MOVE' in action or 'STAY' in action:
                 # rotate the selected action appropriately
                 rot_action = self.rotate_action(selected_action, agent.get_orientation())
                 new_pos = agent.get_pos() + rot_action
-                agent.update_map_agent_pos(new_pos)
+                self.reserved_slots.append((*new_pos, 'P', agent_id))
             elif 'TURN' in action:
-                # FIXME(ev) move into a utility method
                 new_rot = self.update_rotation(action, agent.get_orientation())
                 agent.update_map_agent_rot(new_rot)
             else:
-                self.update_map_fire(agent.get_pos().tolist(), agent.get_orientation())
+                self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
+                                                            agent.get_orientation())
 
-        # TODO(ev) there should be an empty map that we add all new actions to
-        # TODO(ev) doing agents, than fire, than apples is 3x as slow
-        # FIXME(EV) define a sum operation on these numpy matrices that let us "add" the strings
+    def execute_reservations(self):
+
+        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+        agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
+
+        # agent moves keyed by ids
+        agent_moves = {}
+
+        # lists of moves and their corresponding agents
+        move_slots = []
+        agent_to_slot = []
+
+        apple_pos = []
+        firing_pos = []
+        for slot in self.reserved_slots:
+            row, col = slot[0], slot[1]
+            if slot[2] == 'P':
+                agent_id = slot[3]
+                agent_moves[agent_id] = [row, col]
+                move_slots.append([row, col])
+                agent_to_slot.append(agent_id)
+            elif slot[2] == 'A':
+                apple_pos.append([row, col])
+            else:
+                firing_pos.append([row, col])
+
+        # First, resolve conflicts between two agents that want the same spot
+        if len(agent_to_slot) > 0:
+
+            # a random agent will win the slot
+            shuffle_list = list(zip(agent_to_slot, move_slots))
+            np.random.shuffle(shuffle_list)
+            agent_to_slot, move_slots = zip(*shuffle_list)
+            unique_move, indices, return_count = np.unique(move_slots, return_index=True,
+                                                           return_counts=True, axis=0)
+            search_list = np.array(move_slots)
+            # if there are any conflicts over a space
+            if np.any(return_count > 1):
+                for move, index, count in zip(unique_move, indices, return_count):
+                    if count > 1:
+                        self.agents[agent_to_slot[index]].update_map_agent_pos(move)
+                        # remove all the other moves that would have conflicted
+                        remove_indices = np.where((search_list == move).all(axis=1))[0]
+                        all_agents_id = [agent_to_slot[i] for i in remove_indices]
+                        # all other agents now stay in place
+                        for agent_id in all_agents_id:
+                            agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
+
+            for agent_id, move in agent_moves.items():
+                if move in curr_agent_pos:
+                    # find the agent that is currently at that spot, check where they will be next
+                    # if they're going to move away, go ahead and move into their spot
+                    conflicting_agent_id = agent_by_pos[tuple(move)]
+                    # a STAY command has been issued or the other agent hasn't been issued a command,
+                    # don't do anything
+                    if agent_id == conflicting_agent_id or \
+                            conflicting_agent_id not in agent_moves.keys():
+                        continue
+                    elif agent_moves[conflicting_agent_id] != move:
+                        self.agents[agent_id].update_map_agent_pos(move)
+                else:
+                    self.agents[agent_id].update_map_agent_pos(move)
+
+        # TODO(ev) move this into a custom execute method, the above is pretty general
+        # Next fire the beams
+        for pos in firing_pos:
+            row, col = pos
+            self.map[row, col] = 'F'
+            self.firing_points.append([row, col])
+
+        # update the apples
+        self.update_map_apples(apple_pos)
+        self.reserved_slots = []
 
     def custom_map_update(self):
         "See parent class"
         # spawn the apples
         new_apples = self.spawn_apples()
-        self.update_map_apples(new_apples)
+        if len(new_apples) > 0:
+            self.reserved_slots += new_apples
 
     def clean_firing_points(self):
         agent_pos = []
@@ -162,11 +218,6 @@ class HarvestEnv(MapEnv):
                 # put the agent back if they were temporarily obscured by the firing beam
                 self.map[row, col] = 'P'
 
-    def create_agent(self, agent_id, *args):
-        """Takes an agent id and agents args and returns an agent"""
-        # FIXME(ev) the agent window is currently a magic number
-        return HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation(), self, 3)
-
     def spawn_apples(self):
         # iterate over the spawn points in self.ascii_map and compare it with
         # current points in self.map
@@ -179,7 +230,7 @@ class HarvestEnv(MapEnv):
             spawn_prob = SPAWN_PROB[min(num_apples, 3)]
             rand_num = np.random.rand(1)[0]
             if rand_num < spawn_prob:
-                new_apple_points.append([row, col])
+                new_apple_points.append((row, col, 'A'))
         return new_apple_points
 
     def count_apples(self, window):
@@ -200,6 +251,8 @@ class HarvestEnv(MapEnv):
         not_occupied = False
         rand_int = 0
         # select a spawn point
+        # TODO(ev) though it won't ever happen, this can generate an infinite loop and is slow
+        # replace this with an operation over a set
         while not not_occupied:
             num_ints = len(self.spawn_points)
             rand_int = np.random.randint(num_ints)
@@ -218,27 +271,25 @@ class HarvestEnv(MapEnv):
         num_fire_cells = 5
         start_pos = np.asarray(firing_pos)
         firing_direction = ORIENTATIONS[firing_orientation]
+        firing_points = []
         for i in range(num_fire_cells):
             next_cell = start_pos + firing_direction
             if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
                 self.map[next_cell[0], next_cell[1]] = 'F'
-                self.firing_points.append([next_cell[0], next_cell[1]])
+                firing_points.append((next_cell[0], next_cell[1], 'F'))
                 start_pos += firing_direction
             else:
                 break
-
-    # def update_map(self, points_list):
-    #     """Takes in a list of tuples consisting of ('row',
-    #  'col', 'new_ascii_char' and makes a new map"""
+        return firing_points
 
     def update_map_apples(self, new_apple_points):
         for i in range(len(new_apple_points)):
             row, col = new_apple_points[i]
-            if self.map[row, col] != 'P':
-                # FIXME(ev) what if a firing beam is here at this time?
+            if self.map[row, col] != 'P' and self.map[row, col] != 'F':
+                # TODO(ev) what if a firing beam is here at this time?
                 self.map[row, col] = 'A'
 
-    # FIXME(ev) this can be a general property of map_env or a util
+    # TODO(ev) this can be a general property of map_env or a util
     def rotate_action(self, action_vec, orientation):
         # WARNING: Note, we adopt the physics convention that \theta=0 is in the +y direction
         if orientation == 'UP':
@@ -256,7 +307,7 @@ class HarvestEnv(MapEnv):
     def rotate_right(self, action_vec):
         return np.dot(ACTIONS['TURN_CLOCKWISE'], action_vec)
 
-    # FIXME(ev) this should be an agent property
+    # TODO(ev) this should be an agent property
     def update_rotation(self, action, curr_orientation):
         if action == 'TURN_COUNTERCLOCKWISE':
             if curr_orientation == 'LEFT':
@@ -277,7 +328,7 @@ class HarvestEnv(MapEnv):
             else:
                 return 'LEFT'
 
-    # FIXME(ev) this definitely should go into utils or the general agent class
+    # TODO(ev) this definitely should go into utils or the general agent class
     def test_if_in_bounds(self, pos):
         """Checks if a selected cell is outside the range of the map"""
         if pos[0] < 0 or pos[0] >= self.map.shape[0]:
