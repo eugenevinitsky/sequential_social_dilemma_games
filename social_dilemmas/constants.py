@@ -21,3 +21,30 @@ HARVEST_MAP = [
     '@ A    A     AAA  A  P          A    @',
     '@       P     A         P  P P     P @',
     '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@']
+
+CLEANUP_MAP = [
+'@@@@@@@@@@@@@@@@@@'
+'@FFFFFF     BBBBB@'
+'@HHHHHH      BBBB@'
+'@FFFFFF     BBBBB@'
+'@FFFFF  P    BBBB@'
+'@FFFFF    P BBBBB@'
+'@HHHHH       BBBB@'
+'@FFFFF      BBBBB@'
+'@HHHHHHSSSSSSBBBB@'
+'@HHHHHHSSSSSSBBBB@'
+'@FFFFF   P P BBBB@'
+'@HHHHH   P  BBBBB@'
+'@FFFFFF    P BBBB@'
+'@HHHHHH P   BBBBB@'
+'@FFFFF       BBBB@'
+'@HHHH    P  BBBBB@'
+'@FFFFF       BBBB@'
+'@HHHHH  P P BBBBB@'
+'@FFFFF       BBBB@'
+'@HHHH       BBBBB@'
+'@FFFFF       BBBB@'
+'@HHHHH      BBBBB@'
+'@FFFFF       BBBB@'
+'@HHHH       BBBBB@'
+'@@@@@@@@@@@@@@@@@@']

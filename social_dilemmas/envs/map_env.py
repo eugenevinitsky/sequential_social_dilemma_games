@@ -208,19 +208,27 @@ class MapEnv(Env):
 
     def custom_reset(self):
         """Reset custom elements of the map"""
-        pass
+        raise NotImplementedError
 
     def custom_action(self, agent):
         """Allows agents to take actions that are not move or turn"""
-        pass
+        raise NotImplementedError
 
     def custom_map_update(self):
         """Custom map updates that don't have to do with agent actions"""
-        pass
+        raise NotImplementedError
 
     def clean_map(self):
-        """Clean map of elements that should be removed"""
-        pass
+        """Clean map of elements that should be removed. Executed every step/"""
+        raise NotImplementedError
+
+    def execute_custom_reservations(self):
+        """Execute reserved slots that do not have to do with moving"""
+        raise NotImplementedError
+
+    def setup_agents(self):
+        """Constructs all the agents in self.agent"""
+        raise NotImplementedError
 
     def execute_reservations(self):
         """Takes all the reserved slots and decides which move has priority"""
@@ -281,13 +289,6 @@ class MapEnv(Env):
 
         self.execute_custom_reservations()
         self.reserved_slots = []
-
-    def execute_custom_reservations(self):
-        """Execute reserved slots that do not have to do with moving"""
-        raise NotImplementedError
-
-    def setup_agents(self):
-        raise NotImplementedError
 
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent.
