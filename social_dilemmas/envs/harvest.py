@@ -119,7 +119,6 @@ class HarvestEnv(MapEnv):
             row, col = self.wall_points[i]
             self.map[row, col] = '@'
 
-
     def spawn_apples(self):
         """Construct the apples spawned in this step.
 

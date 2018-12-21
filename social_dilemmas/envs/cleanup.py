@@ -1,8 +1,5 @@
-import numpy as np
-
-from social_dilemmas.envs.agent import CleanupAgent
 from social_dilemmas.constants import HARVEST_MAP
-from social_dilemmas.envs.map_env import MapEnv, ACTIONS, ORIENTATIONS
+from social_dilemmas.envs.map_env import MapEnv, ACTIONS
 
 # TODO(ev) add waste colors
 COLOURS = {' ': [0, 0, 0],  # Black background
@@ -17,6 +14,7 @@ ACTIONS['FIRE'] = 5
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
+
 class CleanupEnv(MapEnv):
 
     def __init__(self, ascii_map=HARVEST_MAP, num_agents=1, render=False):
@@ -26,26 +24,21 @@ class CleanupEnv(MapEnv):
         """Reset custom elements of the map"""
         raise NotImplementedError
 
-
     def custom_action(self, agent):
         """Allows agents to take actions that are not move or turn"""
         raise NotImplementedError
-
 
     def custom_map_update(self):
         """Custom map updates that don't have to do with agent actions"""
         raise NotImplementedError
 
-
     def clean_map(self):
         """Clean map of elements that should be removed. Executed every step/"""
         raise NotImplementedError
 
-
     def execute_custom_reservations(self):
         """Execute reserved slots that do not have to do with moving"""
         raise NotImplementedError
-
 
     def setup_agents(self):
         """Constructs all the agents in self.agent"""
