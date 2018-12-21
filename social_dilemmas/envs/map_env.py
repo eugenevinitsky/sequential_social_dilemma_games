@@ -73,9 +73,6 @@ class MapEnv(Env):
                 arr[row, col] = ascii_list[row][col]
         return arr
 
-    def reset_map(self):
-        raise NotImplementedError
-
     def step(self, actions):
         """Takes in a dict of actions and converts them to a map update
 
@@ -186,6 +183,13 @@ class MapEnv(Env):
                 agent.update_map_agent_rot(new_rot)
             else:
                 self.custom_action(agent)
+
+    # TODO(ev) this can probably be moved into the superclass
+    def reset_map(self):
+        self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
+        self.setup_agents()
+        self.build_walls()
+        self.custom_reset()
 
     def custom_action(self, agent):
         pass

@@ -75,14 +75,10 @@ class HarvestEnv(MapEnv):
             agent = HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation(), self, 3)
             self.agents[agent_id] = agent
 
-    # TODO(ev) this can probably be moved into the superclass
-    def reset_map(self):
-        self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
+    def custom_reset(self):
         self.firing_points = []
 
-        self.build_walls()
         self.update_map_apples(self.apple_points)
-        self.setup_agents()
 
     def custom_action(self, agent):
         agent.fire_beam()
