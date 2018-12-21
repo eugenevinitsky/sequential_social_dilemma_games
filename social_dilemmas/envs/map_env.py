@@ -123,7 +123,6 @@ class MapEnv(Env):
         self.reserved_slots = []
         self.reset_map()
         self.custom_map_update()
-        # TODO(ev) the agent pos and orientation setting code is duplicated
 
         observations = {}
         for agent in self.agents.values():
@@ -273,7 +272,6 @@ class MapEnv(Env):
         -------
         view: (np.ndarray) - a slice of the map for the agent to see
         """
-        # FIXME(ev) this might be transposed
         x, y = pos
         left_edge = x - col_size
         right_edge = x + col_size
@@ -291,7 +289,6 @@ class MapEnv(Env):
         row_dim = matrix.shape[0]
         col_dim = matrix.shape[1]
         left_pad, right_pad, top_pad, bot_pad = 0, 0, 0, 0
-        # TODO(ev) this can be more elegantly written in terms of mins and maxes
         if left_edge < 0:
             left_pad = abs(left_edge)
         if right_edge > col_dim - 1:
