@@ -144,7 +144,18 @@ class MapEnv(Env):
         return observations
 
     def map_to_colors(self, map=None, color_map=None):
-        """Converts a map to an array of RGB values"""
+        """Converts a map to an array of RGB values.
+        Parameters
+        ----------
+        map: np.ndarray
+            map to convert to colors
+        color_map: dict
+            mapping between array elements and desired colors
+        Returns
+        -------
+        arr: np.ndarray
+            3-dim numpy array consisting of color map
+        """
         if map is None:
             map = self.map
         if color_map is None:
@@ -156,22 +167,11 @@ class MapEnv(Env):
                 rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
         return rgb_arr
 
-    def render_map(self, mode='human'):
+    def render_map(self):
         if self.render:
             rgb_arr = self.map_to_colors()
             plt.imshow(rgb_arr, interpolation='nearest')
             plt.show()
-
-    def agent_updates(self, agent_actions):
-        """Converts agent action tuples into desired changes to the map
-
-        Returns
-        -------
-        new_map: numpy ndarray
-            the updated map to store
-        agent_pos: dict of tuples with keys as agent ids
-        """
-        raise NotImplementedError
 
     def update_map(self, agent_actions):
         """Converts agent action tuples into a new map and new agent positions
@@ -200,16 +200,18 @@ class MapEnv(Env):
             else:
                 self.custom_action(agent)
 
-    # TODO(ev) this can probably be moved into the superclass
     def reset_map(self):
+        """Resets the map to be empty as well as a custom reset set by subclasses"""
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.setup_agents()
         self.custom_reset()
 
     def custom_reset(self):
+        """Reset custom elements of the map"""
         pass
 
     def custom_action(self, agent):
+        """Allows agents to take actions that are not move or turn"""
         pass
 
     def custom_map_update(self):
@@ -217,9 +219,11 @@ class MapEnv(Env):
         pass
 
     def clean_map(self):
+        """Clean map of elements that should be removed"""
         pass
 
     def execute_reservations(self):
+        """Takes all the reserved slots and decides which move has priority"""
         curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
         agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
 
@@ -279,20 +283,30 @@ class MapEnv(Env):
         self.reserved_slots = []
 
     def execute_custom_reservations(self):
+        """Execute reserved slots that do not have to do with moving"""
         raise NotImplementedError
 
     def setup_agents(self):
         raise NotImplementedError
 
     def create_agent(self, agent_id, *args):
-        """Takes an agent id and agents args and returns an agent"""
+        """Takes an agent id and agents args and returns an agent.
+
+        Parameters
+        ----------
+        agent_id: str
+            name that they agent should be assigned
+
+        Returns
+        -------
+        agent: Agent
+            constructed agent
+
+        """
         raise NotImplementedError
 
-    def next_agent_pos(self, agent_pos):
-        """Finds the agent at pos """
-
     def spawn_point(self):
-        """Returns a randomly selected spawn point"""
+        """Returns a randomly selected spawn point."""
         not_occupied = False
         rand_int = 0
         # select a spawn point
@@ -322,6 +336,12 @@ class MapEnv(Env):
 
         Parameters
         ----------
+        pos: list
+            list consisting of row and column at which to search
+        row_size: int
+            how far the view should look in the row dimension
+        col_size: int
+            how far the view should look in the col dimension
 
         Returns
         -------
