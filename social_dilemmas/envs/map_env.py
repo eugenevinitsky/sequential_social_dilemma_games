@@ -75,9 +75,10 @@ class MapEnv(Env):
             agent_action = self.agents[agent_id].action_map(action)
             agent_actions[agent_id] = agent_action
 
-        self.agent_updates(agent_actions)
+        self.update_map(agent_actions)
         self.custom_map_update()
         self.execute_reservations()
+        self.reserved_slots = []
 
         observations = {}
         rewards = {}
@@ -86,7 +87,7 @@ class MapEnv(Env):
         for agent in self.agents.values():
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
-            rewards[agent.agent_id] = agent.get_reward()
+            rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
         return observations, rewards, dones, info
 
@@ -102,7 +103,9 @@ class MapEnv(Env):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
+        self.reserved_slots = []
         self.reset_map()
+        import ipdb; ipdb.set_trace()
         self.custom_map_update()
         # TODO(ev) the agent pos and orientation setting code is duplicated
 

@@ -97,14 +97,13 @@ class Agent(object):
         old_row, old_col = self.get_pos()
         self.reward_from_pos(new_pos)
         # you can't walk through walls or agents
-        # TODO(ev) you can walk through another agent, if it was going to move anyways
-        if self.grid.map[new_row, new_col] == '@' or self.grid.map[new_row, new_col] == 'P':
+        if self.grid.map[new_row, new_col] == '@':
             new_pos = self.get_pos()
         else:
             self.grid.map[old_row, old_col] = ' '
             self.grid.map[new_row, new_col] = 'P'
 
-            # TODO(ev) if you move over an apple it should show up in the reward function
+        # TODO(ev) if you move over an apple it should show up in the reward function
         self.set_pos(new_pos)
 
     def update_map_agent_rot(self, new_rot):
@@ -131,6 +130,8 @@ class HarvestAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        self.update_map_agent_pos(start_pos)
+        self.update_map_agent_rot(start_orientation)
 
     @property
     def action_space(self):
@@ -150,7 +151,9 @@ class HarvestAgent(Agent):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
 
     def reward_from_pos(self, new_pos):
-        pass
+        row, col = new_pos
+        # TODO(got to do firing here too)
+        self.reward_this_turn += 0
 
     def get_done(self):
         # FIXME(ev) put in the actual computation
