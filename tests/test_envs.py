@@ -394,6 +394,8 @@ class TestHarvestEnv(unittest.TestCase):
         self.assertTrue(reward_1 == -1)
 
     def test_agent_conflict(self):
+        '''Test that agent conflicts are correctly resolved'''
+
         # test that if there are two agents and two spawning points, they hit both of them
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
         self.env.reset()
@@ -473,6 +475,35 @@ class TestHarvestEnv(unittest.TestCase):
         agent_1_percent = num_agent_1 / (num_agent_1 + other_agents)
         within_bounds = .25 < agent_1_percent and agent_1_percent < .35
         self.assertTrue(within_bounds)
+
+    def test_beam_conflict(self):
+        """Test that after the beam is fired, obscured apples and agents are returned"""
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
+        self.env.reset()
+
+        # test that agents can't walk into other agents
+        self.env.agents['agent-0'].update_map_agent_pos([4, 2])
+        self.env.agents['agent-1'].update_map_agent_pos([4, 4])
+        self.env.agents['agent-0'].update_map_agent_rot('UP')
+        self.env.agents['agent-1'].update_map_agent_rot('UP')
+        # test that if an agents firing beam hits another agent it gets covered
+        self.env.update_map({'agent-1': 'FIRE'})
+        self.env.execute_reservations()
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', 'F', 'F', 'F', 'P', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+        self.env.update_map({})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', ' ', 'P', 'A', 'P', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
 
     def clear_agents(self):
         # FIXME(ev) this doesn't clear agent positions off the board

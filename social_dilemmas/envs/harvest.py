@@ -63,6 +63,7 @@ class HarvestEnv(MapEnv):
         self.apple_points = []
         self.wall_points = []
         self.firing_points = []
+        self.hidden_apples = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
                 if self.base_map[row, col] == 'P':
@@ -213,11 +214,15 @@ class HarvestEnv(MapEnv):
             agent_pos.append(agent.get_pos().tolist())
         for i in range(len(self.firing_points)):
             row, col = self.firing_points[i]
-            if [row, col] not in agent_pos:
-                self.map[row, col] = ' '
-            else:
+            if self.firing_points[i] in self.hidden_apples:
+                self.map[row, col] = 'A'
+            elif [row, col] in agent_pos:
                 # put the agent back if they were temporarily obscured by the firing beam
                 self.map[row, col] = 'P'
+            else:
+                self.map[row, col] = ' '
+        self.hidden_apples = []
+        self.firing_points = []
 
     def spawn_apples(self):
         # iterate over the spawn points in self.ascii_map and compare it with
@@ -276,6 +281,8 @@ class HarvestEnv(MapEnv):
         for i in range(num_fire_cells):
             next_cell = start_pos + firing_direction
             if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
+                if self.map[next_cell[0], next_cell[1]] == 'A':
+                    self.hidden_apples.append([next_cell[0], next_cell[1]])
                 self.map[next_cell[0], next_cell[1]] = 'F'
                 firing_points.append((next_cell[0], next_cell[1], 'F'))
                 start_pos += firing_direction
