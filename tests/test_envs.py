@@ -222,6 +222,44 @@ class TestHarvestEnv(unittest.TestCase):
         num_apples = self.env.count_apples(self.env.map)
         self.assertEqual(num_apples, 5)
 
+        # Now, if a point is temporarily obscured by a beam but an apple should spawn there
+        # check that the apple still spawns there
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
+        self.env.reset()
+
+        # test that agents can't walk into other agents
+        self.env.agents['agent-0'].update_map_agent_pos([3, 1])
+        self.env.agents['agent-1'].update_map_agent_pos([3, 3])
+        self.env.agents['agent-0'].update_map_agent_rot('UP')
+        self.env.agents['agent-1'].update_map_agent_rot('UP')
+        # test that if an agents firing beam hits another agent it gets covered
+        self.env.update_map({'agent-1': 'FIRE'})
+        self.env.execute_reservations()
+        self.env.update_map_apples([[3, 2]])
+        self.env.update_map({})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', 'P', 'A', 'P', 'A', '@'],
+                                 ['@', ' ', ' ', 'A', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
+        # If an agent is temporarily obscured by a beam, and an apple attempts to spawn there
+        # no apple should spawn
+        self.env.update_map({'agent-1': 'FIRE'})
+        self.env.execute_reservations()
+        self.env.update_map_apples([[3, 1]])
+        self.env.update_map({})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', 'P', 'A', 'P', 'A', '@'],
+                                 ['@', ' ', ' ', 'A', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
+
     def test_agent_actions(self):
         # FIXME(ev) the axes are 10000000% rotated oddly
         # set up the map

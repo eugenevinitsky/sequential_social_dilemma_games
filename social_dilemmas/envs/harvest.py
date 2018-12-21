@@ -64,6 +64,7 @@ class HarvestEnv(MapEnv):
         self.wall_points = []
         self.firing_points = []
         self.hidden_apples = []
+        self.hidden_agents = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
                 if self.base_map[row, col] == 'P':
@@ -109,6 +110,7 @@ class HarvestEnv(MapEnv):
             dict with agent_id as key and action as value
         """
 
+        # TODO(ev) split into three methods: clean(), update_map, custom_update_map
         self.clean_firing_points()
 
         for agent_id, action in agent_actions.items():
@@ -127,71 +129,15 @@ class HarvestEnv(MapEnv):
                 self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
                                                             agent.get_orientation())
 
-    def execute_reservations(self):
-
-        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
-        agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
-
-        # agent moves keyed by ids
-        agent_moves = {}
-
-        # lists of moves and their corresponding agents
-        move_slots = []
-        agent_to_slot = []
-
+    def execute_custom_reservations(self):
         apple_pos = []
         firing_pos = []
         for slot in self.reserved_slots:
             row, col = slot[0], slot[1]
-            if slot[2] == 'P':
-                agent_id = slot[3]
-                agent_moves[agent_id] = [row, col]
-                move_slots.append([row, col])
-                agent_to_slot.append(agent_id)
-            elif slot[2] == 'A':
+            if slot[2] == 'A':
                 apple_pos.append([row, col])
-            else:
+            elif slot[2] == 'F':
                 firing_pos.append([row, col])
-
-        # First, resolve conflicts between two agents that want the same spot
-        if len(agent_to_slot) > 0:
-
-            # a random agent will win the slot
-            shuffle_list = list(zip(agent_to_slot, move_slots))
-            np.random.shuffle(shuffle_list)
-            agent_to_slot, move_slots = zip(*shuffle_list)
-            unique_move, indices, return_count = np.unique(move_slots, return_index=True,
-                                                           return_counts=True, axis=0)
-            search_list = np.array(move_slots)
-            # if there are any conflicts over a space
-            if np.any(return_count > 1):
-                for move, index, count in zip(unique_move, indices, return_count):
-                    if count > 1:
-                        self.agents[agent_to_slot[index]].update_map_agent_pos(move)
-                        # remove all the other moves that would have conflicted
-                        remove_indices = np.where((search_list == move).all(axis=1))[0]
-                        all_agents_id = [agent_to_slot[i] for i in remove_indices]
-                        # all other agents now stay in place
-                        for agent_id in all_agents_id:
-                            agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
-
-            for agent_id, move in agent_moves.items():
-                if move in curr_agent_pos:
-                    # find the agent that is currently at that spot, check where they will be next
-                    # if they're going to move away, go ahead and move into their spot
-                    conflicting_agent_id = agent_by_pos[tuple(move)]
-                    # a STAY command has been issued or the other agent hasn't been issued a command,
-                    # don't do anything
-                    if agent_id == conflicting_agent_id or \
-                            conflicting_agent_id not in agent_moves.keys():
-                        continue
-                    elif agent_moves[conflicting_agent_id] != move:
-                        self.agents[agent_id].update_map_agent_pos(move)
-                else:
-                    self.agents[agent_id].update_map_agent_pos(move)
-
-        # TODO(ev) move this into a custom execute method, the above is pretty general
-        # Next fire the beams
         for pos in firing_pos:
             row, col = pos
             self.map[row, col] = 'F'
@@ -199,7 +145,6 @@ class HarvestEnv(MapEnv):
 
         # update the apples
         self.update_map_apples(apple_pos)
-        self.reserved_slots = []
 
     def custom_map_update(self):
         "See parent class"
@@ -223,6 +168,7 @@ class HarvestEnv(MapEnv):
                 self.map[row, col] = ' '
         self.hidden_apples = []
         self.firing_points = []
+        self.hidden_agents = []
 
     def spawn_apples(self):
         # iterate over the spawn points in self.ascii_map and compare it with
@@ -283,6 +229,8 @@ class HarvestEnv(MapEnv):
             if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
                 if self.map[next_cell[0], next_cell[1]] == 'A':
                     self.hidden_apples.append([next_cell[0], next_cell[1]])
+                elif self.map[next_cell[0], next_cell[1]] == 'P':
+                    self.hidden_agents.append([next_cell[0], next_cell[1]])
                 self.map[next_cell[0], next_cell[1]] = 'F'
                 firing_points.append((next_cell[0], next_cell[1], 'F'))
                 start_pos += firing_direction
@@ -294,8 +242,9 @@ class HarvestEnv(MapEnv):
         for i in range(len(new_apple_points)):
             row, col = new_apple_points[i]
             if self.map[row, col] != 'P' and self.map[row, col] != 'F':
-                # TODO(ev) what if a firing beam is here at this time?
                 self.map[row, col] = 'A'
+            elif self.map[row, col] == 'F' and [row, col] not in self.hidden_agents:
+                self.hidden_apples.append([row, col])
 
     # TODO(ev) this can be a general property of map_env or a util
     def rotate_action(self, action_vec, orientation):

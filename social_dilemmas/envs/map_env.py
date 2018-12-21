@@ -152,7 +152,65 @@ class MapEnv(Env):
         pass
 
     def execute_reservations(self):
-        # executes the queued actions and map updates
+        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+        agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
+
+        # agent moves keyed by ids
+        agent_moves = {}
+
+        # lists of moves and their corresponding agents
+        move_slots = []
+        agent_to_slot = []
+
+        for slot in self.reserved_slots:
+            row, col = slot[0], slot[1]
+            if slot[2] == 'P':
+                agent_id = slot[3]
+                agent_moves[agent_id] = [row, col]
+                move_slots.append([row, col])
+                agent_to_slot.append(agent_id)
+
+        # First, resolve conflicts between two agents that want the same spot
+        if len(agent_to_slot) > 0:
+
+            # a random agent will win the slot
+            shuffle_list = list(zip(agent_to_slot, move_slots))
+            np.random.shuffle(shuffle_list)
+            agent_to_slot, move_slots = zip(*shuffle_list)
+            unique_move, indices, return_count = np.unique(move_slots, return_index=True,
+                                                           return_counts=True, axis=0)
+            search_list = np.array(move_slots)
+            # if there are any conflicts over a space
+            if np.any(return_count > 1):
+                for move, index, count in zip(unique_move, indices, return_count):
+                    if count > 1:
+                        self.agents[agent_to_slot[index]].update_map_agent_pos(move)
+                        # remove all the other moves that would have conflicted
+                        remove_indices = np.where((search_list == move).all(axis=1))[0]
+                        all_agents_id = [agent_to_slot[i] for i in remove_indices]
+                        # all other agents now stay in place
+                        for agent_id in all_agents_id:
+                            agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
+
+            for agent_id, move in agent_moves.items():
+                if move in curr_agent_pos:
+                    # find the agent that is currently at that spot, check where they will be next
+                    # if they're going to move away, go ahead and move into their spot
+                    conflicting_agent_id = agent_by_pos[tuple(move)]
+                    # a STAY command has been issued or the other agent hasn't been issued a command,
+                    # don't do anything
+                    if agent_id == conflicting_agent_id or \
+                            conflicting_agent_id not in agent_moves.keys():
+                        continue
+                    elif agent_moves[conflicting_agent_id] != move:
+                        self.agents[agent_id].update_map_agent_pos(move)
+                else:
+                    self.agents[agent_id].update_map_agent_pos(move)
+
+        self.execute_custom_reservations()
+        self.reserved_slots = []
+
+    def execute_custom_reservations(self):
         raise NotImplementedError
 
     def setup_agents(self):
