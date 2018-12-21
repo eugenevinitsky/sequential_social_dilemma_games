@@ -69,6 +69,7 @@ class Agent(object):
         raise NotImplementedError
 
     def compute_reward(self):
+        self.reward_from_pos(self.get_pos())
         reward = self.reward_this_turn
         self.reward_this_turn = 0
         return reward
@@ -150,10 +151,15 @@ class HarvestAgent(Agent):
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
 
-    def reward_from_pos(self, new_pos):
-        row, col = new_pos
-        # TODO(got to do firing here too)
-        self.reward_this_turn += 0
+    def reward_from_pos(self, query_pos):
+        row, col = query_pos
+        if self.grid.map[row, col] == 'A':
+            self.reward_this_turn += 1
+        elif self.grid.map[row, col] == 'F':
+            self.reward_this_turn -= 50
+
+    def fire_beam(self):
+        self.reward_this_turn -= 1
 
     def get_done(self):
         # FIXME(ev) put in the actual computation

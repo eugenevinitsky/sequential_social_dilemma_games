@@ -33,6 +33,8 @@ class MapEnv(Env):
         # as well as the intended action in that slot
         self.reserved_slots = []
         self.agents = {}
+        # returns the agent at a desired position if there is one
+        self.pos_dict = {}
         self.render = render
         self.color_map = color_map
 
@@ -76,6 +78,7 @@ class MapEnv(Env):
             agent_actions[agent_id] = agent_action
 
         self.update_map(agent_actions)
+
         self.custom_map_update()
         self.execute_reservations()
         self.reserved_slots = []

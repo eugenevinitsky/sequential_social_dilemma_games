@@ -122,6 +122,7 @@ class HarvestEnv(MapEnv):
                 new_rot = self.update_rotation(action, agent.get_orientation())
                 agent.update_map_agent_rot(new_rot)
             else:
+                agent.fire_beam()
                 self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
                                                             agent.get_orientation())
 
