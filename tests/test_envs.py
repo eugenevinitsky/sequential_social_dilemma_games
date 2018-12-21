@@ -1,6 +1,7 @@
 '''Unit tests for all of the envs'''
 
 import numpy as np
+import unittest
 
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.agent import HarvestAgent
@@ -8,8 +9,8 @@ from social_dilemmas.envs.agent import HarvestAgent
 MINI_HARVEST_MAP = [
     '@@@@@@',
     '@ P  @',
-    '@  A @',
-    '@ AAA@',
+    '@  AA@',
+    '@  AA@',
     '@  AP@',
     '@@@@@@',
 ]
@@ -17,6 +18,15 @@ MINI_HARVEST_MAP = [
 # maps used to test different spawn positions and apple positions
 
 # basic empty map with walls
+BASE_MAP_1 = [
+    '@@@@@@@',
+    '@     @',
+    '@     @',
+    '@     @',
+    '@     @',
+    '@     @',
+    '@@@@@@@'
+]
 TEST_MAP_1 = np.array(
     [['@'] * 7,
      ['@'] + [' '] * 5 + ['@'],
@@ -27,43 +37,69 @@ TEST_MAP_1 = np.array(
      ['@'] * 7]
 )
 
-import unittest
+# basic empty map with 1 starting apple
+BASE_MAP_2 = [
+    '@@@@@@',
+    '@    @',
+    '@    @',
+    '@    @',
+    '@  A @',
+    '@@@@@@'
+]
+TEST_MAP_2 = np.array(
+    [['@'] * 6,
+     ['@'] + [' '] * 4 + ['@'],
+     ['@'] + [' '] * 4 + ['@'],
+     ['@'] + [' '] * 4 + ['@'],
+     ['@'] + [' '] * 2 + ['A'] + [' '] + ['@'],
+     ['@'] * 6]
+)
 
 
 class TestHarvestEnv(unittest.TestCase):
-    def setUp(self):
-        """Construct the env"""
-        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=1)
+
+    def tearDown(self):
+        """Remove the env"""
+        self.env = None
 
     def test_step(self):
         """Just check that the step method works at all for all possible actions"""
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=1)
         self.env.reset()
         # FIXME(ev) magic number
         for i in range(8):
             self.env.step({'agent-0': i})
 
     def test_reset(self):
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=0)
         self.env.reset()
+        # check that the map is full of apples
+        test_map = np.array([['@', '@', '@', '@', '@', '@'],
+                             ['@', ' ', ' ', ' ', ' ', '@'],
+                             ['@', ' ', ' ', 'A', 'A', '@'],
+                             ['@', ' ', ' ', 'A', 'A', '@'],
+                             ['@', ' ', ' ', 'A', ' ', '@'],
+                             ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(self.env.map, test_map)
 
     def test_walls(self):
         """Check that the spawned map and base map have walls in the right place"""
+        self.env = HarvestEnv(BASE_MAP_1, num_agents=0)
         self.env.reset()
-        np.testing.assert_array_equal(self.env.base_map[0, :], np.array(['@'] * 6))
-        np.testing.assert_array_equal(self.env.base_map[-1, :], np.array(['@'] * 6))
-        np.testing.assert_array_equal(self.env.base_map[:, 0], np.array(['@'] * 6))
-        np.testing.assert_array_equal(self.env.base_map[:, -1], np.array(['@'] * 6))
+        np.testing.assert_array_equal(self.env.base_map[0, :], np.array(['@'] * 7))
+        np.testing.assert_array_equal(self.env.base_map[-1, :], np.array(['@'] * 7))
+        np.testing.assert_array_equal(self.env.base_map[:, 0], np.array(['@'] * 7))
+        np.testing.assert_array_equal(self.env.base_map[:, -1], np.array(['@'] * 7))
 
-        np.testing.assert_array_equal(self.env.map[0, :], np.array(['@'] * 6))
-        np.testing.assert_array_equal(self.env.map[-1, :], np.array(['@'] * 6))
-        np.testing.assert_array_equal(self.env.map[:, 0], np.array(['@'] * 6))
-        np.testing.assert_array_equal(self.env.map[:, -1], np.array(['@'] * 6))
+        np.testing.assert_array_equal(self.env.map[0, :], np.array(['@'] * 7))
+        np.testing.assert_array_equal(self.env.map[-1, :], np.array(['@'] * 7))
+        np.testing.assert_array_equal(self.env.map[:, 0], np.array(['@'] * 7))
+        np.testing.assert_array_equal(self.env.map[:, -1], np.array(['@'] * 7))
 
     def test_view(self):
         """Confirm that an agent placed at the right point returns the right view"""
-        self.env.reset()
-
         agent_id = 'agent-0'
-        self.construct_map_1(agent_id, [3,3], 'UP')
+        self.construct_map(TEST_MAP_1, agent_id, [3, 3], 'UP')
 
         # check if the view is correct if there are no walls
         agent_view = self.env.agents[agent_id].get_state()
@@ -172,73 +208,94 @@ class TestHarvestEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
-
     def test_apple_spawn(self):
         # render apples a bunch of times and check that the probabilities are within
-        # a bound of what you expect?
-        pass
+        # a bound of what you expect. This test fill fail w/ <INSERT> probability
+        self.env = HarvestEnv(MINI_HARVEST_MAP, num_agents=0)
+        self.env.reset()
+        self.env.map = TEST_MAP_2.copy()
 
-    def test_firing(self):
-        pass
+        # First test, if we step 300 times, are there five apples there?
+        # This should fail maybe one in 1000000 times
+        for i in range(300):
+            self.env.step({})
+        num_apples = self.env.count_apples(self.env.map)
+        self.assertEqual(num_apples, 5)
 
     def test_agent_actions(self):
         # FIXME(ev) the axes are 10000000% rotated oddly
         # set up the map
         agent_id = 'agent-0'
-        self.construct_map_1(agent_id, [2,2], 'LEFT')
+        self.construct_map(TEST_MAP_1.copy(), agent_id, [2, 2], 'LEFT')
 
         # Test that all the moves and rotations work correctly
         # test when facing left
         self.env.update_map({agent_id: 'MOVE_LEFT'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 3])
         self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         self.env.update_map({agent_id: 'MOVE_UP'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
         self.env.update_map({agent_id: 'MOVE_DOWN'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         # test when facing up
         self.rotate_agent(agent_id, 'UP')
         self.env.update_map({agent_id: 'MOVE_LEFT'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
         self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         self.env.update_map({agent_id: 'MOVE_UP'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
         self.env.update_map({agent_id: 'MOVE_DOWN'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         # test when facing down
         self.rotate_agent(agent_id, 'DOWN')
         self.env.update_map({agent_id: 'MOVE_LEFT'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [3, 2])
         self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         self.env.update_map({agent_id: 'MOVE_UP'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 3])
         self.env.update_map({agent_id: 'MOVE_DOWN'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         # test when facing right
         self.rotate_agent(agent_id, 'RIGHT')
         self.env.update_map({agent_id: 'MOVE_LEFT'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
         self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         self.env.update_map({agent_id: 'MOVE_UP'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [3, 2])
         self.env.update_map({agent_id: 'MOVE_DOWN'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
 
         # quick test of stay
         self.env.update_map({agent_id: 'STAY'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
 
         # if an agent tries to move through a wall they should stay in the same place
         self.rotate_agent(agent_id, 'UP')
-        self.move_agent(agent_id, [2,1])
+        self.move_agent(agent_id, [2, 1])
         self.env.update_map({agent_id: 'MOVE_UP'})
+        self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
-
-        # TODO(ev) if an agent moves over an apple the apple disappears
 
         # rotations correctly update the agent state
         self.rotate_agent(agent_id, 'UP')
@@ -266,21 +323,7 @@ class TestHarvestEnv(unittest.TestCase):
         self.rotate_agent(agent_id, 'UP')
         self.move_agent(agent_id, [3, 2])
         self.env.update_map({agent_id: 'FIRE'})
-        agent_view = self.env.agents[agent_id].get_state()
-        expected_view = np.array(
-            [['@'] + [' '] * 4,
-             ['@'] + [' '] * 4,
-             ['@'] + [' '] + ['P'] + ['F'] * 2,
-             ['@'] + [' '] * 4,
-             ['@'] + [' '] * 4]
-        )
-        np.testing.assert_array_equal(expected_view, agent_view)
-
-        self.env.clean_firing_points()
-
-        self.rotate_agent(agent_id, 'DOWN')
-        self.move_agent(agent_id, [3, 2])
-        self.env.update_map({agent_id: 'FIRE'})
+        self.env.execute_reservations()
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [['@'] + [' '] * 4,
@@ -291,16 +334,153 @@ class TestHarvestEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
+        self.env.clean_firing_points()
+
+        self.rotate_agent(agent_id, 'DOWN')
+        self.move_agent(agent_id, [3, 2])
+        self.env.update_map({agent_id: 'FIRE'})
+        self.env.execute_reservations()
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [['@'] + [' '] * 4,
+             ['@'] + [' '] * 4,
+             ['@'] + [' '] + ['P'] + ['F'] * 2,
+             ['@'] + [' '] * 4,
+             ['@'] + [' '] * 4]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
+
+        self.construct_map(MINI_HARVEST_MAP.copy(), agent_id, [3, 2], 'RIGHT')
+        self.env.update_map_apples(self.env.apple_points)
+        self.env.execute_reservations()
+        self.env.update_map({agent_id: 'MOVE_RIGHT'})
+        self.env.execute_reservations()
+        self.env.update_map({agent_id: 'MOVE_LEFT'})
+        self.env.execute_reservations()
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [['@', ' ', ' ', ' ', ' '],
+             ['@', ' ', ' ', 'A', 'A'],
+             ['@', ' ', 'P', ' ', 'A'],
+             ['@', ' ', ' ', 'A', ' '],
+             ['@', '@', '@', '@', '@']]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
+
+        # TODO(ev) if a firing beam hits an apple, should the apple disappear?
 
     def test_agent_rewards(self):
-        pass
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
+        self.env.reset()
+        self.env.agents['agent-0'].update_map_agent_pos([2, 2])
+        self.env.agents['agent-1'].update_map_agent_pos([3, 2])
+        self.env.agents['agent-0'].update_map_agent_rot('UP')
+        self.env.agents['agent-1'].update_map_agent_rot('UP')
+        # walk over an apple
+        self.env.update_map({'agent-0': 'MOVE_DOWN',
+                             'agent-1': 'MOVE_DOWN'})
+        self.env.execute_reservations()
+        reward_0 = self.env.agents['agent-0'].compute_reward()
+        reward_1 = self.env.agents['agent-1'].compute_reward()
+        self.assertTrue(reward_0 == 1)
+        self.assertTrue(reward_1 == 1)
+        # fire a beam from agent 1 to 2
+        self.env.agents['agent-1'].update_map_agent_rot('LEFT')
+        self.env.update_map({'agent-1': 'FIRE'})
+        self.env.execute_reservations()
+        reward_0 = self.env.agents['agent-0'].compute_reward()
+        reward_1 = self.env.agents['agent-1'].compute_reward()
+        self.assertTrue(reward_0 == -50)
+        self.assertTrue(reward_1 == -1)
+
+    def test_agent_conflict(self):
+        # test that if there are two agents and two spawning points, they hit both of them
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
+        self.env.reset()
+        np.testing.assert_array_equal(self.env.base_map, self.env.map)
+
+        # test that agents can't walk into other agents
+        self.env.agents['agent-0'].update_map_agent_pos([3, 3])
+        self.env.agents['agent-1'].update_map_agent_pos([3, 4])
+        self.env.agents['agent-0'].update_map_agent_rot('UP')
+        self.env.agents['agent-1'].update_map_agent_rot('UP')
+        self.env.update_map({'agent-0': 'MOVE_DOWN'})
+        self.env.execute_reservations()
+        self.env.update_map({'agent-1': 'MOVE_UP'})
+        self.env.execute_reservations()
+        np.testing.assert_array_equal(self.env.agents['agent-0'].get_pos(), [3, 3])
+        np.testing.assert_array_equal(self.env.agents['agent-1'].get_pos(), [3, 4])
+
+        # test that if an agents firing beam hits another agent it gets covered
+        self.env.update_map({'agent-0': 'MOVE_UP', 'agent-1': 'FIRE'})
+        self.env.execute_reservations()
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', 'F', 'F', 'F', 'P', '@'],
+                                 ['@', ' ', ' ', 'A', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+        # but by the next step, the agent is visible again
+        self.env.update_map({})
+        self.env.execute_reservations()
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', ' ', 'P', ' ', 'P', '@'],
+                                 ['@', ' ', ' ', 'A', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
+        # test that agents can walk into other agents if moves are de-conflicting
+        self.env.update_map({'agent-0': 'MOVE_DOWN'})
+        self.env.execute_reservations()
+        self.env.update_map({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_LEFT'})
+        self.env.execute_reservations()
+
+        # test that if two agents have a conflicting move then the tie is broken randomly
+        num_agent_1 = 0.0
+        num_agent_2 = 0.0
+        for i in range(5000):
+            self.env.agents['agent-0'].update_map_agent_pos([3, 2])
+            self.env.agents['agent-1'].update_map_agent_pos([3, 4])
+            self.env.update_map({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_UP'})
+            self.env.execute_reservations()
+            if self.env.agents['agent-0'].get_pos().tolist() == [3, 3]:
+                num_agent_1 += 1
+            else:
+                num_agent_2 += 1
+        agent_1_percent = num_agent_1 / (num_agent_1 + num_agent_2)
+        within_bounds = .48 < agent_1_percent and agent_1_percent < .52
+        self.assertTrue(within_bounds)
+
+        # check that this works correctly with three agents
+        self.add_agent('agent-2', [2, 3], 'UP', self.env, 3)
+        num_agent_1 = 0.0
+        other_agents = 0.0
+        for i in range(10000):
+            self.env.agents['agent-0'].update_map_agent_pos([3, 2])
+            self.env.agents['agent-1'].update_map_agent_pos([3, 4])
+            self.env.agents['agent-2'].update_map_agent_pos([2, 3])
+            self.env.update_map({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_UP',
+                                 'agent-2': 'MOVE_RIGHT'})
+
+            self.env.execute_reservations()
+            if self.env.agents['agent-2'].get_pos().tolist() == [3, 3]:
+                num_agent_1 += 1
+            else:
+                other_agents += 1
+        agent_1_percent = num_agent_1 / (num_agent_1 + other_agents)
+        within_bounds = .25 < agent_1_percent and agent_1_percent < .35
+        self.assertTrue(within_bounds)
 
     def clear_agents(self):
+        # FIXME(ev) this doesn't clear agent positions off the board
         self.env.agents = {}
 
-    def add_agent(self, agent_id, start_pos, start_orientation, grid, view_len):
+    def add_agent(self, agent_id, start_pos, start_orientation, env, view_len):
         self.env.agents[agent_id] = HarvestAgent(agent_id, start_pos, start_orientation,
-                                                 grid, view_len)
+                                                 env, view_len)
 
     def move_agent(self, agent_id, new_pos):
         self.env.agents[agent_id].update_map_agent_pos(new_pos)
@@ -308,26 +488,17 @@ class TestHarvestEnv(unittest.TestCase):
     def rotate_agent(self, agent_id, new_rot):
         self.env.agents[agent_id].update_map_agent_rot(new_rot)
 
-    # TODO(ev) test if an agent walking into another agent that is going to move is allowed
-    # TODO(ev) it should be but it isn't right now
-    def test_agent_conflict(self):
-        # test that if an agents firing beam hits another agent everything is fine
-
-        # test that agents can't walk into other agents
-
-        # test that agents can walk into other agents if moves are de-conflicting
-        pass
-
-    def construct_map_1(self, agent_id, start_pos, start_orientation):
-        # overwrite the map
-        self.env.map = TEST_MAP_1.copy()
+    def construct_map(self, map, agent_id, start_pos, start_orientation):
+        # overwrite the map for testing
+        self.env = HarvestEnv(map, num_agents=0)
+        self.env.reset()
         self.clear_agents()
 
-        # TODO(ev) It seems like this map might be transposed...
         # replace the agents with agents with smaller views
         self.add_agent(agent_id, start_pos, start_orientation, self.env, 2)
         # TODO(ev) hack for now, can't call render logic or else it will spawn apples
         self.move_agent(agent_id, start_pos)
+
 
 if __name__ == '__main__':
     unittest.main()

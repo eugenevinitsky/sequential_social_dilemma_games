@@ -2,8 +2,11 @@ name: causal
 
 dependencies:
     - python==3.5.2
-    - numpy==1.14.0
-    - six==1.11.0
-    - tensorflow==1.12.0
-    - ray==0.6.0
-    - opencv-python
+    - pip:
+        - numpy==1.14.0
+        - gym==0.10.5
+        - matplotlib==3.0.2
+        - opencv-python
+        - ray==0.6.0
+        - tensorflow==1.12.0
+

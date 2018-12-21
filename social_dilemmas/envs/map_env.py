@@ -5,7 +5,7 @@ Code partially adapted from PyColab: https://github.com/deepmind/pycolab
 """
 from ray.rllib.env import MultiAgentEnv
 import numpy as np
-from renderer import CursesUi
+import matplotlib.pyplot as plt
 
 
 class MapEnv(MultiAgentEnv):
@@ -28,11 +28,14 @@ class MapEnv(MultiAgentEnv):
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
+        # keeps track of positions that agents have said they want to move to
+        # as well as the intended action in that slot
+        self.reserved_slots = []
         self.agents = {}
+        # returns the agent at a desired position if there is one
+        self.pos_dict = {}
         self.render = render
         self.color_map = color_map
-        if render:
-            self.renderer = CursesUi({}, 1)
 
     # FIXME(ev) move this to a utils eventually
     def ascii_to_numpy(self, ascii_list):
@@ -74,7 +77,10 @@ class MapEnv(MultiAgentEnv):
             agent_actions[agent_id] = agent_action
 
         self.update_map(agent_actions)
+
         self.custom_map_update()
+        self.execute_reservations()
+        self.reserved_slots = []
 
         observations = {}
         rewards = {}
@@ -83,7 +89,7 @@ class MapEnv(MultiAgentEnv):
         for agent in self.agents.values():
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
-            rewards[agent.agent_id] = agent.get_reward()
+            rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
         return observations, rewards, dones, info
 
@@ -99,6 +105,7 @@ class MapEnv(MultiAgentEnv):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
+        self.reserved_slots = []
         self.reset_map()
         self.custom_map_update()
         # TODO(ev) the agent pos and orientation setting code is duplicated
@@ -109,20 +116,27 @@ class MapEnv(MultiAgentEnv):
             observations[agent.agent_id] = rgb_arr
         return observations
 
-    def map_to_colors(self, map, color_map):
+    def map_to_colors(self, map=None, color_map=None):
         """Converts a map to an array of RGB values"""
-        rgb_arr = np.zeros((map.shape[0], map.shape[1], 3))
+        if map is None:
+            map = self.map
+        if color_map is None:
+            color_map = self.color_map
+
+        rgb_arr = np.zeros((map.shape[0], map.shape[1], 3), dtype=int)
         for row_elem in range(map.shape[0]):
             for col_elem in range(map.shape[1]):
                 rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
         return rgb_arr
 
-    def render(self, mode='human'):
+    def render_map(self, mode='human'):
         if self.render:
-            pass
+            rgb_arr = self.map_to_colors()
+            plt.imshow(rgb_arr, interpolation='nearest')
+            plt.show()
 
-    def update_map(self, agent_actions):
-        """Converts agent action tuples into a new map and new agewnt positions
+    def agent_updates(self, agent_actions):
+        """Converts agent action tuples into desired changes to the map
 
         Returns
         -------
@@ -136,6 +150,10 @@ class MapEnv(MultiAgentEnv):
         """Custom map updates that don't have to do with agent actions"""
         pass
 
+    def execute_reservations(self):
+        # executes the queued actions and map updates
+        raise NotImplementedError
+
     def setup_agents(self):
         raise NotImplementedError
 
@@ -143,12 +161,15 @@ class MapEnv(MultiAgentEnv):
         """Takes an agent id and agents args and returns an agent"""
         raise NotImplementedError
 
+    def next_agent_pos(self, agent_pos):
+        """Finds the agent at pos """
+
     ########################################
     # Utility methods, move these eventually
     ########################################
 
-    def return_view(self, agent_pos, row_size, col_size):
-        """Given an agent position and view window, returns correct map part
+    def return_view(self, pos, row_size, col_size):
+        """Given an  position and view window, returns correct map part
 
         Note, if the agent asks for a view that exceeds the map bounds,
         it is padded with zeros
@@ -161,17 +182,17 @@ class MapEnv(MultiAgentEnv):
         view: (np.ndarray) - a slice of the map for the agent to see
         """
         # FIXME(ev) this might be transposed
-        x, y = agent_pos
+        x, y = pos
         left_edge = x - col_size
         right_edge = x + col_size
         top_edge = y - row_size
         bot_edge = y + row_size
         pad_mat, left_pad, top_pad = self.pad_if_needed(left_edge, right_edge,
-                                  top_edge, bot_edge, self.map)
+                                                        top_edge, bot_edge, self.map)
         x += left_pad
         y += top_pad
         view = pad_mat[x - col_size: x + col_size + 1,
-               y - row_size: y + row_size + 1]
+                       y - row_size: y + row_size + 1]
         return view
 
     def pad_if_needed(self, left_edge, right_edge, top_edge, bot_edge, matrix):

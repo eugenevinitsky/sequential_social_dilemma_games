@@ -32,6 +32,7 @@ class Agent(object):
         self.grid = grid
         self.row_size = row_size
         self.col_size = col_size
+        self.reward_this_turn = 0
 
     @property
     def action_space(self):
@@ -68,6 +69,13 @@ class Agent(object):
         raise NotImplementedError
 
     def compute_reward(self):
+        self.reward_from_pos(self.get_pos())
+        reward = self.reward_this_turn
+        self.reward_this_turn = 0
+        return reward
+
+    def reward_from_pos(self, new_pos):
+        """Given the position agent is moving to, compute the reward"""
         raise NotImplementedError
 
     def set_pos(self, new_pos):
@@ -88,15 +96,15 @@ class Agent(object):
     def update_map_agent_pos(self, new_pos):
         new_row, new_col = new_pos
         old_row, old_col = self.get_pos()
+        self.reward_from_pos(new_pos)
         # you can't walk through walls or agents
-        # TODO(ev) you can walk through another agent, if it was going to move anyways
-        if self.grid.map[new_row, new_col] == '@' or self.grid.map[new_row, new_col] == 'P':
+        if self.grid.map[new_row, new_col] == '@':
             new_pos = self.get_pos()
         else:
             self.grid.map[old_row, old_col] = ' '
             self.grid.map[new_row, new_col] = 'P'
 
-            # TODO(ev) if you move over an apple it should show up in the reward function
+        # TODO(ev) if you move over an apple it should show up in the reward function
         self.set_pos(new_pos)
 
     def update_map_agent_rot(self, new_rot):
@@ -117,11 +125,14 @@ HARVEST_ACTIONS = {0: 'MOVE_LEFT',  # Move left
                    6: 'TURN_COUNTERCLOCKWISE',  # Rotate clockwise
                    7: 'FIRE'}  # Fire forward
 
+
 class HarvestAgent(Agent):
 
     def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        self.update_map_agent_pos(start_pos)
+        self.update_map_agent_rot(start_orientation)
 
     @property
     def action_space(self):
@@ -140,9 +151,15 @@ class HarvestAgent(Agent):
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
 
-    def get_reward(self):
-        # FIXME(ev) put in the actual reward
-        return 1
+    def reward_from_pos(self, query_pos):
+        row, col = query_pos
+        if self.grid.map[row, col] == 'A':
+            self.reward_this_turn += 1
+        elif self.grid.map[row, col] == 'F':
+            self.reward_this_turn -= 50
+
+    def fire_beam(self):
+        self.reward_this_turn -= 1
 
     def get_done(self):
         # FIXME(ev) put in the actual computation
