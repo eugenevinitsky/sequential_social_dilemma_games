@@ -11,7 +11,9 @@ if __name__ == "__main__":
     ray.init(num_cpus=1)
 
     # Simple environment with `num_agents` independent cartpole entities
-    register_env("harvest_env", lambda _: HarvestEnv())
+    def env_creator(_):
+        return HarvestEnv()
+    register_env("harvest_env", env_creator)
     single_env = HarvestEnv()
     obs_space = single_env.observation_space
     act_space = single_env.action_space
@@ -30,11 +32,13 @@ if __name__ == "__main__":
     run_experiments({
         "test": {
             "run": "PPO",
-            "env": "havest_env",
+            "env": "harvest_env",
             "stop": {
                 "training_iteration": 100
             },
             "config": {
+                "train_batch_size": 10000,
+                "horizon": 100,
                 "num_workers": 0,
                 "log_level": "DEBUG",
                 "num_sgd_iter": 10,
@@ -42,6 +46,9 @@ if __name__ == "__main__":
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
                 },
+                # FIXME(ev) magic number
+                "model": {"dim": 3, "conv_filters":
+                    [[4, [2, 2], 1]]}
             },
         }
     })
