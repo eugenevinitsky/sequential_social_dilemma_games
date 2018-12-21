@@ -370,8 +370,6 @@ class TestHarvestEnv(unittest.TestCase):
     def test_agent_rewards(self):
         pass
 
-    # TODO(ev) test if an agent walking into another agent that is going to move is allowed
-    # TODO(ev) it should be but it isn't right now
     def test_agent_conflict(self):
         # test that if there are two agents and two spawning points, they hit both of them
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
