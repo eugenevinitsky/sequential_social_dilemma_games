@@ -417,27 +417,28 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.update_map({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_LEFT'})
         self.env.execute_reservations()
 
-        # test that if two agents have a conflicting move then the tie is broken randomly
-        # num_agent_1 = 0.0
-        # num_agent_2 = 0.0
-        # for i in range(10000):
-        #     self.env.agents['agent-0'].update_map_agent_pos([3, 2])
-        #     self.env.agents['agent-1'].update_map_agent_pos([3, 4])
-        #     self.env.update_map({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_UP'})
-        #     self.env.execute_reservations()
-        #     if self.env.agents['agent-0'].get_pos().tolist() == [3,3]:
-        #         num_agent_1 += 1
-        #     else:
-        #         num_agent_2 += 1
-        # agent_1_percent = num_agent_1/(num_agent_1 + num_agent_2)
-        # within_bounds = .47 < agent_1_percent and agent_1_percent < .53
-        # self.assertTrue(within_bounds)
+        #test that if two agents have a conflicting move then the tie is broken randomly
+        np.random.seed(123)
+        num_agent_1 = 0.0
+        num_agent_2 = 0.0
+        for i in range(5000):
+            self.env.agents['agent-0'].update_map_agent_pos([3, 2])
+            self.env.agents['agent-1'].update_map_agent_pos([3, 4])
+            self.env.update_map({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_UP'})
+            self.env.execute_reservations()
+            if self.env.agents['agent-0'].get_pos().tolist() == [3,3]:
+                num_agent_1 += 1
+            else:
+                num_agent_2 += 1
+        agent_1_percent = num_agent_1/(num_agent_1 + num_agent_2)
+        within_bounds = .48 < agent_1_percent and agent_1_percent < .52
+        self.assertTrue(within_bounds)
 
         # check that this works correctly with three agents
         self.add_agent('agent-2', [2, 3], 'UP', self.env, 3)
         num_agent_1 = 0.0
         other_agents = 0.0
-        for i in range(20000):
+        for i in range(10000):
             self.env.agents['agent-0'].update_map_agent_pos([3, 2])
             self.env.agents['agent-1'].update_map_agent_pos([3, 4])
             self.env.agents['agent-2'].update_map_agent_pos([2, 3])
