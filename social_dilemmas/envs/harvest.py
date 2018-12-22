@@ -1,3 +1,4 @@
+from gym.spaces import Discrete
 import numpy as np
 
 from social_dilemmas.envs.agent import HarvestAgent
@@ -46,11 +47,13 @@ class HarvestEnv(MapEnv):
     # FIXME(ev) action_space should really be defined in the agents
     @property
     def action_space(self):
-        pass
+        return Discrete(8)
 
     @property
     def observation_space(self):
-        pass
+        # FIXME(ev) this is an information leak
+        agents = list(self.agents.values())
+        return agents[0].observation_space
 
     # TODO(ev) this can probably be moved into the superclass
     def setup_agents(self):

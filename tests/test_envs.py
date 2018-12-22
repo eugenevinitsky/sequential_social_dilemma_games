@@ -206,6 +206,17 @@ class TestHarvestEnv(unittest.TestCase):
              [' '] * 3 + ['@'] + [''],
              [' '] * 3 + ['@'] + ['']]
         )
+
+        # check if if the view is correct if the agent is in the bottom right corner
+        self.move_agent(agent_id, [5, 5])
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [[' '] * 3 + ['@'] + [''],
+             [' '] * 3 + ['@'] + [''],
+             [' '] * 2 + ['P'] + ['@'] + [''],
+             ['@'] * 4 + [''],
+             [''] * 5]
+        )
         np.testing.assert_array_equal(expected_view, agent_view)
 
     def test_apple_spawn(self):
