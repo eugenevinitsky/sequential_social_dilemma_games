@@ -374,9 +374,9 @@ class TestHarvestEnv(unittest.TestCase):
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [['@'] + [' '] * 4,
-             ['@'] + [' '] * 4,
+             ['@'] + ['F'] * 2 + [' '] * 2,
              ['@'] + ['F'] + ['P'] + [' '] * 2,
-             ['@'] + [' '] * 4,
+             ['@'] + ['F'] * 2 + [' '] * 2,
              ['@'] + [' '] * 4]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
@@ -390,9 +390,9 @@ class TestHarvestEnv(unittest.TestCase):
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [['@'] + [' '] * 4,
-             ['@'] + [' '] * 4,
+             ['@'] + [' '] + ['F'] * 3,
              ['@'] + [' '] + ['P'] + ['F'] * 2,
-             ['@'] + [' '] * 4,
+             ['@'] + [' '] + ['F'] * 3,
              ['@'] + [' '] * 4]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
@@ -465,9 +465,9 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.execute_reservations()
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', 'F', 'F', 'F', 'F', '@'],
                                  ['@', 'F', 'F', 'F', 'P', '@'],
-                                 ['@', ' ', ' ', 'A', ' ', '@'],
+                                 ['@', 'F', 'F', 'F', 'F', '@'],
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.map)
         # but by the next step, the agent is visible again
@@ -539,7 +539,7 @@ class TestHarvestEnv(unittest.TestCase):
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
                                  ['@', ' ', ' ', 'A', 'A', '@'],
-                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', 'F', 'F', 'F', 'F', '@'],
                                  ['@', 'F', 'F', 'F', 'P', '@'],
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.map)
