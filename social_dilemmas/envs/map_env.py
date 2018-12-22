@@ -118,7 +118,7 @@ class MapEnv(MultiAgentEnv):
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
-        dones["__all__"] = np.any(dones.items())
+        dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, info
 
     def reset(self):
