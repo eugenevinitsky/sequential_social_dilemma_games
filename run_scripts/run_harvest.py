@@ -4,9 +4,9 @@ from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
 
-NUM_CPUS = 1
-
 from social_dilemmas.envs.harvest import HarvestEnv
+
+NUM_CPUS = 1
 
 if __name__ == "__main__":
     ray.init(num_cpus=NUM_CPUS, redirect_output=True)
