@@ -10,8 +10,8 @@ COLOURS = {' ': [0, 0, 0],  # Black background
            '': [195, 0, 255],  # Board walls
            '@': [195, 0, 255],  # Board walls
            'A': [0, 255, 0],  # Green apples
-           'P': [0, 255, 255],  # Player #FIXME(ev) agents need to have different colors
-           'F': [255, 255, 0]}  # Yellow firing beam
+           'P': [0, 255, 255],  # Yellow player
+           'F': [255, 255, 0]}  # Blue firing beam
 
 # Add custom actions to the agent
 ACTIONS['FIRE'] = 5

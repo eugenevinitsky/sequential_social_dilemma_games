@@ -162,9 +162,43 @@ class HarvestAgent(Agent):
         self.reward_this_turn -= 1
 
     def get_done(self):
-        # FIXME(ev) put in the actual computation
         return False
 
 
+# TODO(ev) this is an exact duplicate of HarvestAgent, perhaps rename them both to FiringAgent
 class CleanupAgent(Agent):
-    pass
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
+        self.view_len = view_len
+        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        self.update_map_agent_pos(start_pos)
+        self.update_map_agent_rot(start_orientation)
+
+    @property
+    def action_space(self):
+        return Discrete(8)
+
+    # Ugh, this is gross, this leads to the actions basically being
+    # defined in two places
+    def action_map(self, action_number):
+        """Maps action_number to a desired action in the map"""
+        return HARVEST_ACTIONS[action_number]
+
+    @property
+    def observation_space(self):
+        return Box(low=0.0, high=0.0, shape=(self.view_len, self.view_len, 3), dtype=np.float32)
+
+    def get_state(self):
+        return self.grid.return_view(self.pos, self.row_size, self.col_size)
+
+    def reward_from_pos(self, query_pos):
+        row, col = query_pos
+        if self.grid.map[row, col] == 'A':
+            self.reward_this_turn += 1
+        elif self.grid.map[row, col] == 'F':
+            self.reward_this_turn -= 50
+
+    def fire_beam(self):
+        self.reward_this_turn -= 1
+
+    def get_done(self):
+        return False
