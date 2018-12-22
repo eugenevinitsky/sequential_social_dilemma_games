@@ -7,10 +7,10 @@ from ray.tune.registry import register_env
 
 from social_dilemmas.envs.harvest import HarvestEnv
 
-NUM_CPUS = 3
+NUM_CPUS = 1
 
 if __name__ == "__main__":
-    ray.init(num_cpus=NUM_CPUS, redirect_output=True)
+    ray.init(num_cpus=NUM_CPUS, redirect_output=False)
 
     # Simple environment with `num_agents` independent cartpole entities
     def env_creator(_):
@@ -51,9 +51,9 @@ if __name__ == "__main__":
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
                 },
                 "model": {"dim": 3, "conv_filters":
-                # num_outs, kernel, stride
-                # TODO(ev) pick better numbers
-                    [[4, [2, 2], 1], [8, [7, 7], 1]]}
+                          # num_outs, kernel, stride
+                          # TODO(ev) pick better numbers
+                          [[4, [2, 2], 1], [8, [7, 7], 1]]}
 
     })
 
@@ -66,6 +66,5 @@ if __name__ == "__main__":
             },
             'checkpoint_freq': 20,
             "config": config,
-                # FIXME(ev) magic number
         }
     })
