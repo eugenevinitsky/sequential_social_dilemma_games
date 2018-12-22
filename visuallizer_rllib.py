@@ -2,7 +2,6 @@
    agent policies."""
 
 import argparse
-from datetime import datetime
 import json
 import numpy as np
 import os
@@ -12,62 +11,52 @@ import sys
 import ray
 from ray.rllib.agents.agent import get_agent_class
 from ray.tune.registry import register_env
-from ray.rllib.models import ModelCatalog
 from ray.cloudpickle import cloudpickle
 
 from social_dilemmas.envs.harvest import HarvestEnv
 import utility_funcs
 
+def rollout_and_render(self, horizon=1000, render_frames=False,
+                       render_full_vid=True, path=None):
+    rewards = []
+    observations = []
 
-class Controller(object):
+    if render_full_vid:
+        if path is None:
+            path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
+            if not os.path.exists(path):
+                os.makedirs(path)
+        images_path = path + '/images/'
+        if not os.path.exists(images_path):
+            os.makedirs(images_path)
 
-    def __init__(self):
-        self.env = HarvestEnv(num_agents=2, render=True)
-        self.env.reset()
+        shape = self.env.map.shape
+        full_obs = [np.zeros((shape[0], shape[1], 3), dtype=np.uint8) for i in range(horizon)]
 
-        # TODO: initialize agents here
+    for i in range(horizon):
+        # TODO: use agent policy not just random actions
+        rand_action = np.random.randint(8, size=2)
+        obs, rew, dones, info, = self.env.step({'agent-0': rand_action[0],
+                                                'agent-1': rand_action[1]})
 
-    def rollout_and_render(self, horizon=1000, render_frames=False,
-                           render_full_vid=True, path=None):
-        rewards = []
-        observations = []
+        print("timestep", i, "action", rand_action, "reward", rew['agent-0'])
+        sys.stdout.flush()
 
-        if render_full_vid:
-            if path is None:
-                path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
-                if not os.path.exists(path):
-                    os.makedirs(path)
-            images_path = path + '/images/'
-            if not os.path.exists(images_path):
-                os.makedirs(images_path)
-
-            shape = self.env.map.shape
-            full_obs = [np.zeros((shape[0], shape[1], 3), dtype=np.uint8) for i in range(horizon)]
-
-        for i in range(horizon):
-            # TODO: use agent policy not just random actions
-            rand_action = np.random.randint(8, size=2)
-            obs, rew, dones, info, = self.env.step({'agent-0': rand_action[0],
-                                                    'agent-1': rand_action[1]})
-
-            print("timestep", i, "action", rand_action, "reward", rew['agent-0'])
-            sys.stdout.flush()
-
-            if render_frames:
-                self.env.render_map()
-
-            if render_full_vid:
-                rgb_arr = self.env.map_to_colors()
-                full_obs[i] = rgb_arr.astype(np.uint8)
-
-            observations.append(obs['agent-0'])
-            rewards.append(rew['agent-0'])
+        if render_frames:
+            self.env.render_map()
 
         if render_full_vid:
-            utility_funcs.make_video_from_rgb_imgs(full_obs, path)
+            rgb_arr = self.env.map_to_colors()
+            full_obs[i] = rgb_arr.astype(np.uint8)
 
-            # Clean up images
-            shutil.rmtree(images_path)
+        observations.append(obs['agent-0'])
+        rewards.append(rew['agent-0'])
+
+    if render_full_vid:
+        utility_funcs.make_video_from_rgb_imgs(full_obs, path)
+
+        # Clean up images
+        shutil.rmtree(images_path)
 
 def get_rllib_config(path):
     """Return the data from the specified rllib configuration file."""
@@ -136,6 +125,11 @@ def visualizer_rllib(args):
     if hasattr(agent, "local_evaluator"):
         env = agent.local_evaluator.env
 
+    if args.save_video:
+        shape = env.map.shape
+        full_obs = [np.zeros((shape[0], shape[1], 3), dtype=np.uint8)
+                    for i in range(config["horizon"])]
+
     rets = {}
     # map the agent id to its policy
     policy_map_fn = config['multiagent']['policy_mapping_fn'].func
@@ -149,12 +143,17 @@ def visualizer_rllib(args):
             ret = {key: [0] for key in rets.keys()}
         else:
             ret = 0
-        for _ in range(config["horizon"]):
+        for j in range(config["horizon"]):
             action = {}
             for agent_id in state.keys():
                 action[agent_id] = agent.compute_action(
                     state[agent_id], policy_id=policy_map_fn(agent_id))
-            state, reward, done, _ = env.step(action)
+            observations, reward, done, _ = env.step(action)
+            if args.render:
+                env.render_map()
+            if args.save_video:
+                rgb_arr = env.map_to_colors()
+                full_obs[j] = rgb_arr.astype(np.uint8)
 
             for actor, rew in reward.items():
                 ret[policy_map_fn(actor)][0] += rew
@@ -173,6 +172,18 @@ def visualizer_rllib(args):
     for agent_id, rew in rets.items():
         print('Average, std return: {}, {} for agent {}'.format(
             np.mean(rew), np.std(rew), agent_id))
+
+    if args.save_video:
+        path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
+        if not os.path.exists(path):
+            os.makedirs(path)
+        images_path = path + '/images/'
+        if not os.path.exists(images_path):
+            os.makedirs(images_path)
+        utility_funcs.make_video_from_rgb_imgs(full_obs, path)
+
+        # Clean up images
+        shutil.rmtree(images_path)
 
 def create_parser():
     parser = argparse.ArgumentParser(
@@ -199,6 +210,14 @@ def create_parser():
         type=int,
         default=1,
         help='The number of rollouts to visualize.')
+    parser.add_argument(
+        '--save-video',
+        action='store_true',
+        help='whether to save a movie or not')
+    parser.add_argument(
+        '--render',
+        action='store_true',
+        help='whether to watch the rollout while it happens')
     return parser
 
 if __name__ == '__main__':

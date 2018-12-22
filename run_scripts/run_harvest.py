@@ -7,7 +7,7 @@ from ray.tune.registry import register_env
 
 from social_dilemmas.envs.harvest import HarvestEnv
 
-NUM_CPUS = 1
+NUM_CPUS = 3
 
 if __name__ == "__main__":
     ray.init(num_cpus=NUM_CPUS, redirect_output=True)
@@ -42,7 +42,7 @@ if __name__ == "__main__":
     config['env_config']['run'] = alg_run
     # hyperparams
     config.update({
-                "train_batch_size": 10000,
+                "train_batch_size": 30000,
                 "horizon": 1000,
                 "num_workers": NUM_CPUS - 1,
                 "num_sgd_iter": 10,
@@ -62,7 +62,7 @@ if __name__ == "__main__":
             "run": "PPO",
             "env": "harvest_env",
             "stop": {
-                "training_iteration": 100
+                "training_iteration": 200
             },
             'checkpoint_freq': 20,
             "config": config,
