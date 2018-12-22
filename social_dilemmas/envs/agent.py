@@ -125,10 +125,12 @@ HARVEST_ACTIONS = {0: 'MOVE_LEFT',  # Move left
                    6: 'TURN_COUNTERCLOCKWISE',  # Rotate clockwise
                    7: 'FIRE'}  # Fire forward
 
+HARVEST_VIEW_SIZE = 7
+
 
 class HarvestAgent(Agent):
 
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=HARVEST_VIEW_SIZE):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
         self.update_map_agent_pos(start_pos)

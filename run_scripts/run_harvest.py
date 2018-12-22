@@ -53,7 +53,7 @@ if __name__ == "__main__":
                 "model": {"dim": 3, "conv_filters":
                           # num_outs, kernel, stride
                           # TODO(ev) pick better numbers
-                          [[4, [2, 2], 1], [8, [7, 7], 1]]}
+                          [[8, [2, 2], 1], [16, [15, 15], 1]]}
 
     })
 
