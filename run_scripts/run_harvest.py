@@ -37,7 +37,7 @@ if __name__ == "__main__":
             },
             "config": {
                 "train_batch_size": 10000,
-                "horizon": 100,
+                "horizon": 1000,
                 "num_workers": 0,
                 "log_level": "DEBUG",
                 "num_sgd_iter": 10,
@@ -47,7 +47,9 @@ if __name__ == "__main__":
                 },
                 # FIXME(ev) magic number
                 "model": {"dim": 3, "conv_filters":
-                          [[4, [2, 2], 1]]}
+                          # num_outs, kernel, stride
+                          # TODO(ev) pick better numbers
+                          [[4, [2, 2], 1], [8, [7, 7], 1]]}
             },
         }
     })

@@ -118,6 +118,7 @@ class MapEnv(MultiAgentEnv):
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
+        dones["__all__"] = np.any(dones.items())
         return observations, rewards, dones, info
 
     def reset(self):
@@ -360,17 +361,18 @@ class MapEnv(MultiAgentEnv):
         return view
 
     def pad_if_needed(self, left_edge, right_edge, top_edge, bot_edge, matrix):
+        # FIXME(ev) something is broken here, I think x and y are flipped
         row_dim = matrix.shape[0]
         col_dim = matrix.shape[1]
         left_pad, right_pad, top_pad, bot_pad = 0, 0, 0, 0
         if left_edge < 0:
             left_pad = abs(left_edge)
-        if right_edge > col_dim - 1:
-            right_pad = right_edge - (col_dim - 1)
+        if right_edge > row_dim - 1:
+            right_pad = right_edge - (row_dim - 1)
         if top_edge < 0:
             top_pad = abs(top_edge)
-        if bot_edge > row_dim - 1:
-            bot_pad = bot_edge - (row_dim - 1)
+        if bot_edge > col_dim - 1:
+            bot_pad = bot_edge - (col_dim - 1)
 
         return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, \
             top_pad

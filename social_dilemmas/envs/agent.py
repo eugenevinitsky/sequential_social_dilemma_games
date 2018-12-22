@@ -146,7 +146,8 @@ class HarvestAgent(Agent):
 
     @property
     def observation_space(self):
-        return Box(low=0.0, high=0.0, shape=(self.view_len, self.view_len, 3), dtype=np.float32)
+        return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+                                             2 * self.view_len + 1, 3), dtype=np.float32)
 
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
