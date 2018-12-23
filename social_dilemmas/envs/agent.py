@@ -104,7 +104,6 @@ class Agent(object):
             self.grid.map[old_row, old_col] = ' '
             self.grid.map[new_row, new_col] = 'P'
 
-        # TODO(ev) if you move over an apple it should show up in the reward function
         self.set_pos(new_pos)
 
     def update_map_agent_rot(self, new_rot):
@@ -202,6 +201,39 @@ class CleanupAgent(Agent):
 
     def fire_beam(self):
         self.reward_this_turn -= 1
+
+    def update_map_agent_pos(self, new_pos):
+        new_row, new_col = new_pos
+        old_row, old_col = self.get_pos()
+        self.reward_from_pos(new_pos)
+        if self.grid.map[new_row, new_col] == 'S':
+            self.grid.hidden_stream.append([new_row, new_col])
+        elif self.grid.map[new_row, new_col] == 'R':
+            self.grid.hidden_river.append([new_row, new_col])
+        elif self.grid.map[new_row, new_col] == 'H':
+            self.grid.hidden_waste.append([new_row, new_col])
+        # you can't walk through walls or agents
+        if self.grid.map[new_row, new_col] == '@':
+            new_pos = self.get_pos()
+        else:
+            self.grid.map[old_row, old_col] = ' '
+            self.grid.map[new_row, new_col] = 'P'
+
+        # TODO(ev) this doesn't seem like agent behavior... this should be moved into the map class
+        if [old_row, old_col] in self.grid.hidden_river:
+            self.grid.map[old_row, old_col] = 'R'
+            index = self.grid.hidden_river.index([old_row, old_col])
+            del self.grid.hidden_river[index]
+        elif [old_row, old_col] in self.grid.hidden_stream:
+            self.grid.map[old_row, old_col] = 'S'
+            index = self.grid.hidden_stream.index([old_row, old_col])
+            del self.grid.hidden_stream[index]
+        elif [old_row, old_col] in self.grid.hidden_waste:
+            self.grid.map[old_row, old_col] = 'H'
+            index = self.grid.hidden_waste.index([old_row, old_col])
+            del self.grid.hidden_waste[index]
+
+        self.set_pos(new_pos)
 
     def get_done(self):
         return False

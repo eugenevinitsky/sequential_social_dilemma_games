@@ -1,7 +1,7 @@
 """Defines a multi-agent controller to rollout environment episodes w/
    agent policies."""
 
-from social_dilemmas.envs.harvest import HarvestEnv
+# from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
 
 import utility_funcs
@@ -14,7 +14,7 @@ import shutil
 class Controller(object):
 
     def __init__(self):
-        self.env = CleanupEnv(num_agents=2, render=True)
+        self.env = CleanupEnv(num_agents=5, render=True)
         self.env.reset()
 
         # TODO: initialize agents here

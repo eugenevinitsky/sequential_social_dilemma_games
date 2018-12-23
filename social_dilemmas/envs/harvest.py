@@ -65,6 +65,8 @@ class HarvestEnv(MapEnv):
     def custom_reset(self):
         """Initialize the walls and the apples"""
         self.firing_points = []
+        self.hidden_apples = []
+        self.hidden_agents = []
         self.build_walls()
         self.update_map_apples(self.apple_points)
 

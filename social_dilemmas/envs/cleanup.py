@@ -10,10 +10,10 @@ COLOURS = {' ': [0, 0, 0],  # Black background
            '@': [195, 0, 255],  # Board walls
            'A': [0, 255, 0],  # Green apples
            'P': [0, 255, 255],  # Yellow player
-           'F': [255, 255, 0], # Light blue firing beam
+           'F': [255, 255, 0],  # Light blue firing beam
            'S': [0, 0, 255],  # Dark blue stream cell
-           'H': [139,69,19], # brown waste cells
-           'R': [20, 20, 0]} # some color river cell
+           'H': [17, 56, 100],  # brown waste cells
+           'R': [255, 140, 0]}  # red river cell # CHANGE COLORS
 
 # Add custom actions to the agent
 ACTIONS['FIRE'] = 5
@@ -24,6 +24,7 @@ thresholdDepletion = 0.4
 thresholdRestoration = 0.0
 wasteSpawnProbability = 0.5
 appleRespawnProbability = 0.05
+
 
 class CleanupEnv(MapEnv):
 
@@ -42,11 +43,14 @@ class CleanupEnv(MapEnv):
         self.waste_start_points = []
         self.waste_points = []
         self.river_points = []
+        self.stream_points = []
         self.wall_points = []
         self.firing_points = []
         self.hidden_apples = []
         self.hidden_river = []
+        self.hidden_stream = []
         self.hidden_agents = []
+        self.hidden_waste = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
                 if self.base_map[row, col] == 'P':
@@ -55,20 +59,27 @@ class CleanupEnv(MapEnv):
                     self.apple_points.append([row, col])
                 elif self.base_map[row, col] == '@':
                     self.wall_points.append([row, col])
+                elif self.base_map[row, col] == 'S':
+                    self.stream_points.append([row, col])
                 if self.base_map[row, col] == 'H':
                     self.waste_start_points.append([row, col])
-                if self.base_map[row, col] == 'H' or 'R':
+                if self.base_map[row, col] == 'H' or self.base_map[row, col] == 'R':
                     self.waste_points.append([row, col])
                 if self.base_map[row, col] == 'R':
                     self.river_points.append([row, col])
 
-
     def custom_reset(self):
         """Initialize the walls and the waste"""
         self.firing_points = []
+        self.hidden_apples = []
+        self.hidden_river = []
+        self.hidden_stream = []
+        self.hidden_agents = []
+        self.hidden_waste = []
         self.build_walls()
         self.update_map_waste(self.waste_start_points)
         self.update_map_river(self.river_points)
+        self.update_map_stream(self.stream_points)
 
     def custom_action(self, agent):
         """Allows agents to take actions that are not move or turn"""
@@ -79,6 +90,7 @@ class CleanupEnv(MapEnv):
     def custom_map_update(self):
         """Custom map updates that don't have to do with agent actions"""
         # spawn the apples
+        self.compute_probabilities()
         new_apples_and_waste = self.spawn_apples_and_waste()
         if len(new_apples_and_waste) > 0:
             self.reserved_slots += new_apples_and_waste
@@ -96,8 +108,9 @@ class CleanupEnv(MapEnv):
                 # put the agent back if they were temporarily obscured by the firing beam
                 self.map[row, col] = 'P'
             elif self.firing_points[i] in self.hidden_river:
-                # TODO(ev) make sure that when agents step over a river, when they leave everything is returned
                 self.map[row, col] = 'R'
+            elif self.firing_points[i] in self.hidden_stream:
+                self.map[row, col] = 'S'
             else:
                 self.map[row, col] = ' '
         self.hidden_apples = []
@@ -138,20 +151,18 @@ class CleanupEnv(MapEnv):
         spawn_points = []
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            spawn_prob = self.current_apple_spawn_prob
             rand_num = np.random.rand(1)[0]
-            if rand_num < spawn_prob:
+            if rand_num < self.current_apple_spawn_prob:
                 spawn_points.append((row, col, 'A'))
         for i in range(len(self.waste_points)):
             row, col = self.waste_points[i]
-            spawn_prob = self.current_waste_spawn_prob
             rand_num = np.random.rand(1)[0]
-            if rand_num < spawn_prob:
+            if rand_num < self.current_waste_spawn_prob:
                 spawn_points.append((row, col, 'H'))
         return spawn_points
 
     def compute_probabilities(self):
-        waste_density = 1 - self.compute_permitted_area()/self.potential_waste_area
+        waste_density = 1 - self.compute_permitted_area() / self.potential_waste_area
         if waste_density >= thresholdDepletion:
             self.current_apple_spawn_prob = 0
             self.current_waste_spawn_prob = 0
@@ -160,7 +171,7 @@ class CleanupEnv(MapEnv):
         if waste_density <= thresholdRestoration:
             self.current_apple_spawn_prob = appleRespawnProbability
         else:
-            coeff = appleRespawnProbability/(thresholdDepletion - thresholdRestoration)
+            coeff = appleRespawnProbability / (thresholdDepletion - thresholdRestoration)
             spawn_prob = (1 - (waste_density - thresholdRestoration)) * coeff
             self.current_apple_spawn_prob = spawn_prob
 
@@ -175,7 +186,7 @@ class CleanupEnv(MapEnv):
     def update_map_waste(self, new_waste_points):
         for i in range(len(new_waste_points)):
             row, col = new_waste_points[i]
-            # TODO(ev) can waste spawn where an agent is?
+            # TODO(ev) can waste spawn where an agent or  beam is?
             if self.map[row, col] != 'P' and self.map[row, col] != 'F':
                 self.map[row, col] = 'H'
 
@@ -191,6 +202,11 @@ class CleanupEnv(MapEnv):
         for i in range(len(new_river_points)):
             row, col = new_river_points[i]
             self.map[row, col] = 'R'
+
+    def update_map_stream(self, new_stream_points):
+        for i in range(len(new_stream_points)):
+            row, col = new_stream_points[i]
+            self.map[row, col] = 'S'
 
     def update_map_fire(self, firing_pos, firing_orientation):
         num_fire_cells = ACTIONS['FIRE']
@@ -211,6 +227,8 @@ class CleanupEnv(MapEnv):
                         self.hidden_agents.append([next_cell[0], next_cell[1]])
                     elif self.map[next_cell[0], next_cell[1]] == 'R':
                         self.hidden_river.append([next_cell[0], next_cell[1]])
+                    elif self.map[next_cell[0], next_cell[1]] == 'S':
+                        self.hidden_stream.append([next_cell[0], next_cell[1]])
                     self.map[next_cell[0], next_cell[1]] = 'F'
                     firing_points.append((next_cell[0], next_cell[1], 'F'))
                     pos += firing_direction

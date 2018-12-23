@@ -17,6 +17,15 @@ MINI_HARVEST_MAP = [
     '@@@@@@',
 ]
 
+MINI_CLEANUP_MAP = [
+    '@@@@@@',
+    '@ P  @',
+    '@H BB@',
+    '@R BB@',
+    '@S BP@',
+    '@@@@@@',
+]
+
 # maps used to test different spawn positions and apple positions
 
 # basic empty map with walls
@@ -334,6 +343,12 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.execute_reservations()
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
 
+        # check that stay works properly
+        self.env.update_map({agent_id: 'STAY'})
+        self.env.execute_reservations()
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        self.assertEqual(self.env.map[2, 2], 'P')
+
         # quick test of stay
         self.env.update_map({agent_id: 'STAY'})
         self.env.execute_reservations()
@@ -579,10 +594,76 @@ class TestHarvestEnv(unittest.TestCase):
         # TODO(ev) hack for now, can't call render logic or else it will spawn apples
         self.move_agent(agent_id, start_pos)
 
+
 class TestCleanupEnv(unittest.TestCase):
     def test_parameters(self):
         self.env = CleanupEnv(num_agents=0)
         self.assertEqual(self.env.potential_waste_area, 119)
+
+    def test_reset(self):
+        self.env = CleanupEnv(ascii_map=MINI_CLEANUP_MAP, num_agents=0)
+        self.env.reset()
+        # check that the map has no apples
+        test_map = np.array([['@', '@', '@', '@', '@', '@'],
+                             ['@', ' ', ' ', ' ', ' ', '@'],
+                             ['@', 'H', ' ', ' ', ' ', '@'],
+                             ['@', 'R', ' ', ' ', ' ', '@'],
+                             ['@', 'S', ' ', ' ', ' ', '@'],
+                             ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(self.env.map, test_map)
+
+    # def test_firing(self):
+    #     agent_id = 'agent-0'
+    #     self.construct_map(TEST_MAP_1.copy(), agent_id, [3, 2], 'UP')
+    #     import ipdb; ipdb.set_trace()
+    #     # test basic firing with no rivers or streams or waste
+    #     self.env.update_map({agent_id: 'FIRE'})
+    #     self.env.execute_reservations()
+    #     agent_view = self.env.agents[agent_id].get_state()
+    #     expected_view = np.array(
+    #         [['@'] + [' '] * 4,
+    #          ['@'] + ['F'] * 2 + [' '] * 2,
+    #          ['@'] + ['F'] + ['P'] + [' '] * 2,
+    #          ['@'] + ['F'] * 2 + [' '] * 2,
+    #          ['@'] + [' '] * 4]
+    #     )
+    #     np.testing.assert_array_equal(expected_view, agent_view)
+    #
+    #     self.env.clean_map()
+    #
+    #     expected_view = np.array(
+    #         [['@'] + [' '] * 4,
+    #          ['@'] + [' '] * 4,
+    #          ['@'] + [' '] + ['P'] + [' '] * 2,
+    #          ['@'] + [' '] * 4,
+    #          ['@'] + [' '] * 4]
+    #     )
+    #     np.testing.assert_array_equal(expected_view, agent_view)
+
+    def construct_map(self, map, agent_id, start_pos, start_orientation):
+        # overwrite the map for testing
+        self.env = CleanupEnv(map, num_agents=0)
+        self.env.reset()
+        self.clear_agents()
+
+        # replace the agents with agents with smaller views
+        self.add_agent(agent_id, start_pos, start_orientation, self.env, 2)
+        # TODO(ev) hack for now, can't call render logic or else it will spawn apples
+        self.move_agent(agent_id, start_pos)
+
+    def clear_agents(self):
+        # FIXME(ev) this doesn't clear agent positions off the board
+        self.env.agents = {}
+
+    def add_agent(self, agent_id, start_pos, start_orientation, env, view_len):
+        self.env.agents[agent_id] = CleanupAgent(agent_id, start_pos, start_orientation,
+                                                 env, view_len)
+
+    def move_agent(self, agent_id, new_pos):
+        self.env.agents[agent_id].update_map_agent_pos(new_pos)
+
+    def rotate_agent(self, agent_id, new_rot):
+        self.env.agents[agent_id].update_map_agent_rot(new_rot)
 
 
 if __name__ == '__main__':
