@@ -170,7 +170,7 @@ class HarvestAgent(Agent):
 
 # TODO(ev) this is an exact duplicate of HarvestAgent, perhaps rename them both to FiringAgent
 class CleanupAgent(Agent):
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=10):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
         self.update_map_agent_pos(start_pos)

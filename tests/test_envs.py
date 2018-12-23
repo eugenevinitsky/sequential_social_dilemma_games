@@ -5,6 +5,8 @@ import unittest
 
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.agent import HarvestAgent
+from social_dilemmas.envs.cleanup import CleanupEnv
+from social_dilemmas.envs.agent import CleanupAgent
 
 MINI_HARVEST_MAP = [
     '@@@@@@',
@@ -576,6 +578,11 @@ class TestHarvestEnv(unittest.TestCase):
         self.add_agent(agent_id, start_pos, start_orientation, self.env, 2)
         # TODO(ev) hack for now, can't call render logic or else it will spawn apples
         self.move_agent(agent_id, start_pos)
+
+class TestCleanupEnv(unittest.TestCase):
+    def test_parameters(self):
+        self.env = CleanupEnv(num_agents=0)
+        self.assertEqual(self.env.potential_waste_area, 119)
 
 
 if __name__ == '__main__':
