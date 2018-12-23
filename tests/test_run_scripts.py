@@ -13,14 +13,13 @@ class TestRunScripts(unittest.TestCase):
 
     def run_exp(self, algorithm, env_name, config):
         try:
-            ray.init(num_cpus=1)
+            ray.init(num_cpus=2)
         except Exception:
             pass
         config['train_batch_size'] = 50
-        config['horizon'] = 50
-        config['sample_batch_size'] = 50
-        config['num_workers'] = 0
-        config['sgd_minibatch_size'] = 32
+        config['horizon'] = 20
+        config['sample_batch_size'] = 1
+        config['num_workers'] = 1
 
         run_experiments({
             'test': {
