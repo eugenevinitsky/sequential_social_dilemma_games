@@ -72,7 +72,7 @@ if __name__ == "__main__":
     run_experiments({
         "harvest_test": {
             "run": alg_run,
-            "env": "harvest_env",
+            "env": env_name,
             "stop": {
                 "training_iteration": 200
             },

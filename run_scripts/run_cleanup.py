@@ -50,10 +50,10 @@ def setup():
                 "train_batch_size": 30000,
                 "horizon": 1000,
                 "lr_schedule":
-                [[0, 0.00136],
-                    [20000000, 0.000028]],
+                [[0, 0.00126],
+                    [20000000, 0.000012]],
                 "num_workers": NUM_CPUS - 1,
-                "entropy_coeff": -.000687,
+                "entropy_coeff": -.00176,
                 "multiagent": {
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -72,7 +72,7 @@ if __name__ == "__main__":
     run_experiments({
         "cleanup_test": {
             "run": alg_run,
-            "env": "harvest_env",
+            "env": env_name,
             "stop": {
                 "training_iteration": 200
             },

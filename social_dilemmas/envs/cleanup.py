@@ -1,3 +1,4 @@
+from gym.spaces import Discrete
 import numpy as np
 
 from social_dilemmas.constants import CLEANUP_MAP
@@ -67,6 +68,20 @@ class CleanupEnv(MapEnv):
                     self.waste_points.append([row, col])
                 if self.base_map[row, col] == 'R':
                     self.river_points.append([row, col])
+
+        # TODO(ev) this call should be in the superclass
+        self.setup_agents()
+
+    @property
+    def action_space(self):
+        agents = list(self.agents.values())
+        return agents[0].action_space
+
+    @property
+    def observation_space(self):
+        # FIXME(ev) this is an information leak
+        agents = list(self.agents.values())
+        return agents[0].observation_space
 
     def custom_reset(self):
         """Initialize the walls and the waste"""
@@ -174,8 +189,6 @@ class CleanupEnv(MapEnv):
                 coeff = appleRespawnProbability / (thresholdDepletion - thresholdRestoration)
                 spawn_prob = (1 - (waste_density - thresholdRestoration)) * coeff
                 self.current_apple_spawn_prob = spawn_prob
-        print('apple spawn prob is ', self.current_apple_spawn_prob)
-        print('waste spawn prob is ', self.current_waste_spawn_prob)
 
     def compute_permitted_area(self):
         """How many cells can we spawn waste on?"""

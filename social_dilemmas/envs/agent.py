@@ -166,10 +166,11 @@ class HarvestAgent(Agent):
     def get_done(self):
         return False
 
+CLEANUP_VIEW_SIZE = 7
 
 # TODO(ev) this is an exact duplicate of HarvestAgent, perhaps rename them both to FiringAgent
 class CleanupAgent(Agent):
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=10):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=CLEANUP_VIEW_SIZE):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
         self.update_map_agent_pos(start_pos)
@@ -179,15 +180,16 @@ class CleanupAgent(Agent):
     def action_space(self):
         return Discrete(8)
 
+    @property
+    def observation_space(self):
+        return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+                                             2 * self.view_len + 1, 3), dtype=np.float32)
+
     # Ugh, this is gross, this leads to the actions basically being
     # defined in two places
     def action_map(self, action_number):
         """Maps action_number to a desired action in the map"""
         return HARVEST_ACTIONS[action_number]
-
-    @property
-    def observation_space(self):
-        return Box(low=0.0, high=0.0, shape=(self.view_len, self.view_len, 3), dtype=np.float32)
 
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
