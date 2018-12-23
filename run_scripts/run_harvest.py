@@ -1,6 +1,6 @@
 import ray
 from ray import tune
-from ray.rllib.agents.agent import get_agent_class
+from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
 from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
@@ -9,7 +9,7 @@ from ray.tune.registry import register_env
 from social_dilemmas.envs.harvest import HarvestEnv
 from models.conv_to_fc_net import ConvToFCNet
 
-NUM_CPUS = 1
+NUM_CPUS = 2
 
 if __name__ == "__main__":
     ray.init(num_cpus=NUM_CPUS, redirect_output=False)
@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     # Simple environment with `num_agents` independent cartpole entities
     def env_creator(_):
-        return HarvestEnv(num_agents=3)
+        return HarvestEnv(num_agents=5)
 
     env_name = "harvest_env"
     register_env(env_name, env_creator)
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     def policy_mapping_fn(_):
         return 'shared'
 
-    alg_run = 'PPO'
+    alg_run = 'A3C'
     agent_cls = get_agent_class(alg_run)
     config = agent_cls._default_config.copy()
     # information for replay
@@ -49,9 +49,11 @@ if __name__ == "__main__":
     config.update({
                 "train_batch_size": 30000,
                 "horizon": 1000,
+                "lr_schedule":
+                [[0, 0.00136],
+                    [20000000, 0.000028]],
                 "num_workers": NUM_CPUS - 1,
-                "num_sgd_iter": 10,
-                "log_level": "DEBUG",
+                "entropy_coeff": -.000687,
                 "multiagent": {
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -63,7 +65,7 @@ if __name__ == "__main__":
 
     run_experiments({
         "harvest_test": {
-            "run": "PPO",
+            "run": alg_run,
             "env": "harvest_env",
             "stop": {
                 "training_iteration": 200
