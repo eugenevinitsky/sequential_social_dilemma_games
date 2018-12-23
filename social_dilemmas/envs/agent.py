@@ -220,6 +220,7 @@ class CleanupAgent(Agent):
                 self.grid.map[old_row, old_col] = self.memory
 
             # you can't walk through walls or agents
+            # TODO(ev) if you attempt to walk through a wall, you can disappear
             if self.grid.map[new_row, new_col] == '@':
                 new_pos = self.get_pos()
                 self.memory = self.grid.map[new_pos[0], new_pos[1]]

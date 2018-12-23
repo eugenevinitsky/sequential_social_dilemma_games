@@ -237,14 +237,14 @@ class CleanupEnv(MapEnv):
             for i in range(num_fire_cells):
                 next_cell = pos + firing_direction
                 if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
-                    if self.map[next_cell[0], next_cell[1]] == 'A':
+                    # there should be a river cell here, do not replace
+                    if self.base_map[next_cell[0], next_cell[1]] == 'H' or \
+                            self.base_map[next_cell[0], next_cell[1]] == 'R':
+                        self.hidden_river.append([next_cell[0], next_cell[1]])
+                    elif self.map[next_cell[0], next_cell[1]] == 'A':
                         self.hidden_apples.append([next_cell[0], next_cell[1]])
                     elif self.map[next_cell[0], next_cell[1]] == 'P':
                         self.hidden_agents.append([next_cell[0], next_cell[1]])
-                    # hit a waste cell, so put a river back there
-                    elif self.map[next_cell[0], next_cell[1]] == 'H' or \
-                            self.map[next_cell[0], next_cell[1]] == 'R':
-                        self.hidden_river.append([next_cell[0], next_cell[1]])
                     elif self.map[next_cell[0], next_cell[1]] == 'S':
                         self.hidden_stream.append([next_cell[0], next_cell[1]])
                     self.map[next_cell[0], next_cell[1]] = 'F'
