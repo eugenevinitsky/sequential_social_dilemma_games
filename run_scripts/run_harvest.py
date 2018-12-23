@@ -36,7 +36,8 @@ def setup():
         return agent_id
 
     # register the custom model
-    ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
+    model_name = "conv_to_fc_net"
+    ModelCatalog.register_custom_model(model_name, ConvToFCNet)
 
     algorithm = 'A3C'
     agent_cls = get_agent_class(algorithm)
