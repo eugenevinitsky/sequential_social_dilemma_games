@@ -3,8 +3,7 @@
 
 Code partially adapted from PyColab: https://github.com/deepmind/pycolab
 """
-
-from gym import Env
+from ray.rllib.env import MultiAgentEnv
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -38,7 +37,7 @@ ORIENTATIONS = {'LEFT': [-1, 0],
 #         |
 
 
-class MapEnv(Env):
+class MapEnv(MultiAgentEnv):
 
     def __init__(self, ascii_map, color_map, num_agents=1, render=True):
         """
@@ -119,6 +118,7 @@ class MapEnv(Env):
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
+        dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, info
 
     def reset(self):
@@ -207,27 +207,31 @@ class MapEnv(Env):
         self.custom_reset()
 
     def custom_reset(self):
-        """Reset custom elements of the map"""
-        raise NotImplementedError
+        """Reset custom elements of the map. For example, spawn apples and build walls"""
+        pass
 
     def custom_action(self, agent):
-        """Allows agents to take actions that are not move or turn"""
-        raise NotImplementedError
+        """Add reservations to self.reserved_slots for actions that are not move or turn.
+        For example, if an agent can fire, you can add (row, col, 'F')
+        to indicate that F should be placed at that point"""
+        pass
 
     def custom_map_update(self):
-        """Custom map updates that don't have to do with agent actions"""
-        raise NotImplementedError
+        """Custom map updates that don't have to do with agent actions. For example, you can add
+        (row, col, 'A') to env.reserved_slots to indicate an apple should be placed at that point"""
+        pass
 
     def clean_map(self):
-        """Clean map of elements that should be removed. Executed every step/"""
-        raise NotImplementedError
+        """Clean map of elements that should be removed at the start of every step"""
+        pass
 
     def execute_custom_reservations(self):
-        """Execute reserved slots that do not have to do with moving"""
+        """Execute reserved slots that do not have to do with moving agents. For example,
+        placing apples or placing the fired beam. """
         raise NotImplementedError
 
     def setup_agents(self):
-        """Constructs all the agents in self.agent"""
+        """Construct all the agents for the environment"""
         raise NotImplementedError
 
     def execute_reservations(self):
@@ -362,17 +366,18 @@ class MapEnv(Env):
         return view
 
     def pad_if_needed(self, left_edge, right_edge, top_edge, bot_edge, matrix):
+        # FIXME(ev) something is broken here, I think x and y are flipped
         row_dim = matrix.shape[0]
         col_dim = matrix.shape[1]
         left_pad, right_pad, top_pad, bot_pad = 0, 0, 0, 0
         if left_edge < 0:
             left_pad = abs(left_edge)
-        if right_edge > col_dim - 1:
-            right_pad = right_edge - (col_dim - 1)
+        if right_edge > row_dim - 1:
+            right_pad = right_edge - (row_dim - 1)
         if top_edge < 0:
             top_pad = abs(top_edge)
-        if bot_edge > row_dim - 1:
-            bot_pad = bot_edge - (row_dim - 1)
+        if bot_edge > col_dim - 1:
+            bot_pad = bot_edge - (col_dim - 1)
 
         return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, \
             top_pad

@@ -1,3 +1,4 @@
+from gym.spaces import Discrete
 import numpy as np
 
 from social_dilemmas.envs.agent import HarvestAgent
@@ -14,7 +15,7 @@ COLOURS = {' ': [0, 0, 0],  # Black background
            'F': [255, 255, 0]}  # Blue firing beam
 
 # Add custom actions to the agent
-ACTIONS['FIRE'] = 5
+ACTIONS['FIRE'] = 5  # length of firing range
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
@@ -46,17 +47,19 @@ class HarvestEnv(MapEnv):
     # FIXME(ev) action_space should really be defined in the agents
     @property
     def action_space(self):
-        pass
+        return Discrete(8)
 
     @property
     def observation_space(self):
-        pass
+        # FIXME(ev) this is an information leak
+        agents = list(self.agents.values())
+        return agents[0].observation_space
 
     # TODO(ev) this can probably be moved into the superclass
     def setup_agents(self):
         for i in range(self.num_agents):
             agent_id = 'agent-' + str(i)
-            agent = HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation(), self, 3)
+            agent = HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation(), self)
             self.agents[agent_id] = agent
 
     def custom_reset(self):
@@ -147,22 +150,27 @@ class HarvestEnv(MapEnv):
         return num_apples
 
     def update_map_fire(self, firing_pos, firing_orientation):
-        num_fire_cells = 5
+        num_fire_cells = ACTIONS['FIRE']
         start_pos = np.asarray(firing_pos)
         firing_direction = ORIENTATIONS[firing_orientation]
+        # compute the other two starting positions
+        right_shift = self.rotate_right(firing_direction)
+        firing_pos = [start_pos, start_pos + right_shift - firing_direction,
+                      start_pos - right_shift - firing_direction]
         firing_points = []
-        for i in range(num_fire_cells):
-            next_cell = start_pos + firing_direction
-            if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
-                if self.map[next_cell[0], next_cell[1]] == 'A':
-                    self.hidden_apples.append([next_cell[0], next_cell[1]])
-                elif self.map[next_cell[0], next_cell[1]] == 'P':
-                    self.hidden_agents.append([next_cell[0], next_cell[1]])
-                self.map[next_cell[0], next_cell[1]] = 'F'
-                firing_points.append((next_cell[0], next_cell[1], 'F'))
-                start_pos += firing_direction
-            else:
-                break
+        for pos in firing_pos:
+            for i in range(num_fire_cells):
+                next_cell = pos + firing_direction
+                if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
+                    if self.map[next_cell[0], next_cell[1]] == 'A':
+                        self.hidden_apples.append([next_cell[0], next_cell[1]])
+                    elif self.map[next_cell[0], next_cell[1]] == 'P':
+                        self.hidden_agents.append([next_cell[0], next_cell[1]])
+                    self.map[next_cell[0], next_cell[1]] = 'F'
+                    firing_points.append((next_cell[0], next_cell[1], 'F'))
+                    pos += firing_direction
+                else:
+                    break
         return firing_points
 
     def update_map_apples(self, new_apple_points):

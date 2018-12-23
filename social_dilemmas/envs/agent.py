@@ -125,10 +125,12 @@ HARVEST_ACTIONS = {0: 'MOVE_LEFT',  # Move left
                    6: 'TURN_COUNTERCLOCKWISE',  # Rotate clockwise
                    7: 'FIRE'}  # Fire forward
 
+HARVEST_VIEW_SIZE = 7
+
 
 class HarvestAgent(Agent):
 
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=HARVEST_VIEW_SIZE):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
         self.update_map_agent_pos(start_pos)
@@ -146,7 +148,8 @@ class HarvestAgent(Agent):
 
     @property
     def observation_space(self):
-        return Box(low=0.0, high=0.0, shape=(self.view_len, self.view_len, 3), dtype=np.float32)
+        return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+                                             2 * self.view_len + 1, 3), dtype=np.float32)
 
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
