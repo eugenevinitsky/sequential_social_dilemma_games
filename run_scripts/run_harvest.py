@@ -2,15 +2,20 @@ import ray
 from ray import tune
 from ray.rllib.agents.agent import get_agent_class
 from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
+from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
 
 from social_dilemmas.envs.harvest import HarvestEnv
+from models.conv_to_fc_net import ConvToFCNet
 
 NUM_CPUS = 1
 
 if __name__ == "__main__":
     ray.init(num_cpus=NUM_CPUS, redirect_output=False)
+
+    # register the custom model
+    ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
 
     # Simple environment with `num_agents` independent cartpole entities
     def env_creator(_):
@@ -46,14 +51,13 @@ if __name__ == "__main__":
                 "horizon": 1000,
                 "num_workers": NUM_CPUS - 1,
                 "num_sgd_iter": 10,
+                "log_level": "DEBUG",
                 "multiagent": {
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
                 },
-                "model": {"dim": 3, "conv_filters":
-                          # num_outs, kernel, stride
-                          # TODO(ev) pick better numbers
-                          [[8, [2, 2], 1], [16, [15, 15], 1]]}
+                "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
+                          "lstm_cell_size": 128}
 
     })
 
