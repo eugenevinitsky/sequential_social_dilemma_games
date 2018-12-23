@@ -166,14 +166,16 @@ class CleanupEnv(MapEnv):
         spawn_points = []
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            rand_num = np.random.rand(1)[0]
-            if rand_num < self.current_apple_spawn_prob:
-                spawn_points.append((row, col, 'A'))
+            if self.map[row, col] != 'P':
+                rand_num = np.random.rand(1)[0]
+                if rand_num < self.current_apple_spawn_prob:
+                    spawn_points.append((row, col, 'A'))
         for i in range(len(self.waste_points)):
             row, col = self.waste_points[i]
-            rand_num = np.random.rand(1)[0]
-            if rand_num < self.current_waste_spawn_prob:
-                spawn_points.append((row, col, 'H'))
+            if self.map[row, col] != 'P':
+                rand_num = np.random.rand(1)[0]
+                if rand_num < self.current_waste_spawn_prob:
+                    spawn_points.append((row, col, 'H'))
         return spawn_points
 
     def compute_probabilities(self):

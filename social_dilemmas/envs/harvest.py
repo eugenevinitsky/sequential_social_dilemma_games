@@ -136,12 +136,13 @@ class HarvestEnv(MapEnv):
         new_apple_points = []
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            window = self.return_view(self.apple_points[i], APPLE_RADIUS, APPLE_RADIUS)
-            num_apples = self.count_apples(window)
-            spawn_prob = SPAWN_PROB[min(num_apples, 3)]
-            rand_num = np.random.rand(1)[0]
-            if rand_num < spawn_prob:
-                new_apple_points.append((row, col, 'A'))
+            if self.map[row, col] != 'P':
+                window = self.return_view(self.apple_points[i], APPLE_RADIUS, APPLE_RADIUS)
+                num_apples = self.count_apples(window)
+                spawn_prob = SPAWN_PROB[min(num_apples, 3)]
+                rand_num = np.random.rand(1)[0]
+                if rand_num < spawn_prob:
+                    new_apple_points.append((row, col, 'A'))
         return new_apple_points
 
     def count_apples(self, window):
