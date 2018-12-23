@@ -11,18 +11,14 @@ Tests are located in the test folder and can be run individually or run by runni
 The key parameter of MapEnv is reserved slots; env.reserved_slots stores tuples of length three or four 
 consisting (row, col, 'char') where char is the character you wish to place 
 Every environment that subclasses MapEnv needs to implement the following methods
+`
 def custom_reset(self):
-
-      """Reset custom elements of the map. For example, spawn apples and build walls"""
-      
+      """Reset custom elements of the map. For example, spawn apples and build walls"""  
       pass
 
   def custom_action(self, agent):
-  
-      """Add reservations to self.reserved_slots for actions that are not move or turn. For example, 
-      
+      """Add reservations to self.reserved_slots for actions that are not move or turn. For example,  
       if an agent can fire, you can add (row, col, 'F') to indicate that F should be placed at that point"""
-      
       pass
 
   def custom_map_update(self):
@@ -41,4 +37,5 @@ def custom_reset(self):
 
   def setup_agents(self):
       """Construct all the agents for the environment"""
+`
         
