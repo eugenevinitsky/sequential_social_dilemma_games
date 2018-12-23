@@ -10,9 +10,11 @@ import sys
 
 import ray
 from ray.rllib.agents.registry import get_agent_class
+from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 from ray.cloudpickle import cloudpickle
 
+from models.conv_to_fc_net import ConvToFCNet
 import utility_funcs
 
 
@@ -46,13 +48,12 @@ def visualizer_rllib(args):
     else:
         multiagent = False
 
-    # Run on only one cpu for rendering purposes
-    config['num_workers'] = 0
-
     # Create and register a gym+rllib env
     env_creator = pkl['env_config']['func_create']
     env_name = config['env_config']['env_name']
     register_env(env_name, env_creator.func)
+
+    ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
 
     # Determine agent and checkpoint
     config_run = config['env_config']['run'] if 'run' in config['env_config'] \
@@ -76,6 +77,12 @@ def visualizer_rllib(args):
               'python ./visualizer_rllib.py /tmp/ray/result_dir 1 --run PPO')
         sys.exit(1)
 
+    # Run on only one cpu for rendering purposes if possible; A3C requires two
+    if config_run == 'A3C':
+        config['num_workers'] = 1
+    else:
+        config['num_workers'] = 0
+
     # create the agent that will be used to compute the actions
     agent = agent_cls(env=env_name, config=config)
     checkpoint = result_dir + '/checkpoint_' + args.checkpoint_num
@@ -95,6 +102,15 @@ def visualizer_rllib(args):
     for key in config['multiagent']['policy_graphs'].keys():
         rets[key] = []
 
+    if config['model']['use_lstm']:
+        use_lstm = True
+        state_init = [
+            np.zeros(config['model']['lstm_cell_size'], np.float32),
+            np.zeros(config['model']['lstm_cell_size'], np.float32)
+        ]
+    else:
+        use_lstm = False
+
     for i in range(args.num_rollouts):
         state = env.reset()
         done = False
@@ -105,8 +121,12 @@ def visualizer_rllib(args):
         for j in range(config["horizon"]):
             action = {}
             for agent_id in state.keys():
-                action[agent_id] = agent.compute_action(
-                    state[agent_id], policy_id=policy_map_fn(agent_id))
+                if use_lstm:
+                    action[agent_id], state_init, logits = agent.compute_action(
+                        state[agent_id], state=state_init, policy_id=policy_map_fn(agent_id))
+                else:
+                    action[agent_id] = agent.compute_action(
+                        state[agent_id], policy_id=policy_map_fn(agent_id))
             observations, reward, done, _ = env.step(action)
             if args.render:
                 env.render_map()
@@ -184,5 +204,5 @@ def create_parser():
 if __name__ == '__main__':
     parser = create_parser()
     args = parser.parse_args()
-    ray.init(num_cpus=1)
+    ray.init(num_cpus=2, redirect_output=False)
     visualizer_rllib(args)

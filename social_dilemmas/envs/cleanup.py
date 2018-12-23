@@ -115,6 +115,7 @@ class CleanupEnv(MapEnv):
         for agent in self.agents.values():
             agent_pos.append(agent.get_pos().tolist())
         for i in range(len(self.firing_points)):
+            # TODO(ev) replace this with a map memory of obscured cells
             row, col = self.firing_points[i]
             if self.firing_points[i] in self.hidden_apples:
                 self.map[row, col] = 'A'
@@ -165,17 +166,20 @@ class CleanupEnv(MapEnv):
         spawn_points = []
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            rand_num = np.random.rand(1)[0]
-            if rand_num < self.current_apple_spawn_prob:
-                spawn_points.append((row, col, 'A'))
+            if self.map[row, col] != 'P':
+                rand_num = np.random.rand(1)[0]
+                if rand_num < self.current_apple_spawn_prob:
+                    spawn_points.append((row, col, 'A'))
         for i in range(len(self.waste_points)):
             row, col = self.waste_points[i]
-            rand_num = np.random.rand(1)[0]
-            if rand_num < self.current_waste_spawn_prob:
-                spawn_points.append((row, col, 'H'))
+            if self.map[row, col] != 'P':
+                rand_num = np.random.rand(1)[0]
+                if rand_num < self.current_waste_spawn_prob:
+                    spawn_points.append((row, col, 'H'))
         return spawn_points
 
     def compute_probabilities(self):
+        # TODO(ev) there is almost certainly a bug here
         waste_density = 1 - self.compute_permitted_area() / self.potential_waste_area
         if waste_density >= thresholdDepletion:
             self.current_apple_spawn_prob = 0
@@ -235,12 +239,14 @@ class CleanupEnv(MapEnv):
             for i in range(num_fire_cells):
                 next_cell = pos + firing_direction
                 if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
-                    if self.map[next_cell[0], next_cell[1]] == 'A':
+                    # there should be a river cell here, do not replace
+                    if self.base_map[next_cell[0], next_cell[1]] == 'H' or \
+                            self.base_map[next_cell[0], next_cell[1]] == 'R':
+                        self.hidden_river.append([next_cell[0], next_cell[1]])
+                    elif self.map[next_cell[0], next_cell[1]] == 'A':
                         self.hidden_apples.append([next_cell[0], next_cell[1]])
                     elif self.map[next_cell[0], next_cell[1]] == 'P':
                         self.hidden_agents.append([next_cell[0], next_cell[1]])
-                    elif self.map[next_cell[0], next_cell[1]] == 'R':
-                        self.hidden_river.append([next_cell[0], next_cell[1]])
                     elif self.map[next_cell[0], next_cell[1]] == 'S':
                         self.hidden_stream.append([next_cell[0], next_cell[1]])
                     self.map[next_cell[0], next_cell[1]] = 'F'

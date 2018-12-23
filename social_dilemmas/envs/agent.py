@@ -174,6 +174,8 @@ class CleanupAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=CLEANUP_VIEW_SIZE):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        # remember what you've stepped on
+        self.memory = self.grid.map[start_pos[0], start_pos[1]]
         self.update_map_agent_pos(start_pos)
         self.update_map_agent_rot(start_orientation)
 
@@ -209,34 +211,24 @@ class CleanupAgent(Agent):
         new_row, new_col = new_pos
         old_row, old_col = self.get_pos()
         self.reward_from_pos(new_pos)
-        if self.grid.map[new_row, new_col] == 'S':
-            self.grid.hidden_stream.append([new_row, new_col])
-        elif self.grid.map[new_row, new_col] == 'R':
-            self.grid.hidden_river.append([new_row, new_col])
-        elif self.grid.map[new_row, new_col] == 'H':
-            self.grid.hidden_waste.append([new_row, new_col])
-        # you can't walk through walls or agents
-        if self.grid.map[new_row, new_col] == '@':
-            new_pos = self.get_pos()
-        else:
-            self.grid.map[old_row, old_col] = ' '
-            self.grid.map[new_row, new_col] = 'P'
+        # don't change memory or move if no call to move was made
+        if new_row != old_row or new_col != old_col:
+            # apples and firing beams should not be placed back
+            if self.memory == 'A' or self.memory == 'F':
+                self.grid.map[old_row, old_col] = ' '
+            else:
+                self.grid.map[old_row, old_col] = self.memory
 
-        # TODO(ev) this doesn't seem like agent behavior... this should be moved into the map class
-        if [old_row, old_col] in self.grid.hidden_river:
-            self.grid.map[old_row, old_col] = 'R'
-            index = self.grid.hidden_river.index([old_row, old_col])
-            del self.grid.hidden_river[index]
-        elif [old_row, old_col] in self.grid.hidden_stream:
-            self.grid.map[old_row, old_col] = 'S'
-            index = self.grid.hidden_stream.index([old_row, old_col])
-            del self.grid.hidden_stream[index]
-        elif [old_row, old_col] in self.grid.hidden_waste:
-            self.grid.map[old_row, old_col] = 'H'
-            index = self.grid.hidden_waste.index([old_row, old_col])
-            del self.grid.hidden_waste[index]
+            # you can't walk through walls or agents
+            # TODO(ev) if you attempt to walk through a wall, you can disappear
+            if self.grid.map[new_row, new_col] == '@':
+                new_pos = self.get_pos()
+                self.memory = self.grid.map[new_pos[0], new_pos[1]]
+            else:
+                self.memory = self.grid.map[new_pos[0], new_pos[1]]
+                self.grid.map[new_row, new_col] = 'P'
 
-        self.set_pos(new_pos)
+            self.set_pos(new_pos)
 
     def get_done(self):
         return False
