@@ -168,12 +168,14 @@ class CleanupEnv(MapEnv):
             self.current_waste_spawn_prob = 0
         else:
             self.current_waste_spawn_prob = wasteSpawnProbability
-        if waste_density <= thresholdRestoration:
-            self.current_apple_spawn_prob = appleRespawnProbability
-        else:
-            coeff = appleRespawnProbability / (thresholdDepletion - thresholdRestoration)
-            spawn_prob = (1 - (waste_density - thresholdRestoration)) * coeff
-            self.current_apple_spawn_prob = spawn_prob
+            if waste_density <= thresholdRestoration:
+                self.current_apple_spawn_prob = appleRespawnProbability
+            else:
+                coeff = appleRespawnProbability / (thresholdDepletion - thresholdRestoration)
+                spawn_prob = (1 - (waste_density - thresholdRestoration)) * coeff
+                self.current_apple_spawn_prob = spawn_prob
+        print('apple spawn prob is ', self.current_apple_spawn_prob)
+        print('waste spawn prob is ', self.current_waste_spawn_prob)
 
     def compute_permitted_area(self):
         """How many cells can we spawn waste on?"""
