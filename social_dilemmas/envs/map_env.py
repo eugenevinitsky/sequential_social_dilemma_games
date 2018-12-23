@@ -207,20 +207,32 @@ class MapEnv(MultiAgentEnv):
         self.custom_reset()
 
     def custom_reset(self):
-        """Reset custom elements of the map"""
+        """Reset custom elements of the map. For example, spawn apples and build walls"""
         pass
 
     def custom_action(self, agent):
-        """Allows agents to take actions that are not move or turn"""
+        """Add reservations to self.reserved_slots for actions that are not move or turn.
+        For example, if an agent can fire, you can add (row, col, 'F')
+        to indicate that F should be placed at that point"""
         pass
 
     def custom_map_update(self):
-        """Custom map updates that don't have to do with agent actions"""
+        """Custom map updates that don't have to do with agent actions. For example, you can add
+        (row, col, 'A') to env.reserved_slots to indicate an apple should be placed at that point"""
         pass
 
     def clean_map(self):
-        """Clean map of elements that should be removed"""
+        """Clean map of elements that should be removed at the start of every step"""
         pass
+
+    def execute_custom_reservations(self):
+        """Execute reserved slots that do not have to do with moving agents. For example,
+        placing apples or placing the fired beam. """
+        raise NotImplementedError
+
+    def setup_agents(self):
+        """Construct all the agents for the environment"""
+        raise NotImplementedError
 
     def execute_reservations(self):
         """Takes all the reserved slots and decides which move has priority"""
@@ -281,13 +293,6 @@ class MapEnv(MultiAgentEnv):
 
         self.execute_custom_reservations()
         self.reserved_slots = []
-
-    def execute_custom_reservations(self):
-        """Execute reserved slots that do not have to do with moving"""
-        raise NotImplementedError
-
-    def setup_agents(self):
-        raise NotImplementedError
 
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent.

@@ -10,16 +10,12 @@ from social_dilemmas.envs.harvest import HarvestEnv
 from models.conv_to_fc_net import ConvToFCNet
 
 NUM_CPUS = 2
+NUM_AGENTS = 5
 
-if __name__ == "__main__":
-    ray.init(num_cpus=NUM_CPUS, redirect_output=False)
 
-    # register the custom model
-    ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
-
-    # Simple environment with `num_agents` independent cartpole entities
+def setup():
     def env_creator(_):
-        return HarvestEnv(num_agents=5)
+        return HarvestEnv(num_agents=NUM_AGENTS)
 
     env_name = "harvest_env"
     register_env(env_name, env_creator)
@@ -32,19 +28,23 @@ if __name__ == "__main__":
         return (PPOPolicyGraph, obs_space, act_space, {})
 
     # Setup PPO with an ensemble of `num_policies` different policy graphs
-    policy_graphs = {'shared': gen_policy()}
+    policy_graphs = {}
+    for i in range(NUM_AGENTS):
+        policy_graphs['agent-' + str(i)] = gen_policy()
 
-    # TODO(ev) currently all agents share the same policy
-    def policy_mapping_fn(_):
-        return 'shared'
+    def policy_mapping_fn(agent_id):
+        return agent_id
 
-    alg_run = 'A3C'
-    agent_cls = get_agent_class(alg_run)
+    # register the custom model
+    ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
+
+    algorithm = 'A3C'
+    agent_cls = get_agent_class(algorithm)
     config = agent_cls._default_config.copy()
     # information for replay
     config['env_config']['func_create'] = tune.function(env_creator)
     config['env_config']['env_name'] = env_name
-    config['env_config']['run'] = alg_run
+    config['env_config']['run'] = algorithm
     # hyperparams
     config.update({
                 "train_batch_size": 30000,
@@ -62,6 +62,12 @@ if __name__ == "__main__":
                           "lstm_cell_size": 128}
 
     })
+    return algorithm, env_name, config
+
+
+if __name__ == "__main__":
+    ray.init(num_cpus=NUM_CPUS, redirect_output=True)
+    alg_run, env_name, config = setup()
 
     run_experiments({
         "harvest_test": {
