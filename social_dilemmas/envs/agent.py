@@ -166,9 +166,10 @@ class HarvestAgent(Agent):
     def get_done(self):
         return False
 
+
 CLEANUP_VIEW_SIZE = 7
 
-# TODO(ev) this is an exact duplicate of HarvestAgent, perhaps rename them both to FiringAgent
+
 class CleanupAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=CLEANUP_VIEW_SIZE):
         self.view_len = view_len

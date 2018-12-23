@@ -1,4 +1,3 @@
-from gym.spaces import Discrete
 import numpy as np
 
 from social_dilemmas.constants import CLEANUP_MAP
