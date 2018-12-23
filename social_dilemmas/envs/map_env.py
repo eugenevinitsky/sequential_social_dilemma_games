@@ -211,8 +211,9 @@ class MapEnv(MultiAgentEnv):
         pass
 
     def custom_action(self, agent):
-        """Add reservations to self.reserved_slots for actions that are not move or turn. For example,
-        if an agent can fire, you can add (row, col, 'F') to indicate that F should be placed at that point"""
+        """Add reservations to self.reserved_slots for actions that are not move or turn.
+        For example, if an agent can fire, you can add (row, col, 'F')
+        to indicate that F should be placed at that point"""
         pass
 
     def custom_map_update(self):
@@ -225,8 +226,8 @@ class MapEnv(MultiAgentEnv):
         pass
 
     def execute_custom_reservations(self):
-        """Execute reserved slots that do not have to do with moving agents. For example, placing apples
-           or placing the fired beam. """
+        """Execute reserved slots that do not have to do with moving agents. For example,
+        placing apples or placing the fired beam. """
         raise NotImplementedError
 
     def setup_agents(self):

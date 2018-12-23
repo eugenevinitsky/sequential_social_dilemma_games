@@ -12,6 +12,7 @@ from models.conv_to_fc_net import ConvToFCNet
 NUM_CPUS = 2
 NUM_AGENTS = 5
 
+
 def setup():
     def env_creator(_):
         return HarvestEnv(num_agents=NUM_AGENTS)
