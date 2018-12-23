@@ -6,7 +6,7 @@ from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
 
-from social_dilemmas.envs.harvest import HarvestEnv
+from social_dilemmas.envs.cleanup import CleanupEnv
 from models.conv_to_fc_net import ConvToFCNet
 
 NUM_CPUS = 2
@@ -15,11 +15,11 @@ NUM_AGENTS = 5
 
 def setup():
     def env_creator(_):
-        return HarvestEnv(num_agents=NUM_AGENTS)
+        return CleanupEnv(num_agents=NUM_AGENTS)
 
-    env_name = "harvest_env"
+    env_name = "cleanup_env"
     register_env(env_name, env_creator)
-    single_env = HarvestEnv()
+    single_env = CleanupEnv()
     obs_space = single_env.observation_space
     act_space = single_env.action_space
 
@@ -50,10 +50,10 @@ def setup():
                 "train_batch_size": 30000,
                 "horizon": 1000,
                 "lr_schedule":
-                [[0, 0.00136],
-                    [20000000, 0.000028]],
+                [[0, 0.00126],
+                    [20000000, 0.000012]],
                 "num_workers": NUM_CPUS - 1,
-                "entropy_coeff": -.000687,
+                "entropy_coeff": -.00176,
                 "multiagent": {
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -70,7 +70,7 @@ if __name__ == "__main__":
     alg_run, env_name, config = setup()
 
     run_experiments({
-        "harvest_test": {
+        "cleanup_test": {
             "run": alg_run,
             "env": env_name,
             "stop": {

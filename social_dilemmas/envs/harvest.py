@@ -11,8 +11,8 @@ COLOURS = {' ': [0, 0, 0],  # Black background
            '': [195, 0, 255],  # Board walls
            '@': [195, 0, 255],  # Board walls
            'A': [0, 255, 0],  # Green apples
-           'P': [0, 255, 255],  # Player #FIXME(ev) agents need to have different colors
-           'F': [255, 255, 0]}  # Yellow firing beam
+           'P': [0, 255, 255],  # Yellow player
+           'F': [255, 255, 0]}  # Blue firing beam
 
 # Add custom actions to the agent
 ACTIONS['FIRE'] = 5  # length of firing range
@@ -65,37 +65,15 @@ class HarvestEnv(MapEnv):
     def custom_reset(self):
         """Initialize the walls and the apples"""
         self.firing_points = []
+        self.hidden_apples = []
+        self.hidden_agents = []
         self.build_walls()
         self.update_map_apples(self.apple_points)
-
-    # TODO(ev) this is almost certainly used by every environment
-    def build_walls(self):
-        for i in range(len(self.wall_points)):
-            row, col = self.wall_points[i]
-            self.map[row, col] = '@'
 
     def custom_action(self, agent):
         agent.fire_beam()
         self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
                                                     agent.get_orientation())
-
-    def execute_custom_reservations(self):
-        """Execute firing and then apple spawning"""
-        apple_pos = []
-        firing_pos = []
-        for slot in self.reserved_slots:
-            row, col = slot[0], slot[1]
-            if slot[2] == 'A':
-                apple_pos.append([row, col])
-            elif slot[2] == 'F':
-                firing_pos.append([row, col])
-        for pos in firing_pos:
-            row, col = pos
-            self.map[row, col] = 'F'
-            self.firing_points.append([row, col])
-
-        # update the apples
-        self.update_map_apples(apple_pos)
 
     def custom_map_update(self):
         "See parent class"
@@ -121,6 +99,30 @@ class HarvestEnv(MapEnv):
         self.hidden_apples = []
         self.firing_points = []
         self.hidden_agents = []
+
+    def execute_custom_reservations(self):
+        """Execute firing and then apple spawning"""
+        apple_pos = []
+        firing_pos = []
+        for slot in self.reserved_slots:
+            row, col = slot[0], slot[1]
+            if slot[2] == 'A':
+                apple_pos.append([row, col])
+            elif slot[2] == 'F':
+                firing_pos.append([row, col])
+        for pos in firing_pos:
+            row, col = pos
+            self.map[row, col] = 'F'
+            self.firing_points.append([row, col])
+
+        # update the apples
+        self.update_map_apples(apple_pos)
+
+    # TODO(ev) this is almost certainly used by every environment
+    def build_walls(self):
+        for i in range(len(self.wall_points)):
+            row, col = self.wall_points[i]
+            self.map[row, col] = '@'
 
     def spawn_apples(self):
         """Construct the apples spawned in this step.
