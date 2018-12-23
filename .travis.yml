@@ -33,7 +33,9 @@ before_install:
   - pip install redis~=2.10.6
 
   # Copy over local rllib changes
-  - pushd $HOME/build/flow-project
+  - pwd
+  - ls
+  - pushd $HOME/build/sequential_social_dilemma_games
   -     git clone https://github.com/natashamjaques/ray.git
   -     cd ray && git fetch && git checkout master && cd ..
   -     pushd ray
