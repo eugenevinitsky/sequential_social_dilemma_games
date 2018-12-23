@@ -115,6 +115,7 @@ class CleanupEnv(MapEnv):
         for agent in self.agents.values():
             agent_pos.append(agent.get_pos().tolist())
         for i in range(len(self.firing_points)):
+            # TODO(ev) replace this with a map memory of obscured cells
             row, col = self.firing_points[i]
             if self.firing_points[i] in self.hidden_apples:
                 self.map[row, col] = 'A'
@@ -176,6 +177,7 @@ class CleanupEnv(MapEnv):
         return spawn_points
 
     def compute_probabilities(self):
+        # TODO(ev) there is almost certainly a bug here
         waste_density = 1 - self.compute_permitted_area() / self.potential_waste_area
         if waste_density >= thresholdDepletion:
             self.current_apple_spawn_prob = 0
@@ -239,7 +241,9 @@ class CleanupEnv(MapEnv):
                         self.hidden_apples.append([next_cell[0], next_cell[1]])
                     elif self.map[next_cell[0], next_cell[1]] == 'P':
                         self.hidden_agents.append([next_cell[0], next_cell[1]])
-                    elif self.map[next_cell[0], next_cell[1]] == 'R':
+                    # hit a waste cell, so put a river back there
+                    elif self.map[next_cell[0], next_cell[1]] == 'H' or \
+                            self.map[next_cell[0], next_cell[1]] == 'R':
                         self.hidden_river.append([next_cell[0], next_cell[1]])
                     elif self.map[next_cell[0], next_cell[1]] == 'S':
                         self.hidden_stream.append([next_cell[0], next_cell[1]])

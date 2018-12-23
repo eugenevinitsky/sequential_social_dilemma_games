@@ -19,7 +19,7 @@ class Controller(object):
 
         # TODO: initialize agents here
 
-    def rollout_and_render(self, horizon=100, render_frames=False,
+    def rollout_and_render(self, horizon=1000, render_frames=False,
                            render_full_vid=True, path=None):
         rewards = []
         observations = []
@@ -38,9 +38,12 @@ class Controller(object):
 
         for i in range(horizon):
             # TODO: use agent policy not just random actions
-            rand_action = np.random.randint(8, size=2)
+            rand_action = np.random.randint(8, size=5)
             obs, rew, dones, info, = self.env.step({'agent-0': rand_action[0],
-                                                    'agent-1': rand_action[1]})
+                                                    'agent-1': rand_action[1],
+                                                    'agent-2': rand_action[2],
+                                                    'agent-3': rand_action[3],
+                                                    'agent-4': rand_action[4]})
 
             print("timestep", i, "action", rand_action, "reward", rew['agent-0'])
             sys.stdout.flush()
