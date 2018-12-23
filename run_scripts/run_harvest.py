@@ -1,18 +1,20 @@
 import ray
 from ray import tune
+from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
-from ray.rllib.agents.agent import get_agent_class
+from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
 
 from social_dilemmas.envs.harvest import HarvestEnv
+from models.conv_to_fc_net import ConvToFCNet
 
-NUM_CPUS = 1
-
+NUM_CPUS = 2
+NUM_AGENTS = 5
 
 def setup():
     def env_creator(_):
-        return HarvestEnv(num_agents=3)
+        return HarvestEnv(num_agents=NUM_AGENTS)
 
     env_name = "harvest_env"
     register_env(env_name, env_creator)
@@ -25,29 +27,40 @@ def setup():
         return (PPOPolicyGraph, obs_space, act_space, {})
 
     # Setup PPO with an ensemble of `num_policies` different policy graphs
-    policy_graphs = {'shared': gen_policy()}
+    policy_graphs = {}
+    for i in range(NUM_AGENTS):
+        policy_graphs['agent-' + str(i)] = gen_policy()
 
-    # TODO(ev) currently all agents share the same policy
-    def policy_mapping_fn(_):
-        return 'shared'
+    def policy_mapping_fn(agent_id):
+        return agent_id
 
-    model_dict = {"dim": 3, "conv_filters":
-                  # num_outs, kernel, stride
-                  # TODO(ev) pick better numbers
-                  [[4, [2, 2], 1], [8, [7, 7], 1]]}
+    # register the custom model
+    ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
 
-    algorithm = 'PPO'
+    algorithm = 'A3C'
     agent_cls = get_agent_class(algorithm)
     config = agent_cls._default_config.copy()
-    config["train_batch_size"] = 10000
-    config["horizon"] = 1000
-    config["num_workers"] = NUM_CPUS - 1
-    config["multiagent"] = {
-            "policy_graphs": policy_graphs,
-            "policy_mapping_fn": tune.function(policy_mapping_fn),
-        }
-    config["model"] = model_dict
+    # information for replay
+    config['env_config']['func_create'] = tune.function(env_creator)
+    config['env_config']['env_name'] = env_name
+    config['env_config']['run'] = algorithm
+    # hyperparams
+    config.update({
+                "train_batch_size": 30000,
+                "horizon": 1000,
+                "lr_schedule":
+                [[0, 0.00136],
+                    [20000000, 0.000028]],
+                "num_workers": NUM_CPUS - 1,
+                "entropy_coeff": -.000687,
+                "multiagent": {
+                    "policy_graphs": policy_graphs,
+                    "policy_mapping_fn": tune.function(policy_mapping_fn),
+                },
+                "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
+                          "lstm_cell_size": 128}
 
+    })
     return algorithm, env_name, config
 
 
@@ -56,14 +69,13 @@ if __name__ == "__main__":
     alg_run, env_name, config = setup()
 
     run_experiments({
-        "test": {
+        "harvest_test": {
             "run": alg_run,
-            "env": env_name,
+            "env": "harvest_env",
             "stop": {
-                "training_iteration": 100
+                "training_iteration": 200
             },
-            "config": {
-                **config
-            },
+            'checkpoint_freq': 20,
+            "config": config,
         }
     })
