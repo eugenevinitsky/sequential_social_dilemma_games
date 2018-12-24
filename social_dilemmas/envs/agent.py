@@ -26,7 +26,7 @@ class Agent(object):
             how many columns left and right the agent can look
         """
         self.agent_id = agent_id
-        self.pos = start_pos
+        self.pos = np.array(start_pos)
         self.orientation = start_orientation
         # TODO(ev) change grid to env, this name is not very informative
         self.grid = grid
@@ -94,23 +94,29 @@ class Agent(object):
         return self.grid.map
 
     def update_map_agent_pos(self, new_pos):
+        """Updates the agents internal positions
+
+        Returns
+        -------
+        old_pos: (np.ndarray)
+            2-d array describing where the agent used to be
+        new_pos: (np.ndarray)
+            2-d array describing the agent positions
+        """
         new_row, new_col = new_pos
-        old_row, old_col = self.get_pos()
+        old_pos = self.get_pos()
         self.reward_from_pos(new_pos)
-        # you can't walk through walls or agents
+        # you can't walk through walls
         if self.grid.map[new_row, new_col] == '@':
             new_pos = self.get_pos()
-        else:
-            self.grid.map[old_row, old_col] = ' '
-            self.grid.map[new_row, new_col] = 'P'
 
         self.set_pos(new_pos)
+        # TODO(ev) list array consistency
+        return self.get_pos(), np.array(old_pos)
 
     def update_map_agent_rot(self, new_rot):
         # FIXME(ev) once we have a color scheme worked out we need to convert rotation
         # into a color
-        row, col = self.get_pos()
-        self.grid.map[row, col] = 'P'
         self.set_orientation(new_rot)
 
 
@@ -175,7 +181,6 @@ class CleanupAgent(Agent):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
         # remember what you've stepped on
-        self.memory = self.grid.map[start_pos[0], start_pos[1]]
         self.update_map_agent_pos(start_pos)
         self.update_map_agent_rot(start_orientation)
 

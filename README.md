@@ -27,9 +27,19 @@ Every environment that subclasses MapEnv needs to implement the following method
       (row, col, 'A') to env.reserved_slots to indicate an apple should be placed at that point"""
       pass
 
-  def clean_map(self):
-      """Clean map of elements that should be removed at the start of every step"""
-      pass
+  def append_hiddens(self, new_pos, old_char, new_char):
+      """Add cells that will be hidden and should be put back later
+
+      Parameters
+      ----------
+      new_pos: list
+          the position the new char is going to be placed at
+      old_char: str
+          the character that will be hidden
+      new_char: str
+          the character that will replace it
+      """
+      raise NotImplementedError
 
    def execute_custom_reservations(self):
     """Execute reserved slots that do not have to do with moving agents. For example, placing apples 

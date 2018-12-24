@@ -66,6 +66,17 @@ class MapEnv(MultiAgentEnv):
         self.render = render
         self.color_map = color_map
         self.spawn_points = []  # where agents can appear
+        # cells hidden by agents or other actions, elements are [row, pos, str]
+        self.hidden_cells = []
+        self.wall_points = []
+        for row in range(self.base_map.shape[0]):
+            for col in range(self.base_map.shape[1]):
+                if self.base_map[row, col] == 'P':
+                    self.spawn_points.append([row, col])
+                elif self.base_map[row, col] == '@':
+                    self.wall_points.append([row, col])
+        self.setup_agents()
+
 
     # FIXME(ev) move this to a utils eventually
     def ascii_to_numpy(self, ascii_list):
@@ -103,11 +114,19 @@ class MapEnv(MultiAgentEnv):
             agent_action = self.agents[agent_id].action_map(action)
             agent_actions[agent_id] = agent_action
 
-        self.update_map(agent_actions)
+        # move
+        self.clean_map()
+        self.update_moves(agent_actions)
+        self.execute_reservations()
 
+        # execute custom moves like firing
+        self.clean_map()
+        self.update_custom_moves(agent_actions)
+        self.execute_reservations()
+
+        # execute spawning events
         self.custom_map_update()
         self.execute_reservations()
-        self.reserved_slots = []
 
         observations = {}
         rewards = {}
@@ -134,6 +153,9 @@ class MapEnv(MultiAgentEnv):
             to be zero.
         """
         self.reserved_slots = []
+        self.hidden_cells = []
+        self.agents = {}
+        self.setup_agents()
         self.reset_map()
         self.custom_map_update()
 
@@ -173,7 +195,7 @@ class MapEnv(MultiAgentEnv):
             plt.imshow(rgb_arr, interpolation='nearest')
             plt.show()
 
-    def update_map(self, agent_actions):
+    def update_moves(self, agent_actions):
         """Converts agent action tuples into a new map and new agent positions
 
         Parameters
@@ -181,9 +203,6 @@ class MapEnv(MultiAgentEnv):
         agent_actions: dict
             dict with agent_id as key and action as value
         """
-
-        # TODO(ev) split into three methods: clean(), update_map, custom_update_map
-        self.clean_map()
 
         for agent_id, action in agent_actions.items():
             agent = self.agents[agent_id]
@@ -197,13 +216,24 @@ class MapEnv(MultiAgentEnv):
             elif 'TURN' in action:
                 new_rot = self.update_rotation(action, agent.get_orientation())
                 agent.update_map_agent_rot(new_rot)
-            else:
+
+    def update_custom_moves(self, agent_actions):
+        for agent_id, action in agent_actions.items():
+            # check its not a move based action
+            if 'MOVE' not in action and 'STAY' not in action and 'TURN' not in action:
+                agent = self.agents[agent_id]
                 self.custom_action(agent)
 
     def reset_map(self):
         """Resets the map to be empty as well as a custom reset set by subclasses"""
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
-        self.setup_agents()
+        for agent in self.agents.values():
+            pos = agent.get_pos()
+            row, col = pos
+            # TODO(ev) this rendering logic should not be done here)
+            self.map[row, col] = 'P'
+            self.append_hiddens(pos.tolist(), ' ', 'P')
+        self.build_walls()
         self.custom_reset()
 
     def custom_reset(self):
@@ -222,8 +252,18 @@ class MapEnv(MultiAgentEnv):
         pass
 
     def clean_map(self):
-        """Clean map of elements that should be removed at the start of every step"""
-        pass
+        """Place back all hidden cells that are not currently blocked by an agent"""
+        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+        hidden_pos = [hidden[0:2] for hidden in self.hidden_cells]
+        hidden_char = [hidden[2] for hidden in self.hidden_cells]
+        for i, hidden in enumerate(hidden_pos):
+            # you can't put back hidden cells that an agent is on unless it is an agent that is
+            # hidden
+            if hidden not in curr_agent_pos or hidden_char[i] == 'P':
+                row, col = hidden
+                self.map[row, col] = hidden_char[i]
+                index = self.hidden_cells.index(hidden + [hidden_char[i]])
+                del self.hidden_cells[index]
 
     def execute_custom_reservations(self):
         """Execute reserved slots that do not have to do with moving agents. For example,
@@ -232,6 +272,20 @@ class MapEnv(MultiAgentEnv):
 
     def setup_agents(self):
         """Construct all the agents for the environment"""
+        raise NotImplementedError
+
+    def append_hiddens(self, new_pos, old_char, new_char):
+        """Add hidden cells to self.hidden_cells that should be put back
+
+        Parameters
+        ----------
+        new_pos: list
+            the position the new char is going to be placed at
+        old_char: str
+            the character that will be hidden
+        new_char: str
+            the character that will replace it
+        """
         raise NotImplementedError
 
     def execute_reservations(self):
@@ -277,19 +331,43 @@ class MapEnv(MultiAgentEnv):
                             agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
 
             for agent_id, move in agent_moves.items():
+                hidden_pos = [hidden_cell[0: 2] for hidden_cell in self.hidden_cells]
                 if move in curr_agent_pos:
                     # find the agent that is currently at that spot, check where they will be next
                     # if they're going to move away, go ahead and move into their spot
                     conflicting_agent_id = agent_by_pos[tuple(move)]
+                    curr_pos = self.agents[agent_id].get_pos().tolist()
                     # a STAY command has been issued or the other agent hasn't been issued a command,
-                    # don't do anything
+                    # or the other agent is trying to move into your spot (i.e. agents can't
+                    # walk through each other) then so don't do anything
                     if agent_id == conflicting_agent_id or \
-                            conflicting_agent_id not in agent_moves.keys():
+                            agent_moves.get(conflicting_agent_id, curr_pos) == curr_pos:
                         continue
+                    # TODO(ev) this and the line below seem like code duplication
                     elif agent_moves[conflicting_agent_id] != move:
-                        self.agents[agent_id].update_map_agent_pos(move)
+                        new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
+                        new_pos = new_pos.tolist()
+                        old_pos = old_pos.tolist()
+                        char = self.map[new_pos[0], new_pos[1]]
+                        if old_pos in hidden_pos \
+                                and not np.array_equal(new_pos, old_pos):
+                            index = hidden_pos.index([old_pos[0], old_pos[1]])
+                            self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
+                            del self.hidden_cells[index]
+                        self.map[new_pos[0], new_pos[1]] = 'P'
+
                 else:
-                    self.agents[agent_id].update_map_agent_pos(move)
+                    new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
+                    new_pos = new_pos.tolist()
+                    old_pos = old_pos.tolist()
+                    char = self.map[new_pos[0], new_pos[1]]
+                    if old_pos in hidden_pos \
+                            and not np.array_equal(new_pos, old_pos):
+                        index = hidden_pos.index([old_pos[0], old_pos[1]])
+                        self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
+                        del self.hidden_cells[index]
+                        self.append_hiddens(new_pos, char, 'P')
+                    self.map[new_pos[0], new_pos[1]] = 'P'
 
         self.execute_custom_reservations()
         self.reserved_slots = []
@@ -316,11 +394,13 @@ class MapEnv(MultiAgentEnv):
         rand_int = 0
         # select a spawn point
         # replace this with an operation over a set
+        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
         while not not_occupied:
+            # TODO(ev), this is lazy, only spawn numbers that are valid
             num_ints = len(self.spawn_points)
             rand_int = np.random.randint(num_ints)
             spawn_point = self.spawn_points[rand_int]
-            if self.map[spawn_point[0], spawn_point[1]] != 'P':
+            if [spawn_point[0], spawn_point[1]] not in curr_agent_pos:
                 not_occupied = True
         return np.array(self.spawn_points[rand_int])
 
@@ -328,6 +408,11 @@ class MapEnv(MultiAgentEnv):
         """Return a randomly selected initial rotation for an agent"""
         rand_int = np.random.randint(len(ORIENTATIONS.keys()))
         return list(ORIENTATIONS.keys())[rand_int]
+
+    def build_walls(self):
+        for i in range(len(self.wall_points)):
+            row, col = self.wall_points[i]
+            self.map[row, col] = '@'
 
     ########################################
     # Utility methods, move these eventually
