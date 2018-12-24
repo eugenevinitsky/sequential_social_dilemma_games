@@ -249,12 +249,10 @@ class TestHarvestEnv(unittest.TestCase):
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
         self.env.reset()
 
-        # test that agents can't walk into other agents
         self.env.agents['agent-0'].update_map_agent_pos([3, 1])
         self.env.agents['agent-1'].update_map_agent_pos([3, 3])
         self.env.agents['agent-0'].update_map_agent_rot('UP')
         self.env.agents['agent-1'].update_map_agent_rot('UP')
-        # test that if an agents firing beam hits another agent it gets covered
         self.env.update_map({'agent-1': 'FIRE'})
         self.env.execute_reservations()
         self.env.update_map_apples([[3, 2]])
@@ -431,8 +429,6 @@ class TestHarvestEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
-        # TODO(ev) if a firing beam hits an apple, should the apple disappear?
-
     def test_agent_rewards(self):
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
         self.env.reset()
@@ -545,7 +541,6 @@ class TestHarvestEnv(unittest.TestCase):
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
         self.env.reset()
 
-        # test that agents can't walk into other agents
         self.env.agents['agent-0'].update_map_agent_pos([4, 2])
         self.env.agents['agent-1'].update_map_agent_pos([4, 4])
         self.env.agents['agent-0'].update_map_agent_rot('UP')
