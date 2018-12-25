@@ -27,22 +27,12 @@ class HarvestEnv(MapEnv):
 
     def __init__(self, ascii_map=HARVEST_MAP, num_agents=1, render=False):
         super().__init__(ascii_map, COLOURS, num_agents, render)
-        # set up the list of spawn points
-        self.apple_points = []
-        self.wall_points = []
         self.firing_points = []
-        self.hidden_apples = []
-        self.hidden_agents = []
+        self.apple_points = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
-                if self.base_map[row, col] == 'P':
-                    self.spawn_points.append([row, col])
-                elif self.base_map[row, col] == 'A':
+                if self.base_map[row, col] == 'A':
                     self.apple_points.append([row, col])
-                elif self.base_map[row, col] == '@':
-                    self.wall_points.append([row, col])
-        # TODO(ev) this call should be in the superclass
-        self.setup_agents()
 
     # FIXME(ev) action_space should really be defined in the agents
     @property
@@ -65,9 +55,6 @@ class HarvestEnv(MapEnv):
     def custom_reset(self):
         """Initialize the walls and the apples"""
         self.firing_points = []
-        self.hidden_apples = []
-        self.hidden_agents = []
-        self.build_walls()
         self.update_map_apples(self.apple_points)
 
     def custom_action(self, agent):
@@ -82,24 +69,6 @@ class HarvestEnv(MapEnv):
         if len(new_apples) > 0:
             self.reserved_slots += new_apples
 
-    def clean_map(self):
-        """Put back agents and apples that were hidden by the fining beam"""
-        agent_pos = []
-        for agent in self.agents.values():
-            agent_pos.append(agent.get_pos().tolist())
-        for i in range(len(self.firing_points)):
-            row, col = self.firing_points[i]
-            if self.firing_points[i] in self.hidden_apples:
-                self.map[row, col] = 'A'
-            elif [row, col] in agent_pos:
-                # put the agent back if they were temporarily obscured by the firing beam
-                self.map[row, col] = 'P'
-            else:
-                self.map[row, col] = ' '
-        self.hidden_apples = []
-        self.firing_points = []
-        self.hidden_agents = []
-
     def execute_custom_reservations(self):
         """Execute firing and then apple spawning"""
         apple_pos = []
@@ -113,16 +82,18 @@ class HarvestEnv(MapEnv):
         for pos in firing_pos:
             row, col = pos
             self.map[row, col] = 'F'
-            self.firing_points.append([row, col])
 
         # update the apples
         self.update_map_apples(apple_pos)
 
-    # TODO(ev) this is almost certainly used by every environment
-    def build_walls(self):
-        for i in range(len(self.wall_points)):
-            row, col = self.wall_points[i]
-            self.map[row, col] = '@'
+    def append_hiddens(self, new_pos, old_char, new_char=None):
+        """Add hidden cells to self.hidden_cells that should be put back when cleaning"""
+        # an apple is gone once an agent walks over it
+
+        if old_char == 'A' and new_char == 'P':
+            self.hidden_cells.append(new_pos + [' '])
+        else:
+            self.hidden_cells.append(new_pos + [old_char])
 
     def spawn_apples(self):
         """Construct the apples spawned in this step.
@@ -136,7 +107,7 @@ class HarvestEnv(MapEnv):
         new_apple_points = []
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            if self.map[row, col] != 'P':
+            if self.map[row, col] != 'P' and self.map[row, col] != 'A':
                 window = self.return_view(self.apple_points[i], APPLE_RADIUS, APPLE_RADIUS)
                 num_apples = self.count_apples(window)
                 spawn_prob = SPAWN_PROB[min(num_apples, 3)]
@@ -152,6 +123,17 @@ class HarvestEnv(MapEnv):
         num_apples = counts_dict.get('A', 0)
         return num_apples
 
+    def update_map_apples(self, new_apple_points):
+        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+        for i in range(len(new_apple_points)):
+            row, col = new_apple_points[i]
+            if self.map[row, col] != 'P' and self.map[row, col] != 'F':
+                self.map[row, col] = 'A'
+            # you can't spawn apples if an agent is there but hidden by a beam,
+            elif self.map[row, col] == 'F' and [row, col] not in curr_agent_pos:
+                self.append_hiddens([row, col], 'A')
+
+    # TODO(ev) this is in two classes already
     def update_map_fire(self, firing_pos, firing_orientation):
         num_fire_cells = ACTIONS['FIRE']
         start_pos = np.asarray(firing_pos)
@@ -165,21 +147,10 @@ class HarvestEnv(MapEnv):
             for i in range(num_fire_cells):
                 next_cell = pos + firing_direction
                 if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
-                    if self.map[next_cell[0], next_cell[1]] == 'A':
-                        self.hidden_apples.append([next_cell[0], next_cell[1]])
-                    elif self.map[next_cell[0], next_cell[1]] == 'P':
-                        self.hidden_agents.append([next_cell[0], next_cell[1]])
-                    self.map[next_cell[0], next_cell[1]] = 'F'
+                    char = self.map[next_cell[0], next_cell[1]]
+                    self.append_hiddens([next_cell[0], next_cell[1]], char, 'F')
                     firing_points.append((next_cell[0], next_cell[1], 'F'))
                     pos += firing_direction
                 else:
                     break
         return firing_points
-
-    def update_map_apples(self, new_apple_points):
-        for i in range(len(new_apple_points)):
-            row, col = new_apple_points[i]
-            if self.map[row, col] != 'P' and self.map[row, col] != 'F':
-                self.map[row, col] = 'A'
-            elif self.map[row, col] == 'F' and [row, col] not in self.hidden_agents:
-                self.hidden_apples.append([row, col])
