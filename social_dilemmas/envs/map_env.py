@@ -20,6 +20,7 @@ ORIENTATIONS = {'LEFT': [-1, 0],
                 'UP': [0, -1],
                 'DOWN': [0, 1]}
 
+
 # the axes look like
 # graphic is here to help me get my head in order
 # WARNING: increasing array position in the direction of down
@@ -76,7 +77,6 @@ class MapEnv(MultiAgentEnv):
                 elif self.base_map[row, col] == '@':
                     self.wall_points.append([row, col])
         self.setup_agents()
-
 
     # FIXME(ev) move this to a utils eventually
     def ascii_to_numpy(self, ascii_list):
@@ -322,7 +322,20 @@ class MapEnv(MultiAgentEnv):
             if np.any(return_count > 1):
                 for move, index, count in zip(unique_move, indices, return_count):
                     if count > 1:
-                        self.agents[agent_to_slot[index]].update_map_agent_pos(move)
+                        hidden_pos = [hidden_cell[0: 2] for hidden_cell in self.hidden_cells]
+                        # TODO(ev) this should be a method from ---- to -----
+                        # -------------------------------------
+                        new_pos, old_pos = \
+                            self.agents[agent_to_slot[index]].update_map_agent_pos(move)
+                        new_pos = new_pos.tolist()
+                        old_pos = old_pos.tolist()
+                        index = hidden_pos.index([old_pos[0], old_pos[1]])
+                        self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
+                        del self.hidden_cells[index]
+                        char = self.map[new_pos[0], new_pos[1]]
+                        self.append_hiddens(new_pos, char, 'P')
+                        self.map[new_pos[0], new_pos[1]] = 'P'
+                        # ------------------------------------
                         # remove all the other moves that would have conflicted
                         remove_indices = np.where((search_list == move).all(axis=1))[0]
                         all_agents_id = [agent_to_slot[i] for i in remove_indices]
@@ -330,45 +343,103 @@ class MapEnv(MultiAgentEnv):
                         for agent_id in all_agents_id:
                             agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
 
-            for agent_id, move in agent_moves.items():
-                hidden_pos = [hidden_cell[0: 2] for hidden_cell in self.hidden_cells]
-                if move in curr_agent_pos:
-                    # find the agent that is currently at that spot, check where they will be next
-                    # if they're going to move away, go ahead and move into their spot
-                    conflicting_agent_id = agent_by_pos[tuple(move)]
-                    curr_pos = self.agents[agent_id].get_pos().tolist()
-                    # a STAY command has been issued or the other agent hasn't been issued a command,
-                    # or the other agent is trying to move into your spot (i.e. agents can't
-                    # walk through each other) then so don't do anything
-                    if agent_id == conflicting_agent_id or \
-                            agent_moves.get(conflicting_agent_id, curr_pos) == curr_pos:
+            while len(agent_moves.items()) > 0:
+                moves_copy = agent_moves.copy()
+                # if agent_moves == {'agent-0': [3, 4], 'agent-1': [2, 4]}:
+                #     import ipdb;
+                #     ipdb.set_trace()
+                del_keys = []
+                for agent_id, move in moves_copy.items():
+                    if agent_id in del_keys:
                         continue
-                    # TODO(ev) this and the line below seem like code duplication
-                    elif agent_moves[conflicting_agent_id] != move:
+                    hidden_pos = [hidden_cell[0: 2] for hidden_cell in self.hidden_cells]
+                    if move in curr_agent_pos:
+                        # find the agent that is currently at that spot, check where they will be next
+                        # if they're going to move away, go ahead and move into their spot
+                        conflicting_agent_id = agent_by_pos[tuple(move)]
+                        curr_pos = self.agents[agent_id].get_pos().tolist()
+                        curr_conflict_pos = self.agents[conflicting_agent_id].get_pos().tolist()
+                        conflict_move = agent_moves.get(conflicting_agent_id, curr_conflict_pos)
+                        # Condition (1):
+                        # a STAY command has been issued
+                        if agent_id == conflicting_agent_id:
+                            del agent_moves[agent_id]
+                            del_keys.append(agent_id)
+                        # Condition (2)
+                        # its command is to stay
+                        # or you are trying to move into an agent that hasn't received a command
+                        elif conflicting_agent_id not in moves_copy.keys() or \
+                                curr_conflict_pos == conflict_move:
+                            del agent_moves[agent_id]
+                            del_keys.append(agent_id)
+                        # Condition (3)
+                        # It is trying to move into you and you are moving into it
+                        elif conflicting_agent_id in moves_copy.keys():
+                            if agent_moves[conflicting_agent_id] == curr_pos and \
+                                    move == self.agents[conflicting_agent_id].get_pos().tolist():
+                                del agent_moves[conflicting_agent_id]
+                                del agent_moves[agent_id]
+                                del_keys.append(agent_id)
+                                del_keys.append(conflicting_agent_id)
+
+
+                    else:
                         new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
                         new_pos = new_pos.tolist()
                         old_pos = old_pos.tolist()
-                        char = self.map[new_pos[0], new_pos[1]]
-                        if old_pos in hidden_pos \
-                                and not np.array_equal(new_pos, old_pos):
-                            index = hidden_pos.index([old_pos[0], old_pos[1]])
-                            self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
-                            del self.hidden_cells[index]
-                        self.map[new_pos[0], new_pos[1]] = 'P'
-
-                else:
-                    new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
-                    new_pos = new_pos.tolist()
-                    old_pos = old_pos.tolist()
-                    char = self.map[new_pos[0], new_pos[1]]
-                    if old_pos in hidden_pos \
-                            and not np.array_equal(new_pos, old_pos):
                         index = hidden_pos.index([old_pos[0], old_pos[1]])
                         self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
                         del self.hidden_cells[index]
+                        char = self.map[new_pos[0], new_pos[1]]
                         self.append_hiddens(new_pos, char, 'P')
-                    self.map[new_pos[0], new_pos[1]] = 'P'
+                        self.map[new_pos[0], new_pos[1]] = 'P'
+                        del agent_moves[agent_id]
+                        del_keys.append(agent_id)
+                        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+                        # # The other agent is going to move out of the way, so move in
+                        # elif agent_moves[conflicting_agent_id] != move:
+                        #     new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
+                        #     # update the lists in case conflicts have resolved
+                        #     curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+                        #     agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
+                        #     new_pos = new_pos.tolist()
+                        #     old_pos = old_pos.tolist()
+                        #     char = self.map[new_pos[0], new_pos[1]]
+                        #     if old_pos in hidden_pos \
+                        #             and not np.array_equal(new_pos, old_pos):
+                        #         index = hidden_pos.index([old_pos[0], old_pos[1]])
+                        #         # if there is an agent that is not you in your old pos, don't delete
+                        #         # agent_by_pos is lagging so query it with your old id
+                        #         agent_in_old_pos = agent_by_pos.get((old_pos[0], old_pos[1]), False)
+                        #         if not agent_in_old_pos:
+                        #             self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
+                        #             if char != 'P':
+                        #                 del self.hidden_cells[index]
+                        #                 self.append_hiddens(new_pos, char, 'P')
+                        #     self.map[new_pos[0], new_pos[1]] = 'P'
 
+        #         else:
+        #             new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
+        #             # update the lists in case conflicts have resolved
+        #             curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+        #             agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
+        #             new_pos = new_pos.tolist()
+        #             old_pos = old_pos.tolist()
+        #             char = self.map[new_pos[0], new_pos[1]]
+        #             if old_pos in hidden_pos \
+        #                     and not np.array_equal(new_pos, old_pos):
+        #                 index = hidden_pos.index([old_pos[0], old_pos[1]])
+        #                 agent_in_old_pos = agent_by_pos.get((old_pos[0], old_pos[1]), False)
+        #                 if not agent_in_old_pos:
+        #                     self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
+        #                     if char != 'P':
+        #                         del self.hidden_cells[index]
+        #                         self.append_hiddens(new_pos, char, 'P')
+        #             self.map[new_pos[0], new_pos[1]] = 'P'
+        #
+        # if self.map[3, 3] == 'P' and self.map[3, 4] == 'P' and self.map[2, 4] == 'P':
+        #     import ipdb;
+        #     ipdb.set_trace()
         self.execute_custom_reservations()
         self.reserved_slots = []
 
@@ -447,7 +518,7 @@ class MapEnv(MultiAgentEnv):
         x += left_pad
         y += top_pad
         view = pad_mat[x - col_size: x + col_size + 1,
-                       y - row_size: y + row_size + 1]
+               y - row_size: y + row_size + 1]
         return view
 
     def pad_if_needed(self, left_edge, right_edge, top_edge, bot_edge, matrix):
@@ -465,7 +536,7 @@ class MapEnv(MultiAgentEnv):
             bot_pad = bot_edge - (col_dim - 1)
 
         return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, \
-            top_pad
+               top_pad
 
     def pad_matrix(self, left_pad, right_pad, top_pad, bot_pad, matrix, const_val=1):
         pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
