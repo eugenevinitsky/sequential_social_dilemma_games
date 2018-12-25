@@ -259,11 +259,14 @@ class MapEnv(MultiAgentEnv):
         for i, hidden in enumerate(hidden_pos):
             # you can't put back hidden cells that an agent is on unless it is an agent that is
             # hidden
+            # FIXME(ev) it is possible for there to be two hiddens with the same index
+            # if an agent is currently hidden
             if hidden not in curr_agent_pos or hidden_char[i] == 'P':
                 row, col = hidden
                 self.map[row, col] = hidden_char[i]
                 index = self.hidden_cells.index(hidden + [hidden_char[i]])
                 del self.hidden_cells[index]
+
 
     def execute_custom_reservations(self):
         """Execute reserved slots that do not have to do with moving agents. For example,
@@ -323,15 +326,24 @@ class MapEnv(MultiAgentEnv):
                 for move, index, count in zip(unique_move, indices, return_count):
                     if count > 1:
                         hidden_pos = [hidden_cell[0: 2] for hidden_cell in self.hidden_cells]
+                        hidden_char = [hidden_cell[2] for hidden_cell in self.hidden_cells]
+
                         # TODO(ev) this should be a method from ---- to -----
                         # -------------------------------------
                         new_pos, old_pos = \
                             self.agents[agent_to_slot[index]].update_map_agent_pos(move)
                         new_pos = new_pos.tolist()
                         old_pos = old_pos.tolist()
-                        index = hidden_pos.index([old_pos[0], old_pos[1]])
-                        self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
-                        del self.hidden_cells[index]
+                        hidden_pos_arr = np.array(hidden_pos)
+                        search_rows = np.where((hidden_pos_arr == old_pos).all(axis=1))[0].tolist()
+                        # only put back and delete elements that are not 'P'
+                        found_index = 0
+                        for index in search_rows:
+                            if hidden_char[index] != 'P':
+                                found_index = index
+                                break
+                        self.map[old_pos[0], old_pos[1]] = self.hidden_cells[found_index][2]
+                        del self.hidden_cells[found_index]
                         char = self.map[new_pos[0], new_pos[1]]
                         self.append_hiddens(new_pos, char, 'P')
                         self.map[new_pos[0], new_pos[1]] = 'P'
@@ -352,6 +364,7 @@ class MapEnv(MultiAgentEnv):
                     if agent_id in del_keys:
                         continue
                     hidden_pos = [hidden_cell[0: 2] for hidden_cell in self.hidden_cells]
+                    hidden_char = [hidden_cell[2] for hidden_cell in self.hidden_cells]
                     if move in curr_agent_pos:
                         # find the agent that is currently at that spot, check where they will be next
                         # if they're going to move away, go ahead and move into their spot
@@ -386,9 +399,16 @@ class MapEnv(MultiAgentEnv):
                         new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
                         new_pos = new_pos.tolist()
                         old_pos = old_pos.tolist()
-                        index = hidden_pos.index([old_pos[0], old_pos[1]])
-                        self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
-                        del self.hidden_cells[index]
+                        hidden_pos_arr = np.array(hidden_pos)
+                        search_rows = np.where((hidden_pos_arr == old_pos).all(axis=1))[0].tolist()
+                        # only put back and delete elements that are not 'P'
+                        found_index = 0
+                        for index in search_rows:
+                            if hidden_char[index] != 'P':
+                                found_index = index
+                                break
+                        self.map[old_pos[0], old_pos[1]] = self.hidden_cells[found_index][2]
+                        del self.hidden_cells[found_index]
                         char = self.map[new_pos[0], new_pos[1]]
                         self.append_hiddens(new_pos, char, 'P')
                         self.map[new_pos[0], new_pos[1]] = 'P'

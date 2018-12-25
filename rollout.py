@@ -19,8 +19,8 @@ class Controller(object):
 
         # TODO: initialize agents here
 
-    def rollout_and_render(self, horizon=1000, render_frames=False,
-                           render_full_vid=True, path=None):
+    def rollout_and_render(self, horizon=100000, render_frames=False,
+                           render_full_vid=False, path=None):
         rewards = []
         observations = []
 
