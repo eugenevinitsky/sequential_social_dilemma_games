@@ -123,6 +123,17 @@ class HarvestEnv(MapEnv):
         num_apples = counts_dict.get('A', 0)
         return num_apples
 
+    def update_map_apples(self, new_apple_points):
+        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+        for i in range(len(new_apple_points)):
+            row, col = new_apple_points[i]
+            if self.map[row, col] != 'P' and self.map[row, col] != 'F':
+                self.map[row, col] = 'A'
+            # you can't spawn apples if an agent is there but hidden by a beam,
+            elif self.map[row, col] == 'F' and [row, col] not in curr_agent_pos:
+                self.append_hiddens([row, col], 'A')
+
+    # TODO(ev) this is in two classes already
     def update_map_fire(self, firing_pos, firing_orientation):
         num_fire_cells = ACTIONS['FIRE']
         start_pos = np.asarray(firing_pos)
@@ -143,13 +154,3 @@ class HarvestEnv(MapEnv):
                 else:
                     break
         return firing_points
-
-    def update_map_apples(self, new_apple_points):
-        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
-        for i in range(len(new_apple_points)):
-            row, col = new_apple_points[i]
-            if self.map[row, col] != 'P' and self.map[row, col] != 'F':
-                self.map[row, col] = 'A'
-            # you can't spawn apples if an agent is there but hidden by a bea,
-            elif self.map[row, col] == 'F' and [row, col] not in curr_agent_pos:
-                self.append_hiddens([row, col], 'A')
