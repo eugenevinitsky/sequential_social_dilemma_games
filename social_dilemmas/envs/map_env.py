@@ -342,12 +342,11 @@ class MapEnv(MultiAgentEnv):
                         # all other agents now stay in place
                         for agent_id in all_agents_id:
                             agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
+                        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+                        agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
 
             while len(agent_moves.items()) > 0:
                 moves_copy = agent_moves.copy()
-                # if agent_moves == {'agent-0': [3, 4], 'agent-1': [2, 4]}:
-                #     import ipdb;
-                #     ipdb.set_trace()
                 del_keys = []
                 for agent_id, move in moves_copy.items():
                     if agent_id in del_keys:
@@ -396,50 +395,7 @@ class MapEnv(MultiAgentEnv):
                         del agent_moves[agent_id]
                         del_keys.append(agent_id)
                         curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
-                        # # The other agent is going to move out of the way, so move in
-                        # elif agent_moves[conflicting_agent_id] != move:
-                        #     new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
-                        #     # update the lists in case conflicts have resolved
-                        #     curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
-                        #     agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
-                        #     new_pos = new_pos.tolist()
-                        #     old_pos = old_pos.tolist()
-                        #     char = self.map[new_pos[0], new_pos[1]]
-                        #     if old_pos in hidden_pos \
-                        #             and not np.array_equal(new_pos, old_pos):
-                        #         index = hidden_pos.index([old_pos[0], old_pos[1]])
-                        #         # if there is an agent that is not you in your old pos, don't delete
-                        #         # agent_by_pos is lagging so query it with your old id
-                        #         agent_in_old_pos = agent_by_pos.get((old_pos[0], old_pos[1]), False)
-                        #         if not agent_in_old_pos:
-                        #             self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
-                        #             if char != 'P':
-                        #                 del self.hidden_cells[index]
-                        #                 self.append_hiddens(new_pos, char, 'P')
-                        #     self.map[new_pos[0], new_pos[1]] = 'P'
 
-        #         else:
-        #             new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
-        #             # update the lists in case conflicts have resolved
-        #             curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
-        #             agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
-        #             new_pos = new_pos.tolist()
-        #             old_pos = old_pos.tolist()
-        #             char = self.map[new_pos[0], new_pos[1]]
-        #             if old_pos in hidden_pos \
-        #                     and not np.array_equal(new_pos, old_pos):
-        #                 index = hidden_pos.index([old_pos[0], old_pos[1]])
-        #                 agent_in_old_pos = agent_by_pos.get((old_pos[0], old_pos[1]), False)
-        #                 if not agent_in_old_pos:
-        #                     self.map[old_pos[0], old_pos[1]] = self.hidden_cells[index][2]
-        #                     if char != 'P':
-        #                         del self.hidden_cells[index]
-        #                         self.append_hiddens(new_pos, char, 'P')
-        #             self.map[new_pos[0], new_pos[1]] = 'P'
-        #
-        # if self.map[3, 3] == 'P' and self.map[3, 4] == 'P' and self.map[2, 4] == 'P':
-        #     import ipdb;
-        #     ipdb.set_trace()
         self.execute_custom_reservations()
         self.reserved_slots = []
 

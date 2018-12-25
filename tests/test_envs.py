@@ -593,12 +593,10 @@ class TestHarvestEnv(unittest.TestCase):
             self.env.update_moves({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_UP',
                                    'agent-2': 'MOVE_RIGHT'})
             self.env.execute_reservations()
-            import ipdb; ipdb.set_trace()
             if self.env.agents['agent-2'].get_pos().tolist() == [2, 2]:
                 percent_failed += 1
             else:
                 percent_accomplished += 1
-        import ipdb; ipdb.set_trace()
         percent_success = percent_accomplished / (percent_accomplished + percent_failed)
         within_bounds = (.45 < percent_success) and (percent_success < .55)
         self.assertTrue(within_bounds)
