@@ -590,11 +590,10 @@ class TestHarvestEnv(unittest.TestCase):
             self.env.reserved_slots.append([3, 4, 'P', 'agent-1'])
             self.env.reserved_slots.append([2, 2, 'P', 'agent-2'])
             self.env.execute_reservations()
-            import ipdb; ipdb.set_trace()
             self.env.update_moves({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_UP',
                                    'agent-2': 'MOVE_RIGHT'})
-
             self.env.execute_reservations()
+            import ipdb; ipdb.set_trace()
             if self.env.agents['agent-2'].get_pos().tolist() == [2, 2]:
                 percent_failed += 1
             else:
