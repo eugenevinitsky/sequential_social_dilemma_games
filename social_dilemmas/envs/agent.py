@@ -212,28 +212,5 @@ class CleanupAgent(Agent):
     def fire_beam(self):
         self.reward_this_turn -= 1
 
-    def update_map_agent_pos(self, new_pos):
-        new_row, new_col = new_pos
-        old_row, old_col = self.get_pos()
-        self.reward_from_pos(new_pos)
-        # don't change memory or move if no call to move was made
-        if new_row != old_row or new_col != old_col:
-            # apples and firing beams should not be placed back
-            if self.memory == 'A' or self.memory == 'F':
-                self.grid.map[old_row, old_col] = ' '
-            else:
-                self.grid.map[old_row, old_col] = self.memory
-
-            # you can't walk through walls or agents
-            # TODO(ev) if you attempt to walk through a wall, you can disappear
-            if self.grid.map[new_row, new_col] == '@':
-                new_pos = self.get_pos()
-                self.memory = self.grid.map[new_pos[0], new_pos[1]]
-            else:
-                self.memory = self.grid.map[new_pos[0], new_pos[1]]
-                self.grid.map[new_row, new_col] = 'P'
-
-            self.set_pos(new_pos)
-
     def get_done(self):
         return False

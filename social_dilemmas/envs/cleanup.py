@@ -121,7 +121,7 @@ class CleanupEnv(MapEnv):
             self.hidden_cells.append(new_pos + [' '])
         # a waste cell is gone if a firing cell hits it
         if old_char == 'H' and new_char == 'F':
-            self.hidden_cells.append(new_pos + 'R')
+            self.hidden_cells.append(new_pos + ['R'])
         else:
             self.hidden_cells.append(new_pos + [old_char])
 
@@ -136,13 +136,13 @@ class CleanupEnv(MapEnv):
         spawn_points = []
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            if self.map[row, col] != 'P':
+            if self.map[row, col] != 'P' and self.map[row, col] != 'A':
                 rand_num = np.random.rand(1)[0]
                 if rand_num < self.current_apple_spawn_prob:
                     spawn_points.append((row, col, 'A'))
         for i in range(len(self.waste_points)):
             row, col = self.waste_points[i]
-            if self.map[row, col] != 'P':
+            if self.map[row, col] != 'P' and self.map[row, col] != 'H':
                 rand_num = np.random.rand(1)[0]
                 if rand_num < self.current_waste_spawn_prob:
                     spawn_points.append((row, col, 'H'))

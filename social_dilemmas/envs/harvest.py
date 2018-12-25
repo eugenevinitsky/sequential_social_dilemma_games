@@ -107,7 +107,7 @@ class HarvestEnv(MapEnv):
         new_apple_points = []
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            if self.map[row, col] != 'P':
+            if self.map[row, col] != 'P' and self.map[row, col] != 'A':
                 window = self.return_view(self.apple_points[i], APPLE_RADIUS, APPLE_RADIUS)
                 num_apples = self.count_apples(window)
                 spawn_prob = SPAWN_PROB[min(num_apples, 3)]

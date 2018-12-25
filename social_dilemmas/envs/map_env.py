@@ -267,7 +267,6 @@ class MapEnv(MultiAgentEnv):
                 index = self.hidden_cells.index(hidden + [hidden_char[i]])
                 del self.hidden_cells[index]
 
-
     def execute_custom_reservations(self):
         """Execute reserved slots that do not have to do with moving agents. For example,
         placing apples or placing the fired beam. """
@@ -354,8 +353,10 @@ class MapEnv(MultiAgentEnv):
                         # all other agents now stay in place
                         for agent_id in all_agents_id:
                             agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
-                        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
-                        agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
+                        curr_agent_pos = [agent.get_pos().tolist() for
+                                          agent in self.agents.values()]
+                        agent_by_pos = {tuple(agent.get_pos()):
+                                        agent.agent_id for agent in self.agents.values()}
 
             while len(agent_moves.items()) > 0:
                 moves_copy = agent_moves.copy()
@@ -366,8 +367,8 @@ class MapEnv(MultiAgentEnv):
                     hidden_pos = [hidden_cell[0: 2] for hidden_cell in self.hidden_cells]
                     hidden_char = [hidden_cell[2] for hidden_cell in self.hidden_cells]
                     if move in curr_agent_pos:
-                        # find the agent that is currently at that spot, check where they will be next
-                        # if they're going to move away, go ahead and move into their spot
+                        # find the agent that is currently at that spot, check where they will
+                        # be next if they're going to move away, go ahead and move into their spot
                         conflicting_agent_id = agent_by_pos[tuple(move)]
                         curr_pos = self.agents[agent_id].get_pos().tolist()
                         curr_conflict_pos = self.agents[conflicting_agent_id].get_pos().tolist()
@@ -393,7 +394,6 @@ class MapEnv(MultiAgentEnv):
                                 del agent_moves[agent_id]
                                 del_keys.append(agent_id)
                                 del_keys.append(conflicting_agent_id)
-
 
                     else:
                         new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
@@ -494,7 +494,7 @@ class MapEnv(MultiAgentEnv):
         x += left_pad
         y += top_pad
         view = pad_mat[x - col_size: x + col_size + 1,
-               y - row_size: y + row_size + 1]
+                       y - row_size: y + row_size + 1]
         return view
 
     def pad_if_needed(self, left_edge, right_edge, top_edge, bot_edge, matrix):
@@ -511,8 +511,7 @@ class MapEnv(MultiAgentEnv):
         if bot_edge > col_dim - 1:
             bot_pad = bot_edge - (col_dim - 1)
 
-        return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, \
-               top_pad
+        return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, top_pad
 
     def pad_matrix(self, left_pad, right_pad, top_pad, bot_pad, matrix, const_val=1):
         pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),

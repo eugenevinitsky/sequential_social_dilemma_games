@@ -444,7 +444,7 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.agents['agent-1'].update_map_agent_rot('UP')
         # walk over an apple
         self.env.update_moves({'agent-0': 'MOVE_DOWN',
-                             'agent-1': 'MOVE_DOWN'})
+                               'agent-1': 'MOVE_DOWN'})
         self.env.execute_reservations()
         reward_0 = self.env.agents['agent-0'].compute_reward()
         reward_1 = self.env.agents['agent-1'].compute_reward()
@@ -570,7 +570,7 @@ class TestHarvestEnv(unittest.TestCase):
             self.env.reserved_slots.append([2, 3, 'P', 'agent-2'])
             self.env.execute_reservations()
             self.env.update_moves({'agent-0': 'MOVE_DOWN', 'agent-1': 'MOVE_UP',
-                                 'agent-2': 'MOVE_RIGHT'})
+                                   'agent-2': 'MOVE_RIGHT'})
 
             self.env.execute_reservations()
             if self.env.agents['agent-2'].get_pos().tolist() == [3, 3]:
