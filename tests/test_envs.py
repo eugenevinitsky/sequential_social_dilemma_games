@@ -433,8 +433,6 @@ class TestHarvestEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
-        # TODO(ev) if a firing beam hits an apple, should the apple disappear?
-
     def test_agent_rewards(self):
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
         self.env.reset()
