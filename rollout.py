@@ -1,8 +1,7 @@
 """Defines a multi-agent controller to rollout environment episodes w/
    agent policies."""
 
-# from social_dilemmas.envs.harvest import HarvestEnv
-from social_dilemmas.envs.cleanup import CleanupEnv
+from social_dilemmas.envs.cleanup import CleanupEnv, HarvestEnv
 
 import utility_funcs
 import numpy as np
