@@ -13,7 +13,7 @@ import shutil
 
 class Controller(object):
 
-    def __init__(self, env_name='cleanup'):
+    def __init__(self, env_name='harvest'):
         self.env_name = env_name
         if env_name == 'harvest':
             self.env = HarvestEnv(num_agents=5, render=True)
