@@ -8,6 +8,7 @@ from social_dilemmas.envs.map_env import MapEnv, ACTIONS, ORIENTATIONS
 APPLE_RADIUS = 2
 
 COLOURS = {' ': [0, 0, 0],  # Black background
+           '0': [0, 0, 0],  # Black background beyond map walls
            '': [195, 0, 255],  # Board walls
            '@': [195, 0, 255],  # Board walls
            'A': [0, 255, 0],  # Green apples

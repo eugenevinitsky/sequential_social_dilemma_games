@@ -6,6 +6,7 @@ from social_dilemmas.envs.agent import CleanupAgent
 
 # TODO(ev) add waste colors
 COLOURS = {' ': [0, 0, 0],  # Black background
+           '0': [0, 0, 0],  # Black background beyond map walls
            '': [195, 0, 255],  # Board walls
            '@': [195, 0, 255],  # Board walls
            'A': [0, 255, 0],  # Green apples
