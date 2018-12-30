@@ -23,7 +23,7 @@ class Controller(object):
             print('Error! Not a valid environment type')
             return
 
-        elf.env.reset()
+        self.env.reset()
 
         # TODO: initialize agents here
 
