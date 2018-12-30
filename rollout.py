@@ -1,7 +1,9 @@
 """Defines a multi-agent controller to rollout environment episodes w/
    agent policies."""
 
-from social_dilemmas.envs.harvest import HarvestEnv
+# from social_dilemmas.envs.harvest import HarvestEnv
+from social_dilemmas.envs.cleanup import CleanupEnv
+
 import utility_funcs
 import numpy as np
 import os
@@ -11,14 +13,17 @@ import shutil
 
 class Controller(object):
 
-    def __init__(self, env_name='harvest'):
+    def __init__(self, env_name='cleanup'):
         self.env_name = env_name
         if env_name == 'harvest':
-            self.env = HarvestEnv(num_agents=2, render=True)
-            self.env.reset()
+            self.env = HarvestEnv(num_agents=5, render=True)
+        elif env_name == 'cleanup':
+            self.env = CleanupEnv(num_agents=5, render=True)
         else:
-            print('Error! Not implemented yet!')
+            print('Error! Not a valid environment type')
             return
+
+        elf.env.reset()
 
         # TODO: initialize agents here
 
@@ -38,9 +43,12 @@ class Controller(object):
 
         for i in range(horizon):
             # TODO: use agent policy not just random actions
-            rand_action = np.random.randint(8, size=2)
+            rand_action = np.random.randint(8, size=5)
             obs, rew, dones, info, = self.env.step({'agent-0': rand_action[0],
-                                                    'agent-1': rand_action[1]})
+                                                    'agent-1': rand_action[1],
+                                                    'agent-2': rand_action[2],
+                                                    'agent-3': rand_action[3],
+                                                    'agent-4': rand_action[4]})
 
             print("timestep", i, "action", rand_action, "reward", rew['agent-0'])
             sys.stdout.flush()

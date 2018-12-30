@@ -26,7 +26,7 @@ class Agent(object):
             how many columns left and right the agent can look
         """
         self.agent_id = agent_id
-        self.pos = start_pos
+        self.pos = np.array(start_pos)
         self.orientation = start_orientation
         # TODO(ev) change grid to env, this name is not very informative
         self.grid = grid
@@ -94,24 +94,29 @@ class Agent(object):
         return self.grid.map
 
     def update_map_agent_pos(self, new_pos):
+        """Updates the agents internal positions
+
+        Returns
+        -------
+        old_pos: (np.ndarray)
+            2-d array describing where the agent used to be
+        new_pos: (np.ndarray)
+            2-d array describing the agent positions
+        """
         new_row, new_col = new_pos
-        old_row, old_col = self.get_pos()
+        old_pos = self.get_pos()
         self.reward_from_pos(new_pos)
-        # you can't walk through walls or agents
+        # you can't walk through walls
         if self.grid.map[new_row, new_col] == '@':
             new_pos = self.get_pos()
-        else:
-            self.grid.map[old_row, old_col] = ' '
-            self.grid.map[new_row, new_col] = 'P'
 
-        # TODO(ev) if you move over an apple it should show up in the reward function
         self.set_pos(new_pos)
+        # TODO(ev) list array consistency
+        return self.get_pos(), np.array(old_pos)
 
     def update_map_agent_rot(self, new_rot):
         # FIXME(ev) once we have a color scheme worked out we need to convert rotation
         # into a color
-        row, col = self.get_pos()
-        self.grid.map[row, col] = 'P'
         self.set_orientation(new_rot)
 
 
@@ -125,10 +130,12 @@ HARVEST_ACTIONS = {0: 'MOVE_LEFT',  # Move left
                    6: 'TURN_COUNTERCLOCKWISE',  # Rotate clockwise
                    7: 'FIRE'}  # Fire forward
 
+HARVEST_VIEW_SIZE = 7
+
 
 class HarvestAgent(Agent):
 
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=HARVEST_VIEW_SIZE):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
         self.update_map_agent_pos(start_pos)
@@ -146,7 +153,8 @@ class HarvestAgent(Agent):
 
     @property
     def observation_space(self):
-        return Box(low=0.0, high=0.0, shape=(self.view_len, self.view_len, 3), dtype=np.float32)
+        return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+                                             2 * self.view_len + 1, 3), dtype=np.float32)
 
     def get_state(self):
         return self.grid.return_view(self.pos, self.row_size, self.col_size)
@@ -162,9 +170,47 @@ class HarvestAgent(Agent):
         self.reward_this_turn -= 1
 
     def get_done(self):
-        # FIXME(ev) put in the actual computation
         return False
 
 
+CLEANUP_VIEW_SIZE = 7
+
+
 class CleanupAgent(Agent):
-    pass
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=CLEANUP_VIEW_SIZE):
+        self.view_len = view_len
+        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        # remember what you've stepped on
+        self.update_map_agent_pos(start_pos)
+        self.update_map_agent_rot(start_orientation)
+
+    @property
+    def action_space(self):
+        return Discrete(8)
+
+    @property
+    def observation_space(self):
+        return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+                                             2 * self.view_len + 1, 3), dtype=np.float32)
+
+    # Ugh, this is gross, this leads to the actions basically being
+    # defined in two places
+    def action_map(self, action_number):
+        """Maps action_number to a desired action in the map"""
+        return HARVEST_ACTIONS[action_number]
+
+    def get_state(self):
+        return self.grid.return_view(self.pos, self.row_size, self.col_size)
+
+    def reward_from_pos(self, query_pos):
+        row, col = query_pos
+        if self.grid.map[row, col] == 'A':
+            self.reward_this_turn += 1
+        elif self.grid.map[row, col] == 'F':
+            self.reward_this_turn -= 50
+
+    def fire_beam(self):
+        self.reward_this_turn -= 1
+
+    def get_done(self):
+        return False

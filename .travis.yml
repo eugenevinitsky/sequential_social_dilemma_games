@@ -24,7 +24,7 @@ before_install:
   - conda info -a
   - python -V
 
-  # Set up requirements for flow
+  # Set up requirements for running tests
   - conda env create -f environment.yml
   - source activate causal
 

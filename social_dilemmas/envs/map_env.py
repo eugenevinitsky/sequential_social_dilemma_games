@@ -3,8 +3,7 @@
 
 Code partially adapted from PyColab: https://github.com/deepmind/pycolab
 """
-
-from gym import Env
+from ray.rllib.env import MultiAgentEnv
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -20,6 +19,7 @@ ORIENTATIONS = {'LEFT': [-1, 0],
                 'RIGHT': [1, 0],
                 'UP': [0, -1],
                 'DOWN': [0, 1]}
+
 
 # the axes look like
 # graphic is here to help me get my head in order
@@ -38,7 +38,7 @@ ORIENTATIONS = {'LEFT': [-1, 0],
 #         |
 
 
-class MapEnv(Env):
+class MapEnv(MultiAgentEnv):
 
     def __init__(self, ascii_map, color_map, num_agents=1, render=True):
         """
@@ -66,6 +66,16 @@ class MapEnv(Env):
         self.pos_dict = {}
         self.color_map = color_map
         self.spawn_points = []  # where agents can appear
+        # cells hidden by agents or other actions, elements are [row, pos, str]
+        self.hidden_cells = []
+        self.wall_points = []
+        for row in range(self.base_map.shape[0]):
+            for col in range(self.base_map.shape[1]):
+                if self.base_map[row, col] == 'P':
+                    self.spawn_points.append([row, col])
+                elif self.base_map[row, col] == '@':
+                    self.wall_points.append([row, col])
+        self.setup_agents()
 
     # FIXME(ev) move this to a utils eventually
     def ascii_to_numpy(self, ascii_list):
@@ -103,11 +113,19 @@ class MapEnv(Env):
             agent_action = self.agents[agent_id].action_map(action)
             agent_actions[agent_id] = agent_action
 
-        self.update_map(agent_actions)
+        # move
+        self.clean_map()
+        self.update_moves(agent_actions)
+        self.execute_reservations()
 
+        # execute custom moves like firing
+        self.clean_map()
+        self.update_custom_moves(agent_actions)
+        self.execute_reservations()
+
+        # execute spawning events
         self.custom_map_update()
         self.execute_reservations()
-        self.reserved_slots = []
 
         observations = {}
         rewards = {}
@@ -118,6 +136,7 @@ class MapEnv(Env):
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
+        dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, info
 
     def reset(self):
@@ -133,6 +152,9 @@ class MapEnv(Env):
             to be zero.
         """
         self.reserved_slots = []
+        self.hidden_cells = []
+        self.agents = {}
+        self.setup_agents()
         self.reset_map()
         self.custom_map_update()
 
@@ -180,7 +202,7 @@ class MapEnv(Env):
         else:
             plt.savefig(filename)
 
-    def update_map(self, agent_actions):
+    def update_moves(self, agent_actions):
         """Converts agent action tuples into a new map and new agent positions
 
         Parameters
@@ -188,9 +210,6 @@ class MapEnv(Env):
         agent_actions: dict
             dict with agent_id as key and action as value
         """
-
-        # TODO(ev) split into three methods: clean(), update_map, custom_update_map
-        self.clean_map()
 
         for agent_id, action in agent_actions.items():
             agent = self.agents[agent_id]
@@ -204,30 +223,79 @@ class MapEnv(Env):
             elif 'TURN' in action:
                 new_rot = self.update_rotation(action, agent.get_orientation())
                 agent.update_map_agent_rot(new_rot)
-            else:
+
+    def update_custom_moves(self, agent_actions):
+        for agent_id, action in agent_actions.items():
+            # check its not a move based action
+            if 'MOVE' not in action and 'STAY' not in action and 'TURN' not in action:
+                agent = self.agents[agent_id]
                 self.custom_action(agent)
 
     def reset_map(self):
         """Resets the map to be empty as well as a custom reset set by subclasses"""
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
-        self.setup_agents()
+        for agent in self.agents.values():
+            pos = agent.get_pos()
+            row, col = pos
+            # TODO(ev) this rendering logic should not be done here)
+            self.map[row, col] = 'P'
+            self.append_hiddens(pos.tolist(), ' ', 'P')
+        self.build_walls()
         self.custom_reset()
 
     def custom_reset(self):
-        """Reset custom elements of the map"""
+        """Reset custom elements of the map. For example, spawn apples and build walls"""
         pass
 
     def custom_action(self, agent):
-        """Allows agents to take actions that are not move or turn"""
+        """Add reservations to self.reserved_slots for actions that are not move or turn.
+        For example, if an agent can fire, you can add (row, col, 'F')
+        to indicate that F should be placed at that point"""
         pass
 
     def custom_map_update(self):
-        """Custom map updates that don't have to do with agent actions"""
+        """Custom map updates that don't have to do with agent actions. For example, you can add
+        (row, col, 'A') to env.reserved_slots to indicate an apple should be placed at that point"""
         pass
 
     def clean_map(self):
-        """Clean map of elements that should be removed"""
-        pass
+        """Place back all hidden cells that are not currently blocked by an agent"""
+        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+        hidden_pos = [hidden[0:2] for hidden in self.hidden_cells]
+        hidden_char = [hidden[2] for hidden in self.hidden_cells]
+        for i, hidden in enumerate(hidden_pos):
+            # you can't put back hidden cells that an agent is on unless it is an agent that is
+            # hidden
+            # FIXME(ev) it is possible for there to be two hiddens with the same index
+            # if an agent is currently hidden
+            if hidden not in curr_agent_pos or hidden_char[i] == 'P':
+                row, col = hidden
+                self.map[row, col] = hidden_char[i]
+                index = self.hidden_cells.index(hidden + [hidden_char[i]])
+                del self.hidden_cells[index]
+
+    def execute_custom_reservations(self):
+        """Execute reserved slots that do not have to do with moving agents. For example,
+        placing apples or placing the fired beam. """
+        raise NotImplementedError
+
+    def setup_agents(self):
+        """Construct all the agents for the environment"""
+        raise NotImplementedError
+
+    def append_hiddens(self, new_pos, old_char, new_char):
+        """Add hidden cells to self.hidden_cells that should be put back
+
+        Parameters
+        ----------
+        new_pos: list
+            the position the new char is going to be placed at
+        old_char: str
+            the character that will be hidden
+        new_char: str
+            the character that will replace it
+        """
+        raise NotImplementedError
 
     def execute_reservations(self):
         """Takes all the reserved slots and decides which move has priority"""
@@ -263,38 +331,100 @@ class MapEnv(Env):
             if np.any(return_count > 1):
                 for move, index, count in zip(unique_move, indices, return_count):
                     if count > 1:
-                        self.agents[agent_to_slot[index]].update_map_agent_pos(move)
+                        hidden_pos = [hidden_cell[0: 2] for hidden_cell in self.hidden_cells]
+                        hidden_char = [hidden_cell[2] for hidden_cell in self.hidden_cells]
+
+                        # TODO(ev) this should be a method from ---- to -----
+                        # -------------------------------------
+                        new_pos, old_pos = \
+                            self.agents[agent_to_slot[index]].update_map_agent_pos(move)
+                        new_pos = new_pos.tolist()
+                        old_pos = old_pos.tolist()
+                        hidden_pos_arr = np.array(hidden_pos)
+                        search_rows = np.where((hidden_pos_arr == old_pos).all(axis=1))[0].tolist()
+                        # only put back and delete elements that are not 'P'
+                        found_index = 0
+                        for index in search_rows:
+                            if hidden_char[index] != 'P':
+                                found_index = index
+                                break
+                        self.map[old_pos[0], old_pos[1]] = self.hidden_cells[found_index][2]
+                        del self.hidden_cells[found_index]
+                        char = self.map[new_pos[0], new_pos[1]]
+                        self.append_hiddens(new_pos, char, 'P')
+                        self.map[new_pos[0], new_pos[1]] = 'P'
+                        # ------------------------------------
                         # remove all the other moves that would have conflicted
                         remove_indices = np.where((search_list == move).all(axis=1))[0]
                         all_agents_id = [agent_to_slot[i] for i in remove_indices]
                         # all other agents now stay in place
                         for agent_id in all_agents_id:
                             agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
+                        curr_agent_pos = [agent.get_pos().tolist() for
+                                          agent in self.agents.values()]
+                        agent_by_pos = {tuple(agent.get_pos()):
+                                        agent.agent_id for agent in self.agents.values()}
 
-            for agent_id, move in agent_moves.items():
-                if move in curr_agent_pos:
-                    # find the agent that is currently at that spot, check where they will be next
-                    # if they're going to move away, go ahead and move into their spot
-                    conflicting_agent_id = agent_by_pos[tuple(move)]
-                    # a STAY command has been issued or the other agent hasn't been issued a command,
-                    # don't do anything
-                    if agent_id == conflicting_agent_id or \
-                            conflicting_agent_id not in agent_moves.keys():
+            while len(agent_moves.items()) > 0:
+                moves_copy = agent_moves.copy()
+                del_keys = []
+                for agent_id, move in moves_copy.items():
+                    if agent_id in del_keys:
                         continue
-                    elif agent_moves[conflicting_agent_id] != move:
-                        self.agents[agent_id].update_map_agent_pos(move)
-                else:
-                    self.agents[agent_id].update_map_agent_pos(move)
+                    hidden_pos = [hidden_cell[0: 2] for hidden_cell in self.hidden_cells]
+                    hidden_char = [hidden_cell[2] for hidden_cell in self.hidden_cells]
+                    if move in curr_agent_pos:
+                        # find the agent that is currently at that spot, check where they will
+                        # be next if they're going to move away, go ahead and move into their spot
+                        conflicting_agent_id = agent_by_pos[tuple(move)]
+                        curr_pos = self.agents[agent_id].get_pos().tolist()
+                        curr_conflict_pos = self.agents[conflicting_agent_id].get_pos().tolist()
+                        conflict_move = agent_moves.get(conflicting_agent_id, curr_conflict_pos)
+                        # Condition (1):
+                        # a STAY command has been issued
+                        if agent_id == conflicting_agent_id:
+                            del agent_moves[agent_id]
+                            del_keys.append(agent_id)
+                        # Condition (2)
+                        # its command is to stay
+                        # or you are trying to move into an agent that hasn't received a command
+                        elif conflicting_agent_id not in moves_copy.keys() or \
+                                curr_conflict_pos == conflict_move:
+                            del agent_moves[agent_id]
+                            del_keys.append(agent_id)
+                        # Condition (3)
+                        # It is trying to move into you and you are moving into it
+                        elif conflicting_agent_id in moves_copy.keys():
+                            if agent_moves[conflicting_agent_id] == curr_pos and \
+                                    move == self.agents[conflicting_agent_id].get_pos().tolist():
+                                del agent_moves[conflicting_agent_id]
+                                del agent_moves[agent_id]
+                                del_keys.append(agent_id)
+                                del_keys.append(conflicting_agent_id)
+
+                    else:
+                        new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
+                        new_pos = new_pos.tolist()
+                        old_pos = old_pos.tolist()
+                        hidden_pos_arr = np.array(hidden_pos)
+                        search_rows = np.where((hidden_pos_arr == old_pos).all(axis=1))[0].tolist()
+                        # only put back and delete elements that are not 'P'
+                        found_index = 0
+                        for index in search_rows:
+                            if hidden_char[index] != 'P':
+                                found_index = index
+                                break
+                        self.map[old_pos[0], old_pos[1]] = self.hidden_cells[found_index][2]
+                        del self.hidden_cells[found_index]
+                        char = self.map[new_pos[0], new_pos[1]]
+                        self.append_hiddens(new_pos, char, 'P')
+                        self.map[new_pos[0], new_pos[1]] = 'P'
+                        del agent_moves[agent_id]
+                        del_keys.append(agent_id)
+                        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
 
         self.execute_custom_reservations()
         self.reserved_slots = []
-
-    def execute_custom_reservations(self):
-        """Execute reserved slots that do not have to do with moving"""
-        raise NotImplementedError
-
-    def setup_agents(self):
-        raise NotImplementedError
 
     def create_agent(self, agent_id, *args):
         """Takes an agent id and agents args and returns an agent.
@@ -318,11 +448,13 @@ class MapEnv(Env):
         rand_int = 0
         # select a spawn point
         # replace this with an operation over a set
+        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
         while not not_occupied:
+            # TODO(ev), this is lazy, only spawn numbers that are valid
             num_ints = len(self.spawn_points)
             rand_int = np.random.randint(num_ints)
             spawn_point = self.spawn_points[rand_int]
-            if self.map[spawn_point[0], spawn_point[1]] != 'P':
+            if [spawn_point[0], spawn_point[1]] not in curr_agent_pos:
                 not_occupied = True
         return np.array(self.spawn_points[rand_int])
 
@@ -330,6 +462,11 @@ class MapEnv(Env):
         """Return a randomly selected initial rotation for an agent"""
         rand_int = np.random.randint(len(ORIENTATIONS.keys()))
         return list(ORIENTATIONS.keys())[rand_int]
+
+    def build_walls(self):
+        for i in range(len(self.wall_points)):
+            row, col = self.wall_points[i]
+            self.map[row, col] = '@'
 
     ########################################
     # Utility methods, move these eventually
@@ -368,20 +505,20 @@ class MapEnv(Env):
         return view
 
     def pad_if_needed(self, left_edge, right_edge, top_edge, bot_edge, matrix):
+        # FIXME(ev) something is broken here, I think x and y are flipped
         row_dim = matrix.shape[0]
         col_dim = matrix.shape[1]
         left_pad, right_pad, top_pad, bot_pad = 0, 0, 0, 0
         if left_edge < 0:
             left_pad = abs(left_edge)
-        if right_edge > col_dim - 1:
-            right_pad = right_edge - (col_dim - 1)
+        if right_edge > row_dim - 1:
+            right_pad = right_edge - (row_dim - 1)
         if top_edge < 0:
             top_pad = abs(top_edge)
-        if bot_edge > row_dim - 1:
-            bot_pad = bot_edge - (row_dim - 1)
+        if bot_edge > col_dim - 1:
+            bot_pad = bot_edge - (col_dim - 1)
 
-        return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, \
-            top_pad
+        return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, top_pad
 
     def pad_matrix(self, left_pad, right_pad, top_pad, bot_pad, matrix, const_val=1):
         pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
