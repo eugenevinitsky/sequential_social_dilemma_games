@@ -11,28 +11,30 @@ import shutil
 
 class Controller(object):
 
-    def __init__(self):
-        self.env = HarvestEnv(num_agents=2, render=True)
-        self.env.reset()
+    def __init__(self, env_name='harvest'):
+        self.env_name = env_name
+        if env_name == 'harvest':
+            self.env = HarvestEnv(num_agents=2, render=True)
+            self.env.reset()
+        else:
+            print('Error! Not implemented yet!')
+            return
 
         # TODO: initialize agents here
 
-    def rollout_and_render(self, horizon=50, render_frames=False,
-                           render_full_vid=True, path=None):
+    def rollout(self, horizon=50, save_path=None):
+        """ Rollout several timesteps of an episode of the environment.
+
+        Args:
+            horizon: The number of timesteps to roll out. 
+            save_path: If provided, will save each frame to disk at this
+                location.
+        """
         rewards = []
         observations = []
-
-        if render_full_vid:
-            if path is None:
-                path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
-                if not os.path.exists(path):
-                    os.makedirs(path)
-            images_path = path + '/images/'
-            if not os.path.exists(images_path):
-                os.makedirs(images_path)
-
-            shape = self.env.map.shape
-            full_obs = [np.zeros((shape[0], shape[1], 3), dtype=np.uint8) for i in range(horizon)]
+        shape = self.env.map.shape
+        full_obs = [np.zeros(
+            (shape[0], shape[1], 3), dtype=np.uint8) for i in range(horizon)]
 
         for i in range(horizon):
             # TODO: use agent policy not just random actions
@@ -43,27 +45,52 @@ class Controller(object):
             print("timestep", i, "action", rand_action, "reward", rew['agent-0'])
             sys.stdout.flush()
 
-            if render_frames:
-                self.env.render_map()
+            if save_path is not None:
+                self.env.render_map(save_path + 'frame' + str(i) + '.png')
 
-            if render_full_vid:
-                rgb_arr = self.env.map_to_colors()
-                full_obs[i] = rgb_arr.astype(np.uint8)
-
+            rgb_arr = self.env.map_to_colors()
+            full_obs[i] = rgb_arr.astype(np.uint8)
             observations.append(obs['agent-0'])
             rewards.append(rew['agent-0'])
 
-        if render_full_vid:
-            utility_funcs.make_video_from_rgb_imgs(full_obs, path)
+        return rewards, observations, full_obs
+            
 
+    def render_rollout(self, horizon=50, path=None, 
+                       render_type='pretty'):
+        """ Render a rollout into a video.
+
+        Args:
+            horizon: The number of timesteps to roll out. 
+            path: Directory where the video will be saved.
+            render_type: Can be 'pretty' or 'fast'. Impliciations obvious.
+        """
+        if path is None:
+            path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
+            print(path)
+            if not os.path.exists(path):
+                os.makedirs(path)
+
+        if render_type == 'pretty':
+            image_path = os.path.join(path, 'frames/')
+            if not os.path.exists(image_path):
+                os.makedirs(image_path)
+
+            rewards, observations, full_obs = self.rollout(
+                horizon=horizon, save_path=image_path)
+            utility_funcs.make_video_from_image_dir(path, image_path)
+            
             # Clean up images
-            shutil.rmtree(images_path)
+            shutil.rmtree(image_path)
+        else:
+            rewards, observations, full_obs = self.rollout(horizon=horizon)
+            utility_funcs.make_video_from_rgb_imgs(full_obs, path)
 
 
 if __name__ == '__main__':
     c = Controller()
     if len(sys.argv) > 1:
         vid_path = sys.argv[1]
-        c.rollout_and_render(path=vid_path)
+        c.render_rollout(path=vid_path)
     else:
-        c.rollout_and_render()
+        c.render_rollout()

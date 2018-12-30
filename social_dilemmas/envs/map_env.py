@@ -64,7 +64,6 @@ class MapEnv(Env):
         self.agents = {}
         # returns the agent at a desired position if there is one
         self.pos_dict = {}
-        self.render = render
         self.color_map = color_map
         self.spawn_points = []  # where agents can appear
 
@@ -167,11 +166,19 @@ class MapEnv(Env):
                 rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
         return rgb_arr
 
-    def render_map(self):
-        if self.render:
-            rgb_arr = self.map_to_colors()
-            plt.imshow(rgb_arr, interpolation='nearest')
+    def render_map(self, filename=None):
+        """ Creates an image of the map to plot or save.
+
+        Args:
+            path: If a string is passed, will save the image
+                to disk at this location.
+        """
+        rgb_arr = self.map_to_colors()
+        plt.imshow(rgb_arr, interpolation='nearest')
+        if filename is None:
             plt.show()
+        else:
+            plt.savefig(filename)
 
     def update_map(self, agent_actions):
         """Converts agent action tuples into a new map and new agent positions
