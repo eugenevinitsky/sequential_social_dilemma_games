@@ -16,8 +16,10 @@ class Controller(object):
     def __init__(self, env_name='cleanup'):
         self.env_name = env_name
         if env_name == 'harvest':
+            print('Initializing Harvest environment')
             self.env = HarvestEnv(num_agents=5, render=True)
         elif env_name == 'cleanup':
+            print('Initializing Cleanup environment')
             self.env = CleanupEnv(num_agents=5, render=True)
         else:
             print('Error! Not a valid environment type')
