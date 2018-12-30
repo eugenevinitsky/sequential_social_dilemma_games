@@ -160,7 +160,6 @@ class MapEnv(MultiAgentEnv):
 
         observations = {}
         for agent in self.agents.values():
-            import pdb; pdb.set_trace()
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
         return observations
