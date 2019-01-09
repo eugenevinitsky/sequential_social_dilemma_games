@@ -13,6 +13,7 @@ def make_video_from_image_dir(vid_path, img_folder, video_name='trajectory', fps
     Create a video from a directory of images
     """
     images = [img for img in os.listdir(img_folder) if img.endswith(".png")]
+    images.sort()
 
     rgb_imgs = []
     for i, image in enumerate(images):

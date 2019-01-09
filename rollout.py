@@ -22,7 +22,10 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_string(
     'render_type', 'pretty', 
     'Can be pretty or fast. Implications obvious.')
-    
+tf.app.flags.DEFINE_integer(
+    'fps', 5,
+    'Number of frames per second.')
+
 
 class Controller(object):
 
@@ -69,7 +72,7 @@ class Controller(object):
             sys.stdout.flush()
 
             if save_path is not None:
-                self.env.render_map(save_path + 'frame' + str(i) + '.png')
+                self.env.render_map(save_path + 'frame' + str(i).zfill(6) + '.png')
 
             rgb_arr = self.env.map_to_colors()
             full_obs[i] = rgb_arr.astype(np.uint8)
@@ -80,13 +83,14 @@ class Controller(object):
             
 
     def render_rollout(self, horizon=50, path=None, 
-                       render_type='pretty'):
+                       render_type='pretty', fps=5):
         """ Render a rollout into a video.
 
         Args:
             horizon: The number of timesteps to roll out. 
             path: Directory where the video will be saved.
             render_type: Can be 'pretty' or 'fast'. Impliciations obvious.
+            fps: Integer frames per second.
         """
         if path is None:
             path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
@@ -102,20 +106,21 @@ class Controller(object):
 
             rewards, observations, full_obs = self.rollout(
                 horizon=horizon, save_path=image_path)
-            utility_funcs.make_video_from_image_dir(path, image_path, 
+            utility_funcs.make_video_from_image_dir(path, image_path, fps=fps,
                                                     video_name=video_name)
             
             # Clean up images
             shutil.rmtree(image_path)
         else:
             rewards, observations, full_obs = self.rollout(horizon=horizon)
-            utility_funcs.make_video_from_rgb_imgs(full_obs, path, 
+            utility_funcs.make_video_from_rgb_imgs(full_obs, path, fps=fps,
                                                    video_name=video_name)
 
 
 def main(unused_argv):
     c = Controller(env_name=FLAGS.env)
-    c.render_rollout(path=FLAGS.vid_path, render_type=FLAGS.render_type)
+    c.render_rollout(path=FLAGS.vid_path, render_type=FLAGS.render_type,
+                     fps=FLAGS.fps)
 
 
 if __name__ == '__main__':
