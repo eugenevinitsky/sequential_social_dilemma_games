@@ -1,15 +1,28 @@
 """Defines a multi-agent controller to rollout environment episodes w/
    agent policies."""
 
-#from social_dilemmas.envs.harvest import HarvestEnv
-from social_dilemmas.envs.cleanup import CleanupEnv
-
 import utility_funcs
 import numpy as np
 import os
 import sys
 import shutil
+import tensorflow as tf
 
+from social_dilemmas.envs.cleanup import CleanupEnv
+from social_dilemmas.envs.harvest import HarvestEnv
+
+FLAGS = tf.app.flags.FLAGS
+
+tf.app.flags.DEFINE_string(
+    'vid_path', '/home/natasha/Dropbox (MIT)/Projects/AgentEmpathy/vids',
+    'Path to directory where videos are saved.')
+tf.app.flags.DEFINE_string(
+    'env', 'cleanup',
+    'Name of the environment to rollout. Can be cleanup or harvest.')
+tf.app.flags.DEFINE_string(
+    'render_type', 'pretty', 
+    'Can be pretty or fast. Implications obvious.')
+    
 
 class Controller(object):
 
@@ -80,6 +93,7 @@ class Controller(object):
             print(path)
             if not os.path.exists(path):
                 os.makedirs(path)
+        video_name=self.env_name + '_trajectory'
 
         if render_type == 'pretty':
             image_path = os.path.join(path, 'frames/')
@@ -88,19 +102,22 @@ class Controller(object):
 
             rewards, observations, full_obs = self.rollout(
                 horizon=horizon, save_path=image_path)
-            utility_funcs.make_video_from_image_dir(path, image_path)
+            utility_funcs.make_video_from_image_dir(path, image_path, 
+                                                    video_name=video_name)
             
             # Clean up images
             shutil.rmtree(image_path)
         else:
             rewards, observations, full_obs = self.rollout(horizon=horizon)
-            utility_funcs.make_video_from_rgb_imgs(full_obs, path)
+            utility_funcs.make_video_from_rgb_imgs(full_obs, path, 
+                                                   video_name=video_name)
+
+
+def main(unused_argv):
+    c = Controller(env_name=FLAGS.env)
+    c.render_rollout(path=FLAGS.vid_path, render_type=FLAGS.render_type)
 
 
 if __name__ == '__main__':
-    c = Controller()
-    if len(sys.argv) > 1:
-        vid_path = sys.argv[1]
-        c.render_rollout(path=vid_path)
-    else:
-        c.render_rollout()
+    tf.app.run(main)
+    
