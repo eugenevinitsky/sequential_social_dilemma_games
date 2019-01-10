@@ -20,6 +20,26 @@ ORIENTATIONS = {'LEFT': [-1, 0],
                 'UP': [0, -1],
                 'DOWN': [0, 1]}
 
+DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
+                   '0': [0, 0, 0],  # Black background beyond map walls
+                   '': [180, 180, 180],  # Grey board walls
+                   '@': [180, 180, 180],  # Grey board walls
+                   'A': [0, 255, 0],  # Green apples
+                   'F': [255, 255, 0],  # Yellow fining beam
+                   'P': [159, 67, 255],  # Purple player
+
+                   # Agent colours. Red value is a unique identifier
+                   'agent-0': [159, 67, 255],  # Purple
+                   'agent-1': [2, 81, 154],  # Blue
+                   'agent-2': [238, 223, 16],  # Yellow
+                   'agent-3': [216, 30, 54],  # Red
+                   'agent-4': [1, 174, 110], # Jade
+                   'agent-5': [100, 255, 255],  # Cyan
+                   'agent-6': [99, 99, 255],  # Lavender
+                   'agent-7': [10, 154, 0],  # Deep green
+                   'agent-8': [204, 0, 204],  # Magenta
+                   'agent-9': [254, 151, 0]}  # Orange
+                   
 
 # the axes look like
 # graphic is here to help me get my head in order
@@ -40,7 +60,7 @@ ORIENTATIONS = {'LEFT': [-1, 0],
 
 class MapEnv(MultiAgentEnv):
 
-    def __init__(self, ascii_map, color_map, num_agents=1, render=True):
+    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None):
         """
 
         Parameters
@@ -48,12 +68,12 @@ class MapEnv(MultiAgentEnv):
         ascii_map: list of strings
             Specify what the map should look like. Look at constant.py for
             further explanation
-        color_map: dict
-            Specifies how to convert between ascii chars and colors
         num_agents: int
             Number of agents to have in the system.
         render: bool
             Whether to render the environment
+        color_map: dict
+            Specifies how to convert between ascii chars and colors
         """
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
@@ -64,7 +84,7 @@ class MapEnv(MultiAgentEnv):
         self.agents = {}
         # returns the agent at a desired position if there is one
         self.pos_dict = {}
-        self.color_map = color_map
+        self.color_map = color_map if color_map is not None else DEFAULT_COLOURS
         self.spawn_points = []  # where agents can appear
         # cells hidden by agents or other actions, elements are [row, pos, str]
         self.hidden_cells = []
@@ -186,6 +206,7 @@ class MapEnv(MultiAgentEnv):
         for row_elem in range(map.shape[0]):
             for col_elem in range(map.shape[1]):
                 rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
+
         return rgb_arr
 
     def render_map(self, filename=None):

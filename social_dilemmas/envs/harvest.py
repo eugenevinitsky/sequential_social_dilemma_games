@@ -7,14 +7,6 @@ from social_dilemmas.envs.map_env import MapEnv, ACTIONS, ORIENTATIONS
 
 APPLE_RADIUS = 2
 
-COLOURS = {' ': [0, 0, 0],  # Black background
-           '0': [0, 0, 0],  # Black background beyond map walls
-           '': [195, 0, 255],  # Board walls
-           '@': [195, 0, 255],  # Board walls
-           'A': [0, 255, 0],  # Green apples
-           'P': [0, 255, 255],  # Yellow player
-           'F': [255, 255, 0]}  # Blue firing beam
-
 # Add custom actions to the agent
 ACTIONS['FIRE'] = 5  # length of firing range
 
@@ -27,7 +19,7 @@ SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 class HarvestEnv(MapEnv):
 
     def __init__(self, ascii_map=HARVEST_MAP, num_agents=1, render=False):
-        super().__init__(ascii_map, COLOURS, num_agents, render)
+        super().__init__(ascii_map, num_agents, render)
         self.firing_points = []
         self.apple_points = []
         for row in range(self.base_map.shape[0]):

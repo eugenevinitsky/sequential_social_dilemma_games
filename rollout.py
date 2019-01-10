@@ -72,7 +72,7 @@ class Controller(object):
             sys.stdout.flush()
 
             if save_path is not None:
-                self.env.render_map(save_path + 'frame' + str(i).zfill(6) + '.png')
+                self.env.render_map(filename=save_path + 'frame' + str(i).zfill(6) + '.png')
 
             rgb_arr = self.env.map_to_colors()
             full_obs[i] = rgb_arr.astype(np.uint8)

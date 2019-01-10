@@ -4,20 +4,14 @@ from social_dilemmas.constants import CLEANUP_MAP
 from social_dilemmas.envs.map_env import MapEnv, ACTIONS, ORIENTATIONS
 from social_dilemmas.envs.agent import CleanupAgent
 
-# TODO(ev) add waste colors
-COLOURS = {' ': [0, 0, 0],  # Black background
-           '0': [0, 0, 0],  # Black background beyond map walls
-           '': [195, 0, 255],  # Board walls
-           '@': [195, 0, 255],  # Board walls
-           'A': [0, 255, 0],  # Green apples
-           'P': [0, 255, 255],  # Yellow player
-           'F': [255, 255, 0],  # Light blue firing beam
-           'S': [0, 0, 255],  # Dark blue stream cell
-           'H': [17, 56, 100],  # brown waste cells
-           'R': [255, 140, 0]}  # red river cell # CHANGE COLORS
-
 # Add custom actions to the agent
 ACTIONS['FIRE'] = 5
+
+# Custom colour dictionary
+CLEANUP_COLORS = {'C': [100, 255, 255], # Cyan cleaning beam
+                  'S': [99, 156, 194],  # Light grey-blue stream cell
+                  'H': [113, 75, 24],  # brown waste cells
+                  'R': [99, 156, 194]}  # Light grey-blue river cell
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
@@ -30,7 +24,7 @@ appleRespawnProbability = 0.05
 class CleanupEnv(MapEnv):
 
     def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False):
-        super().__init__(ascii_map, COLOURS, num_agents, render)
+        super().__init__(ascii_map, num_agents, render)
 
         # compute potential waste area
         unique, counts = np.unique(self.base_map, return_counts=True)
@@ -60,6 +54,9 @@ class CleanupEnv(MapEnv):
                     self.waste_points.append([row, col])
                 if self.base_map[row, col] == 'R':
                     self.river_points.append([row, col])
+
+        self.color_map.update(CLEANUP_COLORS)
+        
 
     @property
     def action_space(self):
