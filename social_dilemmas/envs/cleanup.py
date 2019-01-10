@@ -2,7 +2,8 @@ import numpy as np
 
 from social_dilemmas.constants import CLEANUP_MAP
 from social_dilemmas.envs.map_env import MapEnv, ACTIONS, ORIENTATIONS
-from social_dilemmas.envs.agent import CleanupAgent
+from social_dilemmas.envs.agent import CleanupAgent, CLEANUP_VIEW_SIZE
+import utility_funcs as util
 
 # Add custom actions to the agent
 ACTIONS['FIRE'] = 5
@@ -125,9 +126,15 @@ class CleanupEnv(MapEnv):
 
     def setup_agents(self):
         """Constructs all the agents in self.agent"""
+        map_with_agents = self.get_map_with_agents()
+
         for i in range(self.num_agents):
             agent_id = 'agent-' + str(i)
-            agent = CleanupAgent(agent_id, self.spawn_point(), self.spawn_rotation(), self)
+            spawn_point = self.spawn_point()
+            rotation = self.spawn_rotation()
+            grid = util.return_view(map_with_agents, spawn_point, 
+                                    CLEANUP_VIEW_SIZE, CLEANUP_VIEW_SIZE)
+            agent = CleanupAgent(agent_id, spawn_point, rotation, grid)
             self.agents[agent_id] = agent
 
     def spawn_apples_and_waste(self):

@@ -18,8 +18,8 @@ class Agent(object):
             a 2d array indicating the x-y position of the agents
         start_orientation: (np.ndarray)
             a 2d array containing a unit vector indicating the agent direction
-        grid: (MapEnv)
-            a reference to the containing environment
+        grid: (2d array)
+            a reference to this agent's view of the environment
         row_size: (int)
             how many rows up and down the agent can look
         col_size: (int)
@@ -69,7 +69,8 @@ class Agent(object):
         raise NotImplementedError
 
     def compute_reward(self):
-        self.reward_from_pos(self.get_pos())
+        ego_pos = self.translate_pos_to_egocentric_coord(self.get_pos())
+        self.reward_from_pos(ego_pos)
         reward = self.reward_this_turn
         self.reward_this_turn = 0
         return reward
@@ -84,6 +85,11 @@ class Agent(object):
     def get_pos(self):
         return self.pos
 
+    def translate_pos_to_egocentric_coord(self, pos):
+        offset_pos = pos - self.pos
+        ego_centre = [self.row_size, self.col_size]
+        return ego_centre + offset_pos
+
     def set_orientation(self, new_orientation):
         self.orientation = new_orientation
 
@@ -91,30 +97,31 @@ class Agent(object):
         return self.orientation
 
     def get_map(self):
-        return self.grid.map
+        return self.grid
 
-    def update_map_agent_pos(self, new_pos):
+    def update_agent_pos(self, new_pos):
         """Updates the agents internal positions
 
         Returns
         -------
         old_pos: (np.ndarray)
-            2-d array describing where the agent used to be
+            2 element array describing where the agent used to be
         new_pos: (np.ndarray)
-            2-d array describing the agent positions
+            2 element array describing the agent positions
         """
-        new_row, new_col = new_pos
         old_pos = self.get_pos()
-        self.reward_from_pos(new_pos)
+        ego_new_pos = self.translate_pos_to_egocentric_coord(new_pos)
+        new_row, new_col = ego_new_pos
+        self.reward_from_pos(ego_new_pos)
         # you can't walk through walls
-        if self.grid.map[new_row, new_col] == '@':
+        if self.grid[new_row, new_col] == '@':
             new_pos = self.get_pos()
 
         self.set_pos(new_pos)
         # TODO(ev) list array consistency
         return self.get_pos(), np.array(old_pos)
 
-    def update_map_agent_rot(self, new_rot):
+    def update_agent_rot(self, new_rot):
         # FIXME(ev) once we have a color scheme worked out we need to convert rotation
         # into a color
         self.set_orientation(new_rot)
@@ -138,8 +145,8 @@ class HarvestAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=HARVEST_VIEW_SIZE):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
-        self.update_map_agent_pos(start_pos)
-        self.update_map_agent_rot(start_orientation)
+        self.update_agent_pos(start_pos)
+        self.update_agent_rot(start_orientation)
 
     @property
     def action_space(self):
@@ -157,13 +164,18 @@ class HarvestAgent(Agent):
                                              2 * self.view_len + 1, 3), dtype=np.float32)
 
     def get_state(self):
-        return self.grid.return_view(self.pos, self.row_size, self.col_size)
+        return self.grid
 
     def reward_from_pos(self, query_pos):
+        """Gets reward from moving to a query position.
+
+        Note: query_pos must be in egocentric coordinates of 
+        agent's own partially observable view of the map
+        """
         row, col = query_pos
-        if self.grid.map[row, col] == 'A':
+        if self.grid[row, col] == 'A':
             self.reward_this_turn += 1
-        elif self.grid.map[row, col] == 'F':
+        elif self.grid[row, col] == 'F':
             self.reward_this_turn -= 50
 
     def fire_beam(self):
@@ -181,8 +193,8 @@ class CleanupAgent(Agent):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
         # remember what you've stepped on
-        self.update_map_agent_pos(start_pos)
-        self.update_map_agent_rot(start_orientation)
+        self.update_agent_pos(start_pos)
+        self.update_agent_rot(start_orientation)
 
     @property
     def action_space(self):
@@ -200,13 +212,18 @@ class CleanupAgent(Agent):
         return HARVEST_ACTIONS[action_number]
 
     def get_state(self):
-        return self.grid.return_view(self.pos, self.row_size, self.col_size)
+        return self.grid
 
     def reward_from_pos(self, query_pos):
+        """Gets reward from moving to a query position.
+
+        Note: query_pos must be in egocentric coordinates of 
+        agent's own partially observable view of the map
+        """
         row, col = query_pos
-        if self.grid.map[row, col] == 'A':
+        if self.grid[row, col] == 'A':
             self.reward_this_turn += 1
-        elif self.grid.map[row, col] == 'F':
+        elif self.grid[row, col] == 'F':
             self.reward_this_turn -= 50
 
     def fire_beam(self):

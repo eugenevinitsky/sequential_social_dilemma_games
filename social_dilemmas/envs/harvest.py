@@ -1,9 +1,11 @@
 from gym.spaces import Discrete
 import numpy as np
 
-from social_dilemmas.envs.agent import HarvestAgent
+from social_dilemmas.envs.agent import HarvestAgent, HARVEST_VIEW_SIZE
 from social_dilemmas.constants import HARVEST_MAP
 from social_dilemmas.envs.map_env import MapEnv, ACTIONS, ORIENTATIONS
+import utility_funcs as util
+
 
 APPLE_RADIUS = 2
 
@@ -40,9 +42,15 @@ class HarvestEnv(MapEnv):
 
     # TODO(ev) this can probably be moved into the superclass
     def setup_agents(self):
+        map_with_agents = self.get_map_with_agents()
+
         for i in range(self.num_agents):
             agent_id = 'agent-' + str(i)
-            agent = HarvestAgent(agent_id, self.spawn_point(), self.spawn_rotation(), self)
+            spawn_point = self.spawn_point()
+            rotation = self.spawn_rotation()
+            grid = util.return_view(map_with_agents, spawn_point, 
+                                    HARVEST_VIEW_SIZE, HARVEST_VIEW_SIZE)
+            agent = HarvestAgent(agent_id, spawn_point, rotation, grid)
             self.agents[agent_id] = agent
 
     def custom_reset(self):
@@ -101,7 +109,7 @@ class HarvestEnv(MapEnv):
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
             if self.map[row, col] != 'P' and self.map[row, col] != 'A':
-                window = self.return_view(self.apple_points[i], APPLE_RADIUS, APPLE_RADIUS)
+                window = util.return_view(self.map, self.apple_points[i], APPLE_RADIUS, APPLE_RADIUS)
                 num_apples = self.count_apples(window)
                 spawn_prob = SPAWN_PROB[min(num_apples, 3)]
                 rand_num = np.random.rand(1)[0]

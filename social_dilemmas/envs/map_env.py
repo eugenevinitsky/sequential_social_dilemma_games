@@ -6,6 +6,7 @@ Code partially adapted from PyColab: https://github.com/deepmind/pycolab
 from ray.rllib.env import MultiAgentEnv
 import numpy as np
 import matplotlib.pyplot as plt
+import utility_funcs as util
 
 ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
            'MOVE_RIGHT': [1, 0],  # Move right
@@ -28,17 +29,16 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    'F': [255, 255, 0],  # Yellow fining beam
                    'P': [159, 67, 255],  # Purple player
 
-                   # Agent colours. Red value is a unique identifier
-                   'agent-0': [159, 67, 255],  # Purple
-                   'agent-1': [2, 81, 154],  # Blue
-                   'agent-2': [238, 223, 16],  # Yellow
-                   'agent-3': [216, 30, 54],  # Red
-                   'agent-4': [1, 174, 110], # Jade
-                   'agent-5': [100, 255, 255],  # Cyan
-                   'agent-6': [99, 99, 255],  # Lavender
-                   'agent-7': [10, 154, 0],  # Deep green
-                   'agent-8': [204, 0, 204],  # Magenta
-                   'agent-9': [254, 151, 0]}  # Orange
+                   # Colours for agents. R value is a unique identifier
+                   '1': [159, 67, 255],  # Purple
+                   '2': [2, 81, 154],  # Blue
+                   '3': [204, 0, 204],  # Magenta
+                   '4': [216, 30, 54],  # Red
+                   '5': [254, 151, 0],  # Orange
+                   '6': [100, 255, 255],  # Cyan
+                   '7': [99, 99, 255],  # Lavender
+                   '8': [250, 204, 255], # Pink
+                   '9': [238, 223, 16]}  # Yellow
                    
 
 # the axes look like
@@ -147,11 +147,17 @@ class MapEnv(MultiAgentEnv):
         self.custom_map_update()
         self.execute_reservations()
 
+        map_with_agents = self.get_map_with_agents()
+
         observations = {}
         rewards = {}
         dones = {}
         info = {}
         for agent in self.agents.values():
+            # Update each agent's view of the world
+            agent.grid = util.return_view(map_with_agents, agent.pos, 
+                                          agent.row_size, agent.col_size)
+
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
@@ -178,11 +184,32 @@ class MapEnv(MultiAgentEnv):
         self.reset_map()
         self.custom_map_update()
 
+        map_with_agents = self.get_map_with_agents()
+
         observations = {}
         for agent in self.agents.values():
+            # Update each agent's view of the world
+            agent.grid = util.return_view(map_with_agents, agent.pos, 
+                                          agent.row_size, agent.col_size)
+
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
         return observations
+
+    def get_map_with_agents(self):
+        """Gets a version of the environment map where generic
+        'P' characters have been replaced with specific agent IDs. 
+
+        Returns:
+            2D array of strings representing the map.
+        """
+        grid = self.map
+
+        for agent_id, agent in self.agents.items():
+            char_id = str(int(agent_id[-1]) + 1)
+            grid[agent.pos[0], agent.pos[1]] = char_id
+
+        return grid
 
     def map_to_colors(self, map=None, color_map=None):
         """Converts a map to an array of RGB values.
@@ -216,7 +243,8 @@ class MapEnv(MultiAgentEnv):
             path: If a string is passed, will save the image
                 to disk at this location.
         """
-        rgb_arr = self.map_to_colors()
+        map_with_agents = self.get_map_with_agents()
+        rgb_arr = self.map_to_colors(map_with_agents)
         plt.imshow(rgb_arr, interpolation='nearest')
         if filename is None:
             plt.show()
@@ -243,7 +271,7 @@ class MapEnv(MultiAgentEnv):
                 self.reserved_slots.append((*new_pos, 'P', agent_id))
             elif 'TURN' in action:
                 new_rot = self.update_rotation(action, agent.get_orientation())
-                agent.update_map_agent_rot(new_rot)
+                agent.update_agent_rot(new_rot)
 
     def update_custom_moves(self, agent_actions):
         for agent_id, action in agent_actions.items():
@@ -358,7 +386,7 @@ class MapEnv(MultiAgentEnv):
                         # TODO(ev) this should be a method from ---- to -----
                         # -------------------------------------
                         new_pos, old_pos = \
-                            self.agents[agent_to_slot[index]].update_map_agent_pos(move)
+                            self.agents[agent_to_slot[index]].update_agent_pos(move)
                         new_pos = new_pos.tolist()
                         old_pos = old_pos.tolist()
                         hidden_pos_arr = np.array(hidden_pos)
@@ -424,7 +452,7 @@ class MapEnv(MultiAgentEnv):
                                 del_keys.append(conflicting_agent_id)
 
                     else:
-                        new_pos, old_pos = self.agents[agent_id].update_map_agent_pos(move)
+                        new_pos, old_pos = self.agents[agent_id].update_agent_pos(move)
                         new_pos = new_pos.tolist()
                         old_pos = old_pos.tolist()
                         hidden_pos_arr = np.array(hidden_pos)
@@ -492,59 +520,6 @@ class MapEnv(MultiAgentEnv):
     ########################################
     # Utility methods, move these eventually
     ########################################
-
-    def return_view(self, pos, row_size, col_size):
-        """Given an  position and view window, returns correct map part
-
-        Note, if the agent asks for a view that exceeds the map bounds,
-        it is padded with zeros
-
-        Parameters
-        ----------
-        pos: list
-            list consisting of row and column at which to search
-        row_size: int
-            how far the view should look in the row dimension
-        col_size: int
-            how far the view should look in the col dimension
-
-        Returns
-        -------
-        view: (np.ndarray) - a slice of the map for the agent to see
-        """
-        x, y = pos
-        left_edge = x - col_size
-        right_edge = x + col_size
-        top_edge = y - row_size
-        bot_edge = y + row_size
-        pad_mat, left_pad, top_pad = self.pad_if_needed(left_edge, right_edge,
-                                                        top_edge, bot_edge, self.map)
-        x += left_pad
-        y += top_pad
-        view = pad_mat[x - col_size: x + col_size + 1,
-                       y - row_size: y + row_size + 1]
-        return view
-
-    def pad_if_needed(self, left_edge, right_edge, top_edge, bot_edge, matrix):
-        # FIXME(ev) something is broken here, I think x and y are flipped
-        row_dim = matrix.shape[0]
-        col_dim = matrix.shape[1]
-        left_pad, right_pad, top_pad, bot_pad = 0, 0, 0, 0
-        if left_edge < 0:
-            left_pad = abs(left_edge)
-        if right_edge > row_dim - 1:
-            right_pad = right_edge - (row_dim - 1)
-        if top_edge < 0:
-            top_pad = abs(top_edge)
-        if bot_edge > col_dim - 1:
-            bot_pad = bot_edge - (col_dim - 1)
-
-        return self.pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, top_pad
-
-    def pad_matrix(self, left_pad, right_pad, top_pad, bot_pad, matrix, const_val=1):
-        pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
-                         'constant', constant_values=(const_val, const_val))
-        return pad_mat
 
     # TODO(ev) this can be a general property of map_env or a util
     def rotate_action(self, action_vec, orientation):
