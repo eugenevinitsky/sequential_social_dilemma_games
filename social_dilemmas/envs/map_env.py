@@ -209,7 +209,7 @@ class MapEnv(MultiAgentEnv):
 
         return rgb_arr
 
-    def render_map(self, filename=None):
+    def render(self, filename=None):
         """ Creates an image of the map to plot or save.
 
         Args:
