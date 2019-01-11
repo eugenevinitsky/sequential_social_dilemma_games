@@ -144,16 +144,20 @@ class CleanupEnv(MapEnv):
                 rand_num = np.random.rand(1)[0]
                 if rand_num < self.current_apple_spawn_prob:
                     spawn_points.append((row, col, 'A'))
-        for i in range(len(self.waste_points)):
-            row, col = self.waste_points[i]
-            if self.map[row, col] != 'P' and self.map[row, col] != 'H':
-                rand_num = np.random.rand(1)[0]
-                if rand_num < self.current_waste_spawn_prob:
-                    spawn_points.append((row, col, 'H'))
+
+        # spawn one waste point
+        if not np.isclose(self.current_waste_spawn_prob, 0):
+            while True:
+                spawn_index = np.random.randint(0, len(self.waste_points))
+                row, col = self.waste_points[spawn_index]
+                if self.map[row, col] != 'P' and self.map[row, col] != 'H':
+                    rand_num = np.random.rand(1)[0]
+                    if rand_num < self.current_waste_spawn_prob:
+                        spawn_points.append((row, col, 'H'))
+                        break
         return spawn_points
 
     def compute_probabilities(self):
-        # TODO(ev) there is almost certainly a bug here
         waste_density = 1 - self.compute_permitted_area() / self.potential_waste_area
         if waste_density >= thresholdDepletion:
             self.current_apple_spawn_prob = 0
