@@ -148,6 +148,7 @@ class MapEnv(MultiAgentEnv):
         self.execute_reservations()
 
         map_with_agents = self.get_map_with_agents()
+        self.check_agent_map(map_with_agents)
 
         observations = {}
         rewards = {}
@@ -203,13 +204,24 @@ class MapEnv(MultiAgentEnv):
         Returns:
             2D array of strings representing the map.
         """
-        grid = self.map
+        grid = np.copy(self.map)
 
         for agent_id, agent in self.agents.items():
             char_id = str(int(agent_id[-1]) + 1)
             grid[agent.pos[0], agent.pos[1]] = char_id
 
         return grid
+
+    def check_agent_map(self, agent_map):
+        """Checks the map to make sure agents aren't duplicated"""
+        unique, counts = np.unique(agent_map, return_counts=True)
+        count_dict = dict(zip(unique,counts))
+
+        # check for multiple agents
+        for i in range(self.num_agents):
+            if count_dict[str(i+1)] != 1:
+                print('Error! Wrong number of agent', i, 'in map!')
+                import pdb; pdb.set_trace()
 
     def map_to_colors(self, map=None, color_map=None):
         """Converts a map to an array of RGB values.
@@ -244,6 +256,7 @@ class MapEnv(MultiAgentEnv):
                 to disk at this location.
         """
         map_with_agents = self.get_map_with_agents()
+
         rgb_arr = self.map_to_colors(map_with_agents)
         plt.imshow(rgb_arr, interpolation='nearest')
         if filename is None:
