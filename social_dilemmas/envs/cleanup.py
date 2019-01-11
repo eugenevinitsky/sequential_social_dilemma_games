@@ -9,7 +9,7 @@ import utility_funcs as util
 ACTIONS['FIRE'] = 5
 
 # Custom colour dictionary
-CLEANUP_COLORS = {'C': [100, 255, 255], # Cyan cleaning beam
+CLEANUP_COLORS = {'C': [100, 255, 255],  # Cyan cleaning beam
                   'S': [99, 156, 194],  # Light grey-blue stream cell
                   'H': [113, 75, 24],  # brown waste cells
                   'R': [99, 156, 194]}  # Light grey-blue river cell
@@ -57,7 +57,6 @@ class CleanupEnv(MapEnv):
                     self.river_points.append([row, col])
 
         self.color_map.update(CLEANUP_COLORS)
-        
 
     @property
     def action_space(self):
@@ -132,7 +131,7 @@ class CleanupEnv(MapEnv):
             agent_id = 'agent-' + str(i)
             spawn_point = self.spawn_point()
             rotation = self.spawn_rotation()
-            grid = util.return_view(map_with_agents, spawn_point, 
+            grid = util.return_view(map_with_agents, spawn_point,
                                     CLEANUP_VIEW_SIZE, CLEANUP_VIEW_SIZE)
             agent = CleanupAgent(agent_id, spawn_point, rotation, grid)
             self.agents[agent_id] = agent

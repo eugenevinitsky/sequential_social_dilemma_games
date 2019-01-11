@@ -37,9 +37,8 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    '5': [254, 151, 0],  # Orange
                    '6': [100, 255, 255],  # Cyan
                    '7': [99, 99, 255],  # Lavender
-                   '8': [250, 204, 255], # Pink
+                   '8': [250, 204, 255],  # Pink
                    '9': [238, 223, 16]}  # Yellow
-                   
 
 # the axes look like
 # graphic is here to help me get my head in order
@@ -148,7 +147,6 @@ class MapEnv(MultiAgentEnv):
         self.execute_reservations()
 
         map_with_agents = self.get_map_with_agents()
-        self.check_agent_map(map_with_agents)
 
         observations = {}
         rewards = {}
@@ -156,7 +154,7 @@ class MapEnv(MultiAgentEnv):
         info = {}
         for agent in self.agents.values():
             # Update each agent's view of the world
-            agent.grid = util.return_view(map_with_agents, agent.pos, 
+            agent.grid = util.return_view(map_with_agents, agent.pos,
                                           agent.row_size, agent.col_size)
 
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
@@ -190,7 +188,7 @@ class MapEnv(MultiAgentEnv):
         observations = {}
         for agent in self.agents.values():
             # Update each agent's view of the world
-            agent.grid = util.return_view(map_with_agents, agent.pos, 
+            agent.grid = util.return_view(map_with_agents, agent.pos,
                                           agent.row_size, agent.col_size)
 
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
@@ -199,7 +197,7 @@ class MapEnv(MultiAgentEnv):
 
     def get_map_with_agents(self):
         """Gets a version of the environment map where generic
-        'P' characters have been replaced with specific agent IDs. 
+        'P' characters have been replaced with specific agent IDs.
 
         Returns:
             2D array of strings representing the map.
@@ -215,13 +213,14 @@ class MapEnv(MultiAgentEnv):
     def check_agent_map(self, agent_map):
         """Checks the map to make sure agents aren't duplicated"""
         unique, counts = np.unique(agent_map, return_counts=True)
-        count_dict = dict(zip(unique,counts))
+        count_dict = dict(zip(unique, counts))
 
         # check for multiple agents
         for i in range(self.num_agents):
             if count_dict[str(i+1)] != 1:
                 print('Error! Wrong number of agent', i, 'in map!')
-                import pdb; pdb.set_trace()
+                return False
+        return True
 
     def map_to_colors(self, map=None, color_map=None):
         """Converts a map to an array of RGB values.

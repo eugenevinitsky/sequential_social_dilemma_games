@@ -169,7 +169,7 @@ class HarvestAgent(Agent):
     def reward_from_pos(self, query_pos):
         """Gets reward from moving to a query position.
 
-        Note: query_pos must be in egocentric coordinates of 
+        Note: query_pos must be in egocentric coordinates of
         agent's own partially observable view of the map
         """
         row, col = query_pos
@@ -217,7 +217,7 @@ class CleanupAgent(Agent):
     def reward_from_pos(self, query_pos):
         """Gets reward from moving to a query position.
 
-        Note: query_pos must be in egocentric coordinates of 
+        Note: query_pos must be in egocentric coordinates of
         agent's own partially observable view of the map
         """
         row, col = query_pos

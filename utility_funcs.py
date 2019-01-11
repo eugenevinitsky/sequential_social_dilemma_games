@@ -54,6 +54,7 @@ def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory',
     cv2.destroyAllWindows()
     video.release()
 
+
 def return_view(grid, pos, row_size, col_size):
     """Given a map grid, position and view window, returns correct map part
 
@@ -81,12 +82,13 @@ def return_view(grid, pos, row_size, col_size):
     top_edge = y - row_size
     bot_edge = y + row_size
     pad_mat, left_pad, top_pad = pad_if_needed(left_edge, right_edge,
-                                                    top_edge, bot_edge, grid)
+                                               top_edge, bot_edge, grid)
     x += left_pad
     y += top_pad
     view = pad_mat[x - col_size: x + col_size + 1,
                    y - row_size: y + row_size + 1]
     return view
+
 
 def pad_if_needed(left_edge, right_edge, top_edge, bot_edge, matrix):
     # FIXME(ev) something is broken here, I think x and y are flipped
@@ -103,6 +105,7 @@ def pad_if_needed(left_edge, right_edge, top_edge, bot_edge, matrix):
         bot_pad = bot_edge - (col_dim - 1)
 
     return pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, top_pad
+
 
 def pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, const_val=1):
     pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),

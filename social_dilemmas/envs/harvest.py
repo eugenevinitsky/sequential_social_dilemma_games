@@ -48,7 +48,7 @@ class HarvestEnv(MapEnv):
             agent_id = 'agent-' + str(i)
             spawn_point = self.spawn_point()
             rotation = self.spawn_rotation()
-            grid = util.return_view(map_with_agents, spawn_point, 
+            grid = util.return_view(map_with_agents, spawn_point,
                                     HARVEST_VIEW_SIZE, HARVEST_VIEW_SIZE)
             agent = HarvestAgent(agent_id, spawn_point, rotation, grid)
             self.agents[agent_id] = agent

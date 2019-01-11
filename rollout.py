@@ -20,7 +20,7 @@ tf.app.flags.DEFINE_string(
     'env', 'cleanup',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_string(
-    'render_type', 'pretty', 
+    'render_type', 'pretty',
     'Can be pretty or fast. Implications obvious.')
 tf.app.flags.DEFINE_integer(
     'fps', 5,
@@ -49,7 +49,7 @@ class Controller(object):
         """ Rollout several timesteps of an episode of the environment.
 
         Args:
-            horizon: The number of timesteps to roll out. 
+            horizon: The number of timesteps to roll out.
             save_path: If provided, will save each frame to disk at this
                 location.
         """
@@ -80,14 +80,13 @@ class Controller(object):
             rewards.append(rew['agent-0'])
 
         return rewards, observations, full_obs
-            
 
-    def render_rollout(self, horizon=50, path=None, 
+    def render_rollout(self, horizon=50, path=None,
                        render_type='pretty', fps=5):
         """ Render a rollout into a video.
 
         Args:
-            horizon: The number of timesteps to roll out. 
+            horizon: The number of timesteps to roll out.
             path: Directory where the video will be saved.
             render_type: Can be 'pretty' or 'fast'. Impliciations obvious.
             fps: Integer frames per second.
@@ -97,7 +96,7 @@ class Controller(object):
             print(path)
             if not os.path.exists(path):
                 os.makedirs(path)
-        video_name=self.env_name + '_trajectory'
+        video_name = self.env_name + '_trajectory'
 
         if render_type == 'pretty':
             image_path = os.path.join(path, 'frames/')
@@ -108,7 +107,7 @@ class Controller(object):
                 horizon=horizon, save_path=image_path)
             utility_funcs.make_video_from_image_dir(path, image_path, fps=fps,
                                                     video_name=video_name)
-            
+
             # Clean up images
             shutil.rmtree(image_path)
         else:
@@ -125,4 +124,3 @@ def main(unused_argv):
 
 if __name__ == '__main__':
     tf.app.run(main)
-    
