@@ -122,8 +122,6 @@ class Agent(object):
         return self.get_pos(), np.array(old_pos)
 
     def update_agent_rot(self, new_rot):
-        # FIXME(ev) once we have a color scheme worked out we need to convert rotation
-        # into a color
         self.set_orientation(new_rot)
 
 
