@@ -14,7 +14,7 @@ from social_dilemmas.envs.harvest import HarvestEnv
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'vid_path', '/home/natasha/Dropbox (MIT)/Projects/AgentEmpathy/vids',
+    'vid_path', os.path.abspath(os.path.join(os.path.dirname(__file__), './videos')),
     'Path to directory where videos are saved.')
 tf.app.flags.DEFINE_string(
     'env', 'cleanup',
