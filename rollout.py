@@ -23,7 +23,7 @@ tf.app.flags.DEFINE_string(
     'render_type', 'pretty',
     'Can be pretty or fast. Implications obvious.')
 tf.app.flags.DEFINE_integer(
-    'fps', 5,
+    'fps', 8,
     'Number of frames per second.')
 
 
@@ -82,7 +82,7 @@ class Controller(object):
         return rewards, observations, full_obs
 
     def render_rollout(self, horizon=50, path=None,
-                       render_type='pretty', fps=5):
+                       render_type='pretty', fps=8):
         """ Render a rollout into a video.
 
         Args:
