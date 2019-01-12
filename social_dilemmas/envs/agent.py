@@ -86,7 +86,7 @@ class Agent(object):
         return self.pos
 
     def translate_pos_to_egocentric_coord(self, pos):
-        offset_pos = pos - self.pos
+        offset_pos = pos - self.get_pos()
         ego_centre = [self.row_size, self.col_size]
         return ego_centre + offset_pos
 
@@ -122,8 +122,6 @@ class Agent(object):
         return self.get_pos(), np.array(old_pos)
 
     def update_agent_rot(self, new_rot):
-        # FIXME(ev) once we have a color scheme worked out we need to convert rotation
-        # into a color
         self.set_orientation(new_rot)
 
 

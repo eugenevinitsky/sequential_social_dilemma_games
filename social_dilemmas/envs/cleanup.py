@@ -27,6 +27,8 @@ class CleanupEnv(MapEnv):
     def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False):
         super().__init__(ascii_map, num_agents, render)
 
+        self.no_update_cells = ['F']
+
         # compute potential waste area
         unique, counts = np.unique(self.base_map, return_counts=True)
         counts_dict = dict(zip(unique, counts))
