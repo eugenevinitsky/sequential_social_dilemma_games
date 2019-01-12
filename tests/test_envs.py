@@ -9,7 +9,7 @@ from social_dilemmas.envs.cleanup import CleanupEnv
 from social_dilemmas.envs.agent import CleanupAgent
 import utility_funcs as util
 
-ACTION_MAP = {y:x for x,y in HARVEST_ACTIONS.items()}
+ACTION_MAP = {y: x for x, y in HARVEST_ACTIONS.items()}
 
 MINI_HARVEST_MAP = [
     '@@@@@@',
@@ -423,8 +423,6 @@ class TestHarvestEnv(unittest.TestCase):
         # fire a beam from agent 1 to 2
         self.rotate_agent('agent-1', 'LEFT')
         _, rew, _, _ = self.env.step({'agent-1': ACTION_MAP['FIRE']})
-        reward_0 = self.env.agents['agent-0'].compute_reward()
-        reward_1 = self.env.agents['agent-1'].compute_reward()
         self.assertTrue(rew['agent-0'] == -50)
         self.assertTrue(rew['agent-1'] == -1)
 
@@ -475,7 +473,7 @@ class TestHarvestEnv(unittest.TestCase):
         # test that if two agents fire on each other than they're still there after
         self.env.agents['agent-0'].update_agent_rot('DOWN')
         self.env.step({'agent-0': ACTION_MAP['FIRE'],
-                                      'agent-1': ACTION_MAP['FIRE']})
+                       'agent-1': ACTION_MAP['FIRE']})
         self.env.step({})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
@@ -487,6 +485,8 @@ class TestHarvestEnv(unittest.TestCase):
 
         # test that agents can walk into other agents if moves are de-conflicting
         # this only occurs stochastically so try it 50 times
+        # TODO(ev) the percentages are consistent among agents
+        # TODO(ev) but which agent gets which percent is not deterministic..
         np.random.seed(1)
         self.env.agents['agent-0'].update_agent_rot('UP')
         self.env.step({'agent-0': ACTION_MAP['MOVE_DOWN']})
@@ -553,12 +553,34 @@ class TestHarvestEnv(unittest.TestCase):
             else:
                 percent_accomplished += 1
         percent_success = percent_accomplished / (percent_accomplished + percent_failed)
-        within_bounds = (.45 < percent_success) and (percent_success < .57)
+        print('percent success is', percent_success)
+        within_bounds = (.44 < percent_success) and (percent_success < .57)
         self.assertTrue(within_bounds)
 
         # Check that if there is more than one conflict simultaneously
         # that it is handled correctly
-
+        agent_0_percent = 0
+        agent_1_percent = 0
+        num_trials = 100
+        for i in range(num_trials):
+            self.move_agent('agent-1', [3, 4])
+            self.move_agent('agent-2', [1, 2])
+            self.move_agent('agent-0', [3, 2])
+            self.add_agent('agent-3', [1, 4], 'UP', self.env, 3)
+            self.env.step({'agent-0': ACTION_MAP['MOVE_LEFT'],
+                           'agent-2': ACTION_MAP['MOVE_RIGHT'],
+                           'agent-1': ACTION_MAP['MOVE_LEFT'],
+                           'agent-3': ACTION_MAP['MOVE_RIGHT']})
+            if self.env.agents['agent-0'].get_pos().tolist() == [2, 2]:
+                agent_0_percent += 1
+            if self.env.agents['agent-1'].get_pos().tolist() == [2, 4]:
+                agent_1_percent += 1
+        agent_0_success = agent_0_percent/num_trials
+        agent_1_success = agent_1_percent/num_trials
+        within_bounds_0 = (.45 < agent_0_success) and (agent_0_success < .6)
+        within_bounds_1 = (.45 < agent_1_success) and (agent_1_success < .6)
+        self.assertTrue(within_bounds_0)
+        self.assertTrue(within_bounds_1)
 
     def test_beam_conflict(self):
         """Test that after the beam is fired, obscured apples and agents are returned"""
