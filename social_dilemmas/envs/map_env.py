@@ -81,6 +81,8 @@ class MapEnv(MultiAgentEnv):
         # as well as the intended action in that slot
         self.reserved_slots = []
         self.agents = {}
+        # keeps track of cell types that should not be over-ridden by agents
+        self.no_update_cells = []
         # returns the agent at a desired position if there is one
         self.pos_dict = {}
         self.color_map = color_map if color_map is not None else DEFAULT_COLOURS
@@ -138,7 +140,6 @@ class MapEnv(MultiAgentEnv):
         self.execute_reservations()
 
         # execute custom moves like firing
-        self.clean_map()
         self.update_custom_moves(agent_actions)
         self.execute_reservations()
 
@@ -153,10 +154,8 @@ class MapEnv(MultiAgentEnv):
         dones = {}
         info = {}
         for agent in self.agents.values():
-            # Update each agent's view of the world
             agent.grid = util.return_view(map_with_agents, agent.pos,
                                           agent.row_size, agent.col_size)
-
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
@@ -187,10 +186,8 @@ class MapEnv(MultiAgentEnv):
 
         observations = {}
         for agent in self.agents.values():
-            # Update each agent's view of the world
             agent.grid = util.return_view(map_with_agents, agent.pos,
                                           agent.row_size, agent.col_size)
-
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
         return observations
@@ -206,7 +203,9 @@ class MapEnv(MultiAgentEnv):
 
         for agent_id, agent in self.agents.items():
             char_id = str(int(agent_id[-1]) + 1)
-            grid[agent.pos[0], agent.pos[1]] = char_id
+            if self.map[agent.pos[0], agent.pos[1]] not in \
+                    self.no_update_cells:
+                grid[agent.pos[0], agent.pos[1]] = char_id
 
         return grid
 
@@ -378,10 +377,13 @@ class MapEnv(MultiAgentEnv):
                 move_slots.append([row, col])
                 agent_to_slot.append(agent_id)
 
-        # First, resolve conflicts between two agents that want the same spot
+        # cut short the computation if there are no moves
         if len(agent_to_slot) > 0:
 
-            # a random agent will win the slot
+            # first we will resolve all slots over which multiple agents
+            # want the slot
+
+            # shuffle so that a random agent has slot priority
             shuffle_list = list(zip(agent_to_slot, move_slots))
             np.random.shuffle(shuffle_list)
             agent_to_slot, move_slots = zip(*shuffle_list)
@@ -418,14 +420,17 @@ class MapEnv(MultiAgentEnv):
                         # remove all the other moves that would have conflicted
                         remove_indices = np.where((search_list == move).all(axis=1))[0]
                         all_agents_id = [agent_to_slot[i] for i in remove_indices]
-                        # all other agents now stay in place
+                        # all other agents now stay in place so update their moves
+                        # to reflect this
                         for agent_id in all_agents_id:
                             agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
+                        # update the positions for resolving future conflicts
                         curr_agent_pos = [agent.get_pos().tolist() for
                                           agent in self.agents.values()]
                         agent_by_pos = {tuple(agent.get_pos()):
                                         agent.agent_id for agent in self.agents.values()}
 
+            # make the remaining un-conflicted moves
             while len(agent_moves.items()) > 0:
                 moves_copy = agent_moves.copy()
                 del_keys = []
@@ -462,7 +467,7 @@ class MapEnv(MultiAgentEnv):
                                 del agent_moves[agent_id]
                                 del_keys.append(agent_id)
                                 del_keys.append(conflicting_agent_id)
-
+                    # this move is unconflicted
                     else:
                         new_pos, old_pos = self.agents[agent_id].update_agent_pos(move)
                         new_pos = new_pos.tolist()

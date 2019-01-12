@@ -86,7 +86,7 @@ class Agent(object):
         return self.pos
 
     def translate_pos_to_egocentric_coord(self, pos):
-        offset_pos = pos - self.pos
+        offset_pos = pos - self.get_pos()
         ego_centre = [self.row_size, self.col_size]
         return ego_centre + offset_pos
 

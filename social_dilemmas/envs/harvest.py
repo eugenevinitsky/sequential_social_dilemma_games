@@ -22,6 +22,7 @@ class HarvestEnv(MapEnv):
 
     def __init__(self, ascii_map=HARVEST_MAP, num_agents=1, render=False):
         super().__init__(ascii_map, num_agents, render)
+        self.no_update_cells = ['F']
         self.firing_points = []
         self.apple_points = []
         for row in range(self.base_map.shape[0]):
