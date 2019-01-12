@@ -577,8 +577,8 @@ class TestHarvestEnv(unittest.TestCase):
                 agent_1_percent += 1
         agent_0_success = agent_0_percent/num_trials
         agent_1_success = agent_1_percent/num_trials
-        within_bounds_0 = (.45 < agent_0_success) and (agent_0_success < .6)
-        within_bounds_1 = (.45 < agent_1_success) and (agent_1_success < .6)
+        within_bounds_0 = (.4 < agent_0_success) and (agent_0_success < .6)
+        within_bounds_1 = (.4 < agent_1_success) and (agent_1_success < .6)
         self.assertTrue(within_bounds_0)
         self.assertTrue(within_bounds_1)
 

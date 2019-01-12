@@ -203,6 +203,8 @@ class MapEnv(MultiAgentEnv):
 
         for agent_id, agent in self.agents.items():
             char_id = str(int(agent_id[-1]) + 1)
+            # make sure that we don't override things like firing
+            # cells with agents
             if self.map[agent.pos[0], agent.pos[1]] not in \
                     self.no_update_cells:
                 grid[agent.pos[0], agent.pos[1]] = char_id
