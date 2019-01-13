@@ -7,8 +7,9 @@ from gym.spaces import Discrete
 from social_dilemmas.envs.agent import Agent
 from social_dilemmas.envs.agent import CleanupAgent
 from social_dilemmas.envs.agent import HarvestAgent
-from social_dilemmas.envs.agent import HARVEST_ACTIONS
 from social_dilemmas.envs.agent import BASE_ACTIONS
+from social_dilemmas.envs.agent import HARVEST_ACTIONS
+from social_dilemmas.envs.agent import CLEANUP_ACTIONS
 from social_dilemmas.envs.cleanup import CleanupEnv
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.map_env import MapEnv
@@ -18,6 +19,8 @@ import utility_funcs as util
 # map actions to appropriate numbers
 ACTION_MAP = {y: x for x, y in BASE_ACTIONS.items()}
 HARVEST_ACTION_MAP = {y: x for x, y in HARVEST_ACTIONS.items()}
+CLEANUP_ACTION_MAP = {y: x for x, y in CLEANUP_ACTIONS.items()}
+
 
 MINI_HARVEST_MAP = [
     '@@@@@@',
@@ -28,12 +31,23 @@ MINI_HARVEST_MAP = [
     '@@@@@@',
 ]
 
+
 MINI_CLEANUP_MAP = [
     '@@@@@@',
     '@ P  @',
     '@H BB@',
     '@R BB@',
     '@S BP@',
+    '@@@@@@',
+]
+
+# Map to check that cleanup beam removes waste correctly
+FIRING_CLEANUP_MAP = [
+    '@@@@@@',
+    '@    @',
+    '@HHP @',
+    '@RH  @',
+    '@H P @',
     '@@@@@@',
 ]
 
@@ -782,6 +796,50 @@ class TestCleanupEnv(unittest.TestCase):
                              ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(self.env.map, test_map)
 
+    def test_cleanup_beam(self):
+        self.env = CleanupEnv(ascii_map=FIRING_CLEANUP_MAP, num_agents=2)
+        self.env.reset()
+        self.move_agent('agent-0', [3, 3])
+        self.move_agent('agent-1', [4, 2])
+        self.rotate_agent('agent-0', 'UP')
+        # check that cleanup beam does three things
+        # 1. Cleans waste cells correctly
+        # 2. Is blocked by the first waste cell it encounters
+        # 3. Obscures agents when fired, doesn't remove them when cleaned
+        self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', 'H', 'C', 'C', ' ', '@'],
+                                 ['@', 'R', 'C', 'P', ' ', '@'],
+                                 ['@', 'C', 'C', 'C', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+        # TODO(ev) can't call step or else waste might spawn
+        self.env.clean_map()
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', 'H', 'R', ' ', ' ', '@'],
+                                 ['@', 'R', 'R', 'P', ' ', '@'],
+                                 ['@', 'R', 'P', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
+        # check that the cleanup beam doesn't remove apples
+        self.env.reset()
+        self.move_agent('agent-0', [3, 3])
+        self.move_agent('agent-1', [4, 2])
+        self.env.update_map_apples([[3, 4]])
+        self.rotate_agent('agent-0', 'DOWN')
+        self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN']})
+        self.env.step({})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', 'H', 'H', ' ', ' ', '@'],
+                                 ['@', 'R', 'H', 'P', 'A', '@'],
+                                 ['@', 'H', 'P', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
     # def test_firing(self):
     #     agent_id = 'agent-0'
     #     self.construct_map(TEST_MAP_1.copy(), agent_id, [3, 2], 'UP')
@@ -810,31 +868,44 @@ class TestCleanupEnv(unittest.TestCase):
     #     )
     #     np.testing.assert_array_equal(expected_view, agent_view)
 
-    def construct_map(self, map, agent_id, start_pos, start_orientation):
-        # overwrite the map for testing
-        self.env = CleanupEnv(map, num_agents=0)
-        self.env.reset()
-        self.clear_agents()
-
-        # replace the agents with agents with smaller views
-        self.add_agent(agent_id, start_pos, start_orientation, self.env, 2)
-        # TODO(ev) hack for now, can't call render logic or else it will spawn apples
-        self.move_agent(agent_id, start_pos)
-
     def clear_agents(self):
         # FIXME(ev) this doesn't clear agent positions off the board
         self.env.agents = {}
 
     def add_agent(self, agent_id, start_pos, start_orientation, env, view_len):
+        # FIXME(ev) hack for now to make agents appear
+        char = self.env.map[start_pos[0], start_pos[1]]
+        self.env.hidden_cells.append([start_pos[0], start_pos[1], char])
+        self.env.map[start_pos[0], start_pos[1]] = 'P'
+        map_with_agents = env.get_map_with_agents()
+        grid = util.return_view(map_with_agents, start_pos, view_len, view_len)
         self.env.agents[agent_id] = CleanupAgent(agent_id, start_pos, start_orientation,
-                                                 env, view_len)
+                                                 grid, view_len)
+        map_with_agents = env.get_map_with_agents()
+
+        for agent in env.agents.values():
+            # Update each agent's view of the world
+            agent.grid = util.return_view(map_with_agents, agent.pos,
+                                          agent.row_size, agent.col_size)
 
     def move_agent(self, agent_id, new_pos):
         self.env.reserved_slots.append([new_pos[0], new_pos[1], 'P', agent_id])
         self.env.execute_reservations()
+        map_with_agents = self.env.get_map_with_agents()
+        agent = self.env.agents[agent_id]
+        agent.grid = util.return_view(map_with_agents, agent.pos,
+                                      agent.row_size, agent.col_size)
 
     def rotate_agent(self, agent_id, new_rot):
         self.env.agents[agent_id].update_agent_rot(new_rot)
+
+    def construct_map(self, map, agent_id, start_pos, start_orientation):
+        # overwrite the map for testing
+        self.env = CleanupEnv(map, num_agents=0)
+        self.env.reset()
+
+        # replace the agents with agents with smaller views
+        self.add_agent(agent_id, start_pos, start_orientation, self.env, 2)
 
 
 if __name__ == '__main__':

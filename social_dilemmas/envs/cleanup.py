@@ -42,7 +42,7 @@ class CleanupEnv(MapEnv):
         # make a list of the potential apple and waste spawn points
         self.apple_points = []
         self.firing_points = []
-        self.cleanup_pos = []
+        self.cleanup_points = []
         self.waste_start_points = []
         self.waste_points = []
         self.river_points = []
@@ -78,6 +78,7 @@ class CleanupEnv(MapEnv):
     def custom_reset(self):
         """Initialize the walls and the waste"""
         self.firing_points = []
+        self.cleanup_points = []
         self.update_map_waste(self.waste_start_points)
         self.update_map_river(self.river_points)
         self.update_map_stream(self.stream_points)
@@ -123,9 +124,9 @@ class CleanupEnv(MapEnv):
         for pos in clean_pos:
             row, col = pos
             self.map[row, col] = 'C'
-            self.cleanup_pos.append([row, col])
+            self.cleanup_points.append([row, col])
 
-        # update the apples
+        # update the apples and waste
         self.update_map_apples(apple_pos)
         self.update_map_waste(waste_pos)
 
@@ -199,8 +200,8 @@ class CleanupEnv(MapEnv):
     def update_map_waste(self, new_waste_points):
         for i in range(len(new_waste_points)):
             row, col = new_waste_points[i]
-            # TODO(ev) can waste spawn where an agent or  beam is?
-            if self.map[row, col] != 'P' and self.map[row, col] != 'F':
+            # TODO(ev) can waste spawn where an agent or beam is?
+            if self.map[row, col] != 'P' and self.map[row, col] != 'C':
                 self.map[row, col] = 'H'
 
     def update_map_apples(self, new_apple_points):
@@ -246,7 +247,7 @@ class CleanupEnv(MapEnv):
         return firing_points
 
     def update_map_clean(self, cleanup_pos, cleanup_orientation):
-        num_fire_cells = ACTIONS['FIRE']
+        num_fire_cells = ACTIONS['CLEAN']
         start_pos = np.asarray(cleanup_pos)
         firing_direction = ORIENTATIONS[cleanup_orientation]
         # compute the other two starting positions
@@ -258,7 +259,6 @@ class CleanupEnv(MapEnv):
             for i in range(num_fire_cells):
                 next_cell = pos + firing_direction
                 if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
-                    # FIXME(ev) the beam should stop updating
                     char = self.map[next_cell[0], next_cell[1]]
                     self.append_hiddens([next_cell[0], next_cell[1]], char, 'C')
                     cleanup_points.append((next_cell[0], next_cell[1], 'C'))
