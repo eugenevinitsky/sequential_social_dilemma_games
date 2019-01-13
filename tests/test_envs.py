@@ -425,7 +425,7 @@ class TestMapEnv(unittest.TestCase):
             else:
                 other_agents += 1
         agent_1_percent = num_agent_1 / (num_agent_1 + other_agents)
-        within_bounds = (agent_1_percent > .30) and (agent_1_percent < .36)
+        within_bounds = (agent_1_percent > .27) and (agent_1_percent < .39)
         self.assertTrue(within_bounds)
 
         # you try to move into an agent that is in conflict with another agent
@@ -445,7 +445,7 @@ class TestMapEnv(unittest.TestCase):
                 percent_accomplished += 1
         percent_success = percent_accomplished / (percent_accomplished + percent_failed)
         print('percent success is', percent_success)
-        within_bounds = (.44 < percent_success) and (percent_success < .57)
+        within_bounds = (.40 < percent_success) and (percent_success < .60)
         self.assertTrue(within_bounds)
 
         # Check that if there is more than one conflict simultaneously
