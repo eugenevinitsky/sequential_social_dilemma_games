@@ -129,6 +129,7 @@ class MapEnv(MultiAgentEnv):
         dones: dict indicating whether each agent is done
         info: dict to pass extra info to gym
         """
+
         agent_actions = {}
         for agent_id, action in actions.items():
             agent_action = self.agents[agent_id].action_map(action)
@@ -291,7 +292,7 @@ class MapEnv(MultiAgentEnv):
             # check its not a move based action
             if 'MOVE' not in action and 'STAY' not in action and 'TURN' not in action:
                 agent = self.agents[agent_id]
-                self.custom_action(agent)
+                self.custom_action(agent, action)
 
     def reset_map(self):
         """Resets the map to be empty as well as a custom reset set by subclasses"""
@@ -309,7 +310,7 @@ class MapEnv(MultiAgentEnv):
         """Reset custom elements of the map. For example, spawn apples and build walls"""
         pass
 
-    def custom_action(self, agent):
+    def custom_action(self, agent, action):
         """Add reservations to self.reserved_slots for actions that are not move or turn.
         For example, if an agent can fire, you can add (row, col, 'F')
         to indicate that F should be placed at that point"""
