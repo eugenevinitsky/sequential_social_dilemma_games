@@ -59,7 +59,7 @@ class HarvestEnv(MapEnv):
         self.firing_points = []
         self.update_map_apples(self.apple_points)
 
-    def custom_action(self, agent):
+    def custom_action(self, agent, action):
         agent.fire_beam()
         self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
                                                     agent.get_orientation())

@@ -183,6 +183,16 @@ class HarvestAgent(Agent):
         return False
 
 
+# use keyword names so that it's easy to understand what the agent is calling
+CLEANUP_ACTIONS = {0: 'MOVE_LEFT',  # Move left
+                   1: 'MOVE_RIGHT',  # Move right
+                   2: 'MOVE_UP',  # Move up
+                   3: 'MOVE_DOWN',  # Move down
+                   4: 'STAY',  # don't move
+                   5: 'TURN_CLOCKWISE',  # Rotate counter clockwise
+                   6: 'TURN_COUNTERCLOCKWISE',  # Rotate clockwise
+                   7: 'FIRE',  # Fire forward
+                   8: 'CLEAN'}  # Fire a cleaning beam
 CLEANUP_VIEW_SIZE = 7
 
 
@@ -196,7 +206,7 @@ class CleanupAgent(Agent):
 
     @property
     def action_space(self):
-        return Discrete(8)
+        return Discrete(9)
 
     @property
     def observation_space(self):

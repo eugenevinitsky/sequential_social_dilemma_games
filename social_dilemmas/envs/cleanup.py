@@ -7,6 +7,7 @@ import utility_funcs as util
 
 # Add custom actions to the agent
 ACTIONS['FIRE'] = 5
+ACTIONS['CLEANUP'] = 5
 
 # Custom colour dictionary
 CLEANUP_COLORS = {'C': [100, 255, 255],  # Cyan cleaning beam
@@ -39,6 +40,7 @@ class CleanupEnv(MapEnv):
         # make a list of the potential apple and waste spawn points
         self.apple_points = []
         self.firing_points = []
+        self.cleanup_pos = []
         self.waste_start_points = []
         self.waste_points = []
         self.river_points = []
@@ -78,11 +80,15 @@ class CleanupEnv(MapEnv):
         self.update_map_river(self.river_points)
         self.update_map_stream(self.stream_points)
 
-    def custom_action(self, agent):
+    def custom_action(self, agent, action):
         """Allows agents to take actions that are not move or turn"""
         agent.fire_beam()
-        self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
-                                                    agent.get_orientation())
+        if action == 'FIRE':
+            self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
+                                                        agent.get_orientation())
+        elif action == 'CLEAN':
+            self.reserved_slots += self.update_map_clean(agent.get_pos().tolist(),
+                                                        agent.get_orientation())
 
     def custom_map_update(self):
         """Custom map updates that don't have to do with agent actions"""
@@ -96,6 +102,7 @@ class CleanupEnv(MapEnv):
         """Execute firing and then apple spawning"""
         apple_pos = []
         firing_pos = []
+        clean_pos = []
         waste_pos = []
         for slot in self.reserved_slots:
             row, col = slot[0], slot[1]
@@ -105,10 +112,16 @@ class CleanupEnv(MapEnv):
                 waste_pos.append([row, col])
             elif slot[2] == 'F':
                 firing_pos.append([row, col])
+            elif slot[2] == 'C':
+                clean_pos.append([row, col])
         for pos in firing_pos:
             row, col = pos
             self.map[row, col] = 'F'
             self.firing_points.append([row, col])
+        for pos in clean_pos:
+            row, col = pos
+            self.map[row, col] = 'C'
+            self.cleanup_pos.append([row, col])
 
         # update the apples
         self.update_map_apples(apple_pos)
@@ -119,8 +132,8 @@ class CleanupEnv(MapEnv):
         # an apple is gone once an agent walks over it
         if old_char == 'A' and new_char == 'P':
             self.hidden_cells.append(new_pos + [' '])
-        # a waste cell is gone if a firing cell hits it
-        if old_char == 'H' and new_char == 'F':
+        # a waste cell is gone if a cleanup cell hits it
+        if old_char == 'H' and new_char == 'C':
             self.hidden_cells.append(new_pos + ['R'])
         else:
             self.hidden_cells.append(new_pos + [old_char])
@@ -229,3 +242,27 @@ class CleanupEnv(MapEnv):
                 else:
                     break
         return firing_points
+
+    def update_map_clean(self, cleanup_pos, cleanup_orientation):
+        num_fire_cells = ACTIONS['FIRE']
+        start_pos = np.asarray(cleanup_pos)
+        firing_direction = ORIENTATIONS[cleanup_orientation]
+        # compute the other two starting positions
+        right_shift = self.rotate_right(firing_direction)
+        firing_pos = [start_pos, start_pos + right_shift - firing_direction,
+                      start_pos - right_shift - firing_direction]
+        cleanup_points = []
+        for pos in firing_pos:
+            for i in range(num_fire_cells):
+                next_cell = pos + firing_direction
+                if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
+                    # FIXME(ev) the beam should stop updating
+                    char = self.map[next_cell[0], next_cell[1]]
+                    self.append_hiddens([next_cell[0], next_cell[1]], char, 'C')
+                    cleanup_points.append((next_cell[0], next_cell[1], 'C'))
+                    pos += firing_direction
+                    if char == 'H':
+                        break
+                else:
+                    break
+        return cleanup_points
