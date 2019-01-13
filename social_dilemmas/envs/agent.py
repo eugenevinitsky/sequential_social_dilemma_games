@@ -4,6 +4,15 @@ from gym.spaces import Box
 from gym.spaces import Discrete
 import numpy as np
 
+# basic moves every agent should do
+BASE_ACTIONS = {0: 'MOVE_LEFT',  # Move left
+                1: 'MOVE_RIGHT',  # Move right
+                2: 'MOVE_UP',  # Move up
+                3: 'MOVE_DOWN',  # Move down
+                4: 'STAY',  # don't move
+                5: 'TURN_CLOCKWISE',  # Rotate counter clockwise
+                6: 'TURN_COUNTERCLOCKWISE'}  # Rotate clockwise
+
 
 class Agent(object):
 
@@ -66,7 +75,7 @@ class Agent(object):
         raise NotImplementedError
 
     def get_state(self):
-        raise NotImplementedError
+        return self.grid
 
     def compute_reward(self):
         ego_pos = self.translate_pos_to_egocentric_coord(self.get_pos())
@@ -125,15 +134,8 @@ class Agent(object):
         self.set_orientation(new_rot)
 
 
-# use keyword names so that it's easy to understand what the agent is calling
-HARVEST_ACTIONS = {0: 'MOVE_LEFT',  # Move left
-                   1: 'MOVE_RIGHT',  # Move right
-                   2: 'MOVE_UP',  # Move up
-                   3: 'MOVE_DOWN',  # Move down
-                   4: 'STAY',  # don't move
-                   5: 'TURN_CLOCKWISE',  # Rotate counter clockwise
-                   6: 'TURN_COUNTERCLOCKWISE',  # Rotate clockwise
-                   7: 'FIRE'}  # Fire forward
+HARVEST_ACTIONS = BASE_ACTIONS.copy()
+HARVEST_ACTIONS.update({7: 'FIRE'})  # Fire a penalty beam
 
 HARVEST_VIEW_SIZE = 7
 
@@ -161,9 +163,6 @@ class HarvestAgent(Agent):
         return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
                                              2 * self.view_len + 1, 3), dtype=np.float32)
 
-    def get_state(self):
-        return self.grid
-
     def reward_from_pos(self, query_pos):
         """Gets reward from moving to a query position.
 
@@ -183,16 +182,10 @@ class HarvestAgent(Agent):
         return False
 
 
-# use keyword names so that it's easy to understand what the agent is calling
-CLEANUP_ACTIONS = {0: 'MOVE_LEFT',  # Move left
-                   1: 'MOVE_RIGHT',  # Move right
-                   2: 'MOVE_UP',  # Move up
-                   3: 'MOVE_DOWN',  # Move down
-                   4: 'STAY',  # don't move
-                   5: 'TURN_CLOCKWISE',  # Rotate counter clockwise
-                   6: 'TURN_COUNTERCLOCKWISE',  # Rotate clockwise
-                   7: 'FIRE',  # Fire forward
-                   8: 'CLEAN'}  # Fire a cleaning beam
+CLEANUP_ACTIONS = BASE_ACTIONS.copy()
+CLEANUP_ACTIONS.update({7: 'FIRE',  # Fire a penalty beam
+                        8: 'CLEAN'})  # Fire a cleaning beam
+
 CLEANUP_VIEW_SIZE = 7
 
 
@@ -218,9 +211,6 @@ class CleanupAgent(Agent):
     def action_map(self, action_number):
         """Maps action_number to a desired action in the map"""
         return CLEANUP_ACTIONS[action_number]
-
-    def get_state(self):
-        return self.grid
 
     def reward_from_pos(self, query_pos):
         """Gets reward from moving to a query position.

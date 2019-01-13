@@ -13,9 +13,6 @@ ACTIONS['FIRE'] = 5  # length of firing range
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
-# FIXME(ev) this whole thing is in serious need of some abstraction
-# FIXME(ev) switching betewen types and lists in a pretty arbitrary manner
-
 
 class HarvestEnv(MapEnv):
 
@@ -31,7 +28,6 @@ class HarvestEnv(MapEnv):
                 if self.base_map[row, col] == 'A':
                     self.apple_points.append([row, col])
 
-    # FIXME(ev) action_space should really be defined in the agents
     @property
     def action_space(self):
         agents = list(self.agents.values())
@@ -137,7 +133,6 @@ class HarvestEnv(MapEnv):
             elif self.map[row, col] == 'F' and [row, col] not in curr_agent_pos:
                 self.append_hiddens([row, col], 'A')
 
-    # TODO(ev) this is in two classes already
     def update_map_fire(self, firing_pos, firing_orientation):
         num_fire_cells = ACTIONS['FIRE']
         start_pos = np.asarray(firing_pos)

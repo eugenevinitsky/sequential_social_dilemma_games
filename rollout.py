@@ -7,6 +7,7 @@ import os
 import sys
 import shutil
 import tensorflow as tf
+import time
 
 from social_dilemmas.envs.cleanup import CleanupEnv
 from social_dilemmas.envs.harvest import HarvestEnv
@@ -60,6 +61,7 @@ class Controller(object):
             (shape[0], shape[1], 3), dtype=np.uint8) for i in range(horizon)]
 
         for i in range(horizon):
+            time_start = time.time()
             agents = list(self.env.agents.values())
             action_dim = agents[0].action_space.n
             rand_action = np.random.randint(action_dim, size=5)
@@ -68,17 +70,29 @@ class Controller(object):
                                                     'agent-2': rand_action[2],
                                                     'agent-3': rand_action[3],
                                                     'agent-4': rand_action[4]})
+            print('STEP TIME IS', time.time() - time_start)
 
             print("timestep", i, "action", rand_action, "reward", rew['agent-0'])
+            time0 = time.time()
             sys.stdout.flush()
+            time1 = time.time()
+            print('flush time is ', time1 - time0)
 
             if save_path is not None:
                 self.env.render(filename=save_path + 'frame' + str(i).zfill(6) + '.png')
+
+            time2 = time.time()
+            print('Save and render time is ', time2 - time1)
 
             rgb_arr = self.env.map_to_colors()
             full_obs[i] = rgb_arr.astype(np.uint8)
             observations.append(obs['agent-0'])
             rewards.append(rew['agent-0'])
+            time3 = time.time()
+            print('Mapping to color time is ', time3 - time2)
+
+            time_final = time.time()
+            print('total time of a step is ', time_final - time_start)
 
         return rewards, observations, full_obs
 
