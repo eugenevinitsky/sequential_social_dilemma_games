@@ -60,8 +60,9 @@ class Controller(object):
             (shape[0], shape[1], 3), dtype=np.uint8) for i in range(horizon)]
 
         for i in range(horizon):
-            # TODO: use agent policy not just random actions
-            rand_action = np.random.randint(8, size=5)
+            agents = list(self.env.agents.values())
+            action_dim = agents[0].action_space.n
+            rand_action = np.random.randint(action_dim, size=5)
             obs, rew, dones, info, = self.env.step({'agent-0': rand_action[0],
                                                     'agent-1': rand_action[1],
                                                     'agent-2': rand_action[2],

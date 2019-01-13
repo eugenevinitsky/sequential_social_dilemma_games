@@ -130,11 +130,8 @@ class MapEnv(MultiAgentEnv):
         info: dict to pass extra info to gym
         """
 
-        print('the actions are this bruh:', actions)
         agent_actions = {}
         for agent_id, action in actions.items():
-            if action == 8:
-                import ipdb; ipdb.set_trace()
             agent_action = self.agents[agent_id].action_map(action)
             agent_actions[agent_id] = agent_action
 

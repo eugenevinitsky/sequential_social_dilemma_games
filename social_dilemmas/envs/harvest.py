@@ -1,4 +1,3 @@
-from gym.spaces import Discrete
 import numpy as np
 
 from social_dilemmas.envs.agent import HarvestAgent, HARVEST_VIEW_SIZE
@@ -22,6 +21,8 @@ class HarvestEnv(MapEnv):
 
     def __init__(self, ascii_map=HARVEST_MAP, num_agents=1, render=False):
         super().__init__(ascii_map, num_agents, render)
+        # FIXME(ev) this is a temporary way to prevent agent views
+        # FIXME(ev) from hiding firing beams
         self.no_update_cells = ['F']
         self.firing_points = []
         self.apple_points = []
@@ -33,7 +34,8 @@ class HarvestEnv(MapEnv):
     # FIXME(ev) action_space should really be defined in the agents
     @property
     def action_space(self):
-        return Discrete(8)
+        agents = list(self.agents.values())
+        return agents[0].action_space
 
     @property
     def observation_space(self):

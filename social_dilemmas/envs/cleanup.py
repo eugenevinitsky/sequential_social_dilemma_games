@@ -7,7 +7,7 @@ import utility_funcs as util
 
 # Add custom actions to the agent
 ACTIONS['FIRE'] = 5
-ACTIONS['CLEANUP'] = 5
+ACTIONS['CLEAN'] = 5
 
 # Custom colour dictionary
 CLEANUP_COLORS = {'C': [100, 255, 255],  # Cyan cleaning beam
@@ -28,7 +28,9 @@ class CleanupEnv(MapEnv):
     def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False):
         super().__init__(ascii_map, num_agents, render)
 
-        self.no_update_cells = ['F']
+        # FIXME(ev) this is a temporary way to prevent agent views
+        # FIXME(ev) from hiding firing beams
+        self.no_update_cells = ['F', 'C']
 
         # compute potential waste area
         unique, counts = np.unique(self.base_map, return_counts=True)
@@ -88,7 +90,7 @@ class CleanupEnv(MapEnv):
                                                         agent.get_orientation())
         elif action == 'CLEAN':
             self.reserved_slots += self.update_map_clean(agent.get_pos().tolist(),
-                                                        agent.get_orientation())
+                                                         agent.get_orientation())
 
     def custom_map_update(self):
         """Custom map updates that don't have to do with agent actions"""
