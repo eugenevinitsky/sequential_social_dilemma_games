@@ -3,13 +3,21 @@
 import numpy as np
 import unittest
 
-from social_dilemmas.envs.harvest import HarvestEnv
-from social_dilemmas.envs.agent import HarvestAgent, HARVEST_ACTIONS
-from social_dilemmas.envs.cleanup import CleanupEnv
+from gym.spaces import Discrete
+from social_dilemmas.envs.agent import Agent
 from social_dilemmas.envs.agent import CleanupAgent
+from social_dilemmas.envs.agent import HarvestAgent
+from social_dilemmas.envs.agent import HARVEST_ACTIONS
+from social_dilemmas.envs.agent import BASE_ACTIONS
+from social_dilemmas.envs.cleanup import CleanupEnv
+from social_dilemmas.envs.harvest import HarvestEnv
+from social_dilemmas.envs.map_env import MapEnv
+
 import utility_funcs as util
 
-ACTION_MAP = {y: x for x, y in HARVEST_ACTIONS.items()}
+# map actions to appropriate numbers
+ACTION_MAP = {y: x for x, y in BASE_ACTIONS.items()}
+HARVEST_ACTION_MAP = {y: x for x, y in HARVEST_ACTIONS.items()}
 
 MINI_HARVEST_MAP = [
     '@@@@@@',
@@ -70,35 +78,59 @@ TEST_MAP_2 = np.array(
 )
 
 
-class TestHarvestEnv(unittest.TestCase):
+class DummyMapEnv(MapEnv):
+    """This class implements a few missing methods in map env that are needed for testing."""
+    def setup_agents(self):
+        map_with_agents = self.get_map_with_agents()
 
+        for i in range(self.num_agents):
+            agent_id = 'agent-' + str(i)
+            spawn_point = self.spawn_point()
+            rotation = self.spawn_rotation()
+            grid = util.return_view(map_with_agents, spawn_point,
+                                    2, 2)
+            agent = DummyAgent(agent_id, spawn_point, rotation, grid, 2, 2)
+            self.agents[agent_id] = agent
+
+    def append_hiddens(self, new_pos, old_char, new_char):
+        self.hidden_cells.append(new_pos + [old_char])
+
+    def execute_custom_reservations(self):
+        return
+
+
+class DummyAgent(Agent):
+    def reward_from_pos(self, new_pos):
+        return 0
+
+    def get_done(self):
+        return False
+
+    def action_map(self, action_number):
+        return BASE_ACTIONS[action_number]
+
+    @property
+    def action_space(self):
+        return Discrete(len(ACTION_MAP))
+
+
+class TestMapEnv(unittest.TestCase):
     def tearDown(self):
         """Remove the env"""
         self.env = None
 
     def test_step(self):
         """Just check that the step method works at all for all possible actions"""
-        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=1)
+        self.env = DummyMapEnv(ascii_map=BASE_MAP_2, num_agents=1)
         self.env.reset()
-        # FIXME(ev) magic number
-        for i in range(8):
+        agents = list(self.env.agents.values())
+        action_dim = agents[0].action_space.n
+        for i in range(action_dim):
             self.env.step({'agent-0': i})
-
-    def test_reset(self):
-        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=0)
-        self.env.reset()
-        # check that the map is full of apples
-        test_map = np.array([['@', '@', '@', '@', '@', '@'],
-                             ['@', ' ', ' ', ' ', ' ', '@'],
-                             ['@', ' ', ' ', 'A', 'A', '@'],
-                             ['@', ' ', ' ', 'A', 'A', '@'],
-                             ['@', ' ', ' ', 'A', ' ', '@'],
-                             ['@', '@', '@', '@', '@', '@']])
-        np.testing.assert_array_equal(self.env.map, test_map)
 
     def test_walls(self):
         """Check that the spawned map and base map have walls in the right place"""
-        self.env = HarvestEnv(BASE_MAP_1, num_agents=0)
+        self.env = DummyMapEnv(BASE_MAP_1, num_agents=0)
         self.env.reset()
         np.testing.assert_array_equal(self.env.base_map[0, :], np.array(['@'] * 7))
         np.testing.assert_array_equal(self.env.base_map[-1, :], np.array(['@'] * 7))
@@ -234,53 +266,6 @@ class TestHarvestEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
-    def test_apple_spawn(self):
-        # render apples a bunch of times and check that the probabilities are within
-        # a bound of what you expect. This test fill fail w/ <INSERT> probability
-        self.env = HarvestEnv(MINI_HARVEST_MAP, num_agents=0)
-        self.env.reset()
-        self.env.map = TEST_MAP_2.copy()
-
-        # First test, if we step 300 times, are there five apples there?
-        # This should fail maybe one in 1000000 times
-        for i in range(300):
-            self.env.step({})
-        num_apples = self.env.count_apples(self.env.map)
-        self.assertEqual(num_apples, 5)
-
-        # Now, if a point is temporarily obscured by a beam but an apple should spawn there
-        # check that the apple still spawns there
-        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
-        self.env.reset()
-        self.move_agent('agent-0', [3, 1])
-        self.move_agent('agent-1', [3, 3])
-        self.rotate_agent('agent-0', 'UP')
-        self.rotate_agent('agent-1', 'UP')
-        self.env.step({'agent-1': ACTION_MAP['FIRE']})
-        self.env.update_map_apples([[3, 2]])
-        self.env.step({})
-        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
-                                 ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', ' ', ' ', 'A', 'A', '@'],
-                                 ['@', 'P', 'A', 'P', 'A', '@'],
-                                 ['@', ' ', ' ', 'A', ' ', '@'],
-                                 ['@', '@', '@', '@', '@', '@']])
-        np.testing.assert_array_equal(expected_map, self.env.map)
-
-        # If an agent is temporarily obscured by a beam, and an apple attempts to spawn there
-        # no apple should spawn
-        self.env.step({'agent-1': ACTION_MAP['FIRE']})
-        self.env.update_map_apples([[3, 1]])
-        self.env.step({})
-
-        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
-                                 ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', ' ', ' ', 'A', 'A', '@'],
-                                 ['@', 'P', 'A', 'P', 'A', '@'],
-                                 ['@', ' ', ' ', 'A', ' ', '@'],
-                                 ['@', '@', '@', '@', '@', '@']])
-        np.testing.assert_array_equal(expected_map, self.env.map)
-
     def test_agent_actions(self):
         # set up the map
         agent_id = 'agent-0'
@@ -364,73 +349,11 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.step({agent_id: ACTION_MAP['TURN_COUNTERCLOCKWISE']})
         self.assertEqual('UP', self.env.agents[agent_id].get_orientation())
 
-        # test firing
-        self.rotate_agent(agent_id, 'UP')
-        self.move_agent(agent_id, [3, 2])
-        self.env.step({agent_id: ACTION_MAP['FIRE']})
-        agent_view = self.env.agents[agent_id].get_state()
-        expected_view = np.array(
-            [['@'] + [' '] * 4,
-             ['@'] + ['F'] * 2 + [' '] * 2,
-             ['@'] + ['F'] + ['1'] + [' '] * 2,
-             ['@'] + ['F'] * 2 + [' '] * 2,
-             ['@'] + [' '] * 4]
-        )
-        np.testing.assert_array_equal(expected_view, agent_view)
-
-        # clean up the map and then check if firing looks right
-        self.env.step({})
-        self.rotate_agent(agent_id, 'DOWN')
-        self.move_agent(agent_id, [3, 2])
-        self.env.step({agent_id: ACTION_MAP['FIRE']})
-        agent_view = self.env.agents[agent_id].get_state()
-        expected_view = np.array(
-            [['@'] + [' '] * 4,
-             ['@'] + [' '] + ['F'] * 3,
-             ['@'] + [' '] + ['1'] + ['F'] * 2,
-             ['@'] + [' '] + ['F'] * 3,
-             ['@'] + [' '] * 4]
-        )
-        np.testing.assert_array_equal(expected_view, agent_view)
-
-        # Check that agents walking over apples makes them go away
-        np.random.seed(10)
-        self.construct_map(MINI_HARVEST_MAP.copy(), agent_id, [3, 2], 'RIGHT')
-        self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
-        self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
-        agent_view = self.env.agents[agent_id].get_state()
-        expected_view = np.array(
-            [['@', ' ', ' ', ' ', ' '],
-             ['@', ' ', ' ', 'A', 'A'],
-             ['@', ' ', '1', ' ', 'A'],
-             ['@', ' ', ' ', 'A', ' '],
-             ['@', '@', '@', '@', '@']]
-        )
-        np.testing.assert_array_equal(expected_view, agent_view)
-
-    def test_agent_rewards(self):
-        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
-        self.env.reset()
-        self.move_agent('agent-0', [2, 2])
-        self.move_agent('agent-1', [3, 2])
-        self.rotate_agent('agent-0', 'UP')
-        self.rotate_agent('agent-1', 'UP')
-        # walk over an apple
-        _, rew, _, _ = self.env.step({'agent-0': ACTION_MAP['MOVE_DOWN'],
-                                      'agent-1': ACTION_MAP['MOVE_DOWN']})
-        self.assertTrue(rew['agent-0'] == 1)
-        self.assertTrue(rew['agent-1'] == 1)
-        # fire a beam from agent 1 to 2
-        self.rotate_agent('agent-1', 'LEFT')
-        _, rew, _, _ = self.env.step({'agent-1': ACTION_MAP['FIRE']})
-        self.assertTrue(rew['agent-0'] == -50)
-        self.assertTrue(rew['agent-1'] == -1)
-
     def test_agent_conflict(self):
         '''Test that agent conflicts are correctly resolved'''
 
         # test that if there are two agents and two spawning points, they hit both of them
-        self.env = HarvestEnv(ascii_map=BASE_MAP_2, num_agents=2)
+        self.env = DummyMapEnv(ascii_map=BASE_MAP_2, num_agents=2)
         self.env.reset()
         np.testing.assert_array_equal(self.env.base_map, self.env.map)
 
@@ -450,41 +373,8 @@ class TestHarvestEnv(unittest.TestCase):
         np.testing.assert_array_equal(self.env.agents['agent-0'].get_pos(), [3, 3])
         np.testing.assert_array_equal(self.env.agents['agent-1'].get_pos(), [3, 4])
 
-        # test that if an agents firing beam hits another agent it gets covered
-        self.env.step({'agent-0': ACTION_MAP['MOVE_UP']})
-        self.env.step({'agent-1': ACTION_MAP['FIRE']})
-        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
-                                 ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', 'F', 'F', 'F', 'F', '@'],
-                                 ['@', 'F', 'F', 'F', 'P', '@'],
-                                 ['@', 'F', 'F', 'F', 'F', '@'],
-                                 ['@', '@', '@', '@', '@', '@']])
-        np.testing.assert_array_equal(expected_map, self.env.map)
-        # but by the next step, the agent is visible again
-        self.env.step({})
-        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
-                                 ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', ' ', 'P', ' ', 'P', '@'],
-                                 ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', '@', '@', '@', '@', '@']])
-        np.testing.assert_array_equal(expected_map, self.env.map)
-
-        # test that if two agents fire on each other than they're still there after
-        self.env.agents['agent-0'].update_agent_rot('DOWN')
-        self.env.step({'agent-0': ACTION_MAP['FIRE'],
-                       'agent-1': ACTION_MAP['FIRE']})
-        self.env.step({})
-        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
-                                 ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', ' ', 'P', ' ', 'P', '@'],
-                                 ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', '@', '@', '@', '@', '@']])
-        np.testing.assert_array_equal(expected_map, self.env.map)
-
         # test that agents can walk into other agents if moves are de-conflicting
-        # this only occurs stochastically so try it 50 times
+        # conflict only occurs stochastically so try it 50 times
         # TODO(ev) the percentages are consistent among agents
         # TODO(ev) but which agent gets which percent is not deterministic..
         np.random.seed(1)
@@ -499,6 +389,7 @@ class TestHarvestEnv(unittest.TestCase):
                                      ['@', ' ', ' ', ' ', 'P', '@'],
                                      ['@', ' ', ' ', ' ', ' ', '@'],
                                      ['@', '@', '@', '@', '@', '@']])
+            np.testing.assert_array_equal(expected_map, self.env.map)
             self.env.step({'agent-0': ACTION_MAP['MOVE_UP'],
                            'agent-1': ACTION_MAP['MOVE_RIGHT']})
 
@@ -582,6 +473,229 @@ class TestHarvestEnv(unittest.TestCase):
         self.assertTrue(within_bounds_0)
         self.assertTrue(within_bounds_1)
 
+    def move_agent(self, agent_id, new_pos):
+        self.env.reserved_slots.append([new_pos[0], new_pos[1], 'P', agent_id])
+        self.env.execute_reservations()
+        map_with_agents = self.env.get_map_with_agents()
+        agent = self.env.agents[agent_id]
+        agent.grid = util.return_view(map_with_agents, agent.pos,
+                                      agent.row_size, agent.col_size)
+
+    def rotate_agent(self, agent_id, new_rot):
+        self.env.agents[agent_id].update_agent_rot(new_rot)
+
+    def construct_map(self, map, agent_id, start_pos, start_orientation):
+        # overwrite the map for testing
+        self.env = DummyMapEnv(map, num_agents=0)
+        self.env.reset()
+
+        # replace the agents with agents with smaller views
+        self.add_agent(agent_id, start_pos, start_orientation, self.env, 2)
+
+    def add_agent(self, agent_id, start_pos, start_orientation, env, view_len):
+        # FIXME(ev) hack for now to make agents appear
+        char = self.env.map[start_pos[0], start_pos[1]]
+        self.env.hidden_cells.append([start_pos[0], start_pos[1], char])
+        self.env.map[start_pos[0], start_pos[1]] = 'P'
+        map_with_agents = env.get_map_with_agents()
+        grid = util.return_view(map_with_agents, start_pos, view_len, view_len)
+        self.env.agents[agent_id] = DummyAgent(agent_id, start_pos, start_orientation,
+                                               grid, view_len, view_len)
+        map_with_agents = env.get_map_with_agents()
+
+        for agent in env.agents.values():
+            # Update each agent's view of the world
+            agent.grid = util.return_view(map_with_agents, agent.pos,
+                                          agent.row_size, agent.col_size)
+
+
+class TestHarvestEnv(unittest.TestCase):
+
+    def tearDown(self):
+        """Remove the env"""
+        self.env = None
+
+    def test_step(self):
+        """Just check that the step method works at all for all possible actions"""
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=1)
+        self.env.reset()
+        agents = list(self.env.agents.values())
+        action_dim = agents[0].action_space.n
+        for i in range(action_dim):
+            self.env.step({'agent-0': i})
+
+    def test_reset(self):
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=0)
+        self.env.reset()
+        # check that the map is full of apples
+        test_map = np.array([['@', '@', '@', '@', '@', '@'],
+                             ['@', ' ', ' ', ' ', ' ', '@'],
+                             ['@', ' ', ' ', 'A', 'A', '@'],
+                             ['@', ' ', ' ', 'A', 'A', '@'],
+                             ['@', ' ', ' ', 'A', ' ', '@'],
+                             ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(self.env.map, test_map)
+
+    def test_apple_spawn(self):
+        # render apples a bunch of times and check that the probabilities are within
+        # a bound of what you expect. This test fill fail w/ <INSERT> probability
+        self.env = HarvestEnv(MINI_HARVEST_MAP, num_agents=0)
+        self.env.reset()
+        self.env.map = TEST_MAP_2.copy()
+
+        # First test, if we step 300 times, are there five apples there?
+        # This should fail maybe one in 1000000 times
+        for i in range(300):
+            self.env.step({})
+        num_apples = self.env.count_apples(self.env.map)
+        self.assertEqual(num_apples, 5)
+
+        # Now, if a point is temporarily obscured by a beam but an apple should spawn there
+        # check that the apple still spawns there
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
+        self.env.reset()
+        self.move_agent('agent-0', [3, 1])
+        self.move_agent('agent-1', [3, 3])
+        self.rotate_agent('agent-0', 'UP')
+        self.rotate_agent('agent-1', 'UP')
+        self.env.step({'agent-1': HARVEST_ACTION_MAP['FIRE']})
+        self.env.update_map_apples([[3, 2]])
+        self.env.step({})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', 'P', 'A', 'P', 'A', '@'],
+                                 ['@', ' ', ' ', 'A', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
+        # If an agent is temporarily obscured by a beam, and an apple attempts to spawn there
+        # no apple should spawn
+        self.env.step({'agent-1': HARVEST_ACTION_MAP['FIRE']})
+        self.env.update_map_apples([[3, 1]])
+        self.env.step({})
+
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', 'A', 'A', '@'],
+                                 ['@', 'P', 'A', 'P', 'A', '@'],
+                                 ['@', ' ', ' ', 'A', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
+    def test_agent_actions(self):
+        # set up the map
+        agent_id = 'agent-0'
+        self.construct_map(TEST_MAP_1.copy(), agent_id, [2, 2], 'LEFT')
+        # test firing
+        self.rotate_agent(agent_id, 'UP')
+        self.move_agent(agent_id, [3, 2])
+        self.env.step({agent_id: HARVEST_ACTION_MAP['FIRE']})
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [['@'] + [' '] * 4,
+             ['@'] + ['F'] * 2 + [' '] * 2,
+             ['@'] + ['F'] + ['1'] + [' '] * 2,
+             ['@'] + ['F'] * 2 + [' '] * 2,
+             ['@'] + [' '] * 4]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
+
+        # clean up the map and then check if firing looks right
+        self.env.step({})
+        self.rotate_agent(agent_id, 'DOWN')
+        self.move_agent(agent_id, [3, 2])
+        self.env.step({agent_id: HARVEST_ACTION_MAP['FIRE']})
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [['@'] + [' '] * 4,
+             ['@'] + [' '] + ['F'] * 3,
+             ['@'] + [' '] + ['1'] + ['F'] * 2,
+             ['@'] + [' '] + ['F'] * 3,
+             ['@'] + [' '] * 4]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
+
+        # Check that agents walking over apples makes them go away
+        np.random.seed(10)
+        self.construct_map(MINI_HARVEST_MAP.copy(), agent_id, [3, 2], 'RIGHT')
+        self.env.step({agent_id: HARVEST_ACTION_MAP['MOVE_RIGHT']})
+        self.env.step({agent_id: HARVEST_ACTION_MAP['MOVE_LEFT']})
+        agent_view = self.env.agents[agent_id].get_state()
+        expected_view = np.array(
+            [['@', ' ', ' ', ' ', ' '],
+             ['@', ' ', ' ', 'A', 'A'],
+             ['@', ' ', '1', ' ', 'A'],
+             ['@', ' ', ' ', 'A', ' '],
+             ['@', '@', '@', '@', '@']]
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
+
+    def test_agent_rewards(self):
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
+        self.env.reset()
+        self.move_agent('agent-0', [2, 2])
+        self.move_agent('agent-1', [3, 2])
+        self.rotate_agent('agent-0', 'UP')
+        self.rotate_agent('agent-1', 'UP')
+        # walk over an apple
+        _, rew, _, _ = self.env.step({'agent-0': HARVEST_ACTION_MAP['MOVE_DOWN'],
+                                      'agent-1': HARVEST_ACTION_MAP['MOVE_DOWN']})
+        self.assertTrue(rew['agent-0'] == 1)
+        self.assertTrue(rew['agent-1'] == 1)
+        # fire a beam from agent 1 to 2
+        self.rotate_agent('agent-1', 'LEFT')
+        _, rew, _, _ = self.env.step({'agent-1': HARVEST_ACTION_MAP['FIRE']})
+        self.assertTrue(rew['agent-0'] == -50)
+        self.assertTrue(rew['agent-1'] == -1)
+
+    def test_agent_conflict(self):
+        '''Test that agent conflicts are correctly resolved'''
+
+        # test that if there are two agents and two spawning points, they hit both of them
+        self.env = HarvestEnv(ascii_map=BASE_MAP_2, num_agents=2)
+        self.env.reset()
+        np.testing.assert_array_equal(self.env.base_map, self.env.map)
+
+        # test that agents can't walk into other agents
+        self.move_agent('agent-0', [3, 3])
+        self.move_agent('agent-1', [3, 4])
+        self.rotate_agent('agent-0', 'UP')
+        self.rotate_agent('agent-1', 'UP')
+
+        # test that if an agents firing beam hits another agent it gets covered
+        self.env.step({'agent-0': HARVEST_ACTION_MAP['MOVE_UP']})
+        self.env.step({'agent-1': HARVEST_ACTION_MAP['FIRE']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', 'F', 'F', 'F', 'F', '@'],
+                                 ['@', 'F', 'F', 'F', 'P', '@'],
+                                 ['@', 'F', 'F', 'F', 'F', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+        # but by the next step, the agent is visible again
+        self.env.step({})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', 'P', ' ', 'P', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
+        # test that if two agents fire on each other than they're still there after
+        self.env.agents['agent-0'].update_agent_rot('DOWN')
+        self.env.step({'agent-0': HARVEST_ACTION_MAP['FIRE'],
+                       'agent-1': HARVEST_ACTION_MAP['FIRE']})
+        self.env.step({})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', 'P', ' ', 'P', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
     def test_beam_conflict(self):
         """Test that after the beam is fired, obscured apples and agents are returned"""
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
@@ -593,8 +707,7 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.agents['agent-0'].update_agent_rot('UP')
         self.env.agents['agent-1'].update_agent_rot('UP')
         # test that if an agents firing beam hits another agent it gets covered
-        self.env.update_custom_moves({'agent-1': 'FIRE'})
-        self.env.execute_reservations()
+        self.env.step({'agent-1': HARVEST_ACTION_MAP['FIRE']})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
                                  ['@', ' ', ' ', 'A', 'A', '@'],
@@ -602,7 +715,8 @@ class TestHarvestEnv(unittest.TestCase):
                                  ['@', 'F', 'F', 'F', 'P', '@'],
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.map)
-        self.env.clean_map()
+        # test that by the next step it will be returned
+        self.env.step({})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
                                  ['@', ' ', ' ', 'A', 'A', '@'],

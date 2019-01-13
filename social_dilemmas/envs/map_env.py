@@ -495,22 +495,6 @@ class MapEnv(MultiAgentEnv):
         self.execute_custom_reservations()
         self.reserved_slots = []
 
-    def create_agent(self, agent_id, *args):
-        """Takes an agent id and agents args and returns an agent.
-
-        Parameters
-        ----------
-        agent_id: str
-            name that they agent should be assigned
-
-        Returns
-        -------
-        agent: Agent
-            constructed agent
-
-        """
-        raise NotImplementedError
-
     def spawn_point(self):
         """Returns a randomly selected spawn point."""
         not_occupied = False

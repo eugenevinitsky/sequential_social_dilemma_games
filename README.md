@@ -3,6 +3,7 @@ Repo for reproductions of deepmind gridworld papers
 
 # Setup instructions
 Run `python setup.py develop`
+Then, activate your environment by running `source activate causal`.
 
 # Tests
 Tests are located in the test folder and can be run individually or run by running `python -m pytest`
