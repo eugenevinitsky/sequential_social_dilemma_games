@@ -77,16 +77,22 @@ class MapEnv(MultiAgentEnv):
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
         self.map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
+
         # keeps track of positions that agents have said they want to move to
         # as well as the intended action in that slot
         self.reserved_slots = []
         self.agents = {}
         # keeps track of cell types that should not be over-ridden by agents
         self.no_update_cells = []
+
         # returns the agent at a desired position if there is one
         self.pos_dict = {}
         self.color_map = color_map if color_map is not None else DEFAULT_COLOURS
         self.spawn_points = []  # where agents can appear
+
+        # map that is revealed after cleaning
+        self.post_clean_map = None
+
         # cells hidden by agents or other actions, elements are [row, pos, str]
         self.hidden_cells = []
         self.wall_points = []
@@ -137,6 +143,7 @@ class MapEnv(MultiAgentEnv):
 
         # move
         self.clean_map()
+        self.post_clean_map = self.map.copy()
         self.update_moves(agent_actions)
         self.execute_reservations()
 
@@ -181,6 +188,7 @@ class MapEnv(MultiAgentEnv):
         self.agents = {}
         self.setup_agents()
         self.reset_map()
+        self.post_clean_map = self.map.copy()
         self.custom_map_update()
 
         map_with_agents = self.get_map_with_agents()
@@ -329,8 +337,6 @@ class MapEnv(MultiAgentEnv):
         for i, hidden in enumerate(hidden_pos):
             # you can't put back hidden cells that an agent is on unless it is an agent that is
             # hidden
-            # FIXME(ev) it is possible for there to be two hiddens with the same index
-            # if an agent is currently hidden
             if hidden not in curr_agent_pos or hidden_char[i] == 'P':
                 row, col = hidden
                 self.map[row, col] = hidden_char[i]
