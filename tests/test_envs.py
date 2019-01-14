@@ -21,39 +21,7 @@ ACTION_MAP = {y: x for x, y in BASE_ACTIONS.items()}
 HARVEST_ACTION_MAP = {y: x for x, y in HARVEST_ACTIONS.items()}
 CLEANUP_ACTION_MAP = {y: x for x, y in CLEANUP_ACTIONS.items()}
 
-
-MINI_HARVEST_MAP = [
-    '@@@@@@',
-    '@ P  @',
-    '@  AA@',
-    '@  AA@',
-    '@  AP@',
-    '@@@@@@',
-]
-
-
-MINI_CLEANUP_MAP = [
-    '@@@@@@',
-    '@ P  @',
-    '@H BB@',
-    '@R BB@',
-    '@S BP@',
-    '@@@@@@',
-]
-
-# Map to check that cleanup beam removes waste correctly
-FIRING_CLEANUP_MAP = [
-    '@@@@@@',
-    '@    @',
-    '@HHP @',
-    '@RH  @',
-    '@H P @',
-    '@@@@@@',
-]
-
-# maps used to test different spawn positions and apple positions
-
-# basic empty map with walls
+# Maps for any env
 BASE_MAP_1 = [
     '@@@@@@@',
     '@     @',
@@ -90,6 +58,60 @@ TEST_MAP_2 = np.array(
      ['@'] + [' '] * 2 + ['A'] + [' '] + ['@'],
      ['@'] * 6]
 )
+
+# Maps for Harvest
+MINI_HARVEST_MAP = [
+    '@@@@@@',
+    '@ P  @',
+    '@  AA@',
+    '@  AA@',
+    '@  AP@',
+    '@@@@@@',
+]
+
+# Maps for Cleanup
+MINI_CLEANUP_MAP = [
+    '@@@@@@',
+    '@ P  @',
+    '@H BB@',
+    '@R BB@',
+    '@S BP@',
+    '@@@@@@',
+]
+
+# Map to check that cleanup beam removes waste correctly
+FIRING_CLEANUP_MAP = [
+    '@@@@@@',
+    '@    @',
+    '@HHP @',
+    '@RH  @',
+    '@H P @',
+    '@@@@@@',
+]
+
+# Check that apples spawn correctly in cleanup
+APPLE_SPAWN_MAP_CLEANUP = [
+    '@@@@@@',
+    '@ P  @',
+    '@  BB@',
+    '@  BB@',
+    '@  BP@',
+    '@@@@@@',
+]
+
+# Check that the spawn probabilities are correct in cleanup
+# Map to check that cleanup beam removes waste correctly
+CLEANUP_PROB_MAP = [
+    '@@@@@@',
+    '@    @',
+    '@HHPB@',
+    '@RH B@',
+    '@H PB@',
+    '@@@@@@',
+]
+
+
+# maps used to test different spawn positions and apple positions
 
 
 class DummyMapEnv(MapEnv):
@@ -458,7 +480,6 @@ class TestMapEnv(unittest.TestCase):
             else:
                 percent_accomplished += 1
         percent_success = percent_accomplished / (percent_accomplished + percent_failed)
-        print('percent success is', percent_success)
         within_bounds = (.40 < percent_success) and (percent_success < .60)
         self.assertTrue(within_bounds)
 
@@ -573,12 +594,12 @@ class TestHarvestEnv(unittest.TestCase):
         self.rotate_agent('agent-0', 'UP')
         self.rotate_agent('agent-1', 'UP')
         self.env.step({'agent-1': HARVEST_ACTION_MAP['FIRE']})
-        self.env.update_map_apples([[3, 2]])
+        self.env.update_map_apples([[2, 1]])
         self.env.step({})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', ' ', ' ', 'A', 'A', '@'],
-                                 ['@', 'P', 'A', 'P', 'A', '@'],
+                                 ['@', 'A', ' ', 'A', 'A', '@'],
+                                 ['@', 'P', ' ', 'P', 'A', '@'],
                                  ['@', ' ', ' ', 'A', ' ', '@'],
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.map)
@@ -591,8 +612,8 @@ class TestHarvestEnv(unittest.TestCase):
 
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', ' ', ' ', 'A', 'A', '@'],
-                                 ['@', 'P', 'A', 'P', 'A', '@'],
+                                 ['@', 'A', ' ', 'A', 'A', '@'],
+                                 ['@', 'P', ' ', 'P', 'A', '@'],
                                  ['@', ' ', ' ', 'A', ' ', '@'],
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.map)
@@ -797,6 +818,7 @@ class TestCleanupEnv(unittest.TestCase):
         np.testing.assert_array_equal(self.env.map, test_map)
 
     def test_cleanup_beam(self):
+        # TODO(ev) you have to disable spawning here
         self.env = CleanupEnv(ascii_map=FIRING_CLEANUP_MAP, num_agents=2)
         self.env.reset()
         self.move_agent('agent-0', [3, 3])
@@ -814,7 +836,6 @@ class TestCleanupEnv(unittest.TestCase):
                                  ['@', 'C', 'C', 'C', ' ', '@'],
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.map)
-        # TODO(ev) can't call step or else waste might spawn
         self.env.clean_map()
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
@@ -840,33 +861,101 @@ class TestCleanupEnv(unittest.TestCase):
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.map)
 
-    # def test_firing(self):
-    #     agent_id = 'agent-0'
-    #     self.construct_map(TEST_MAP_1.copy(), agent_id, [3, 2], 'UP')
-    #     import ipdb; ipdb.set_trace()
-    #     # test basic firing with no rivers or streams or waste
-    #     self.env.update_map({agent_id: 'FIRE'})
-    #     self.env.execute_reservations()
-    #     agent_view = self.env.agents[agent_id].get_state()
-    #     expected_view = np.array(
-    #         [['@'] + [' '] * 4,
-    #          ['@'] + ['F'] * 2 + [' '] * 2,
-    #          ['@'] + ['F'] + ['P'] + [' '] * 2,
-    #          ['@'] + ['F'] * 2 + [' '] * 2,
-    #          ['@'] + [' '] * 4]
-    #     )
-    #     np.testing.assert_array_equal(expected_view, agent_view)
-    #
-    #     self.env.clean_map()
-    #
-    #     expected_view = np.array(
-    #         [['@'] + [' '] * 4,
-    #          ['@'] + [' '] * 4,
-    #          ['@'] + [' '] + ['P'] + [' '] * 2,
-    #          ['@'] + [' '] * 4,
-    #          ['@'] + [' '] * 4]
-    #     )
-    #     np.testing.assert_array_equal(expected_view, agent_view)
+    def test_firing_beam(self):
+        self.env = CleanupEnv(ascii_map=FIRING_CLEANUP_MAP, num_agents=2)
+        self.env.reset()
+        self.move_agent('agent-0', [3, 3])
+        self.move_agent('agent-1', [4, 2])
+        self.rotate_agent('agent-0', 'UP')
+        # check that cleanup beam does three things
+        # 1. Cleans waste cells correctly
+        # 2. Is blocked by the first waste cell it encounters
+        # 3. Obscures agents when fired, doesn't remove them when cleaned
+
+        self.env.step({'agent-0': CLEANUP_ACTION_MAP['FIRE']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', 'F', 'F', 'F', ' ', '@'],
+                                 ['@', 'F', 'F', 'P', ' ', '@'],
+                                 ['@', 'F', 'F', 'F', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+        self.env.step({})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', 'H', 'H', ' ', ' ', '@'],
+                                 ['@', 'R', 'H', 'P', ' ', '@'],
+                                 ['@', 'H', 'P', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
+        # check that the cleanup beam doesn't remove apples
+        self.env.reset()
+        self.move_agent('agent-0', [3, 3])
+        self.move_agent('agent-1', [4, 2])
+        self.env.update_map_apples([[3, 4]])
+        self.rotate_agent('agent-0', 'DOWN')
+        self.env.step({'agent-0': CLEANUP_ACTION_MAP['FIRE']})
+        self.env.step({})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', 'H', 'H', ' ', ' ', '@'],
+                                 ['@', 'R', 'H', 'P', 'A', '@'],
+                                 ['@', 'H', 'P', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
+    def test_apple_spawn(self):
+        """Confirm that apples spawn correctly in cleanup"""
+        self.env = CleanupEnv(ascii_map=APPLE_SPAWN_MAP_CLEANUP, num_agents=2)
+        self.env.reset()
+        for i in range(500):
+            self.env.step({})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                ['@', ' ', 'P', ' ', ' ', '@'],
+                                ['@', ' ', ' ', 'A', 'A', '@'],
+                                ['@', ' ', ' ', 'A', 'A', '@'],
+                                ['@', ' ', ' ', 'A', 'P', '@'],
+                                ['@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.map)
+
+    def test_spawn_probabilities(self):
+        """Test that apple and waste spawn probabilities are set correctly"""
+        self.env = CleanupEnv(ascii_map=CLEANUP_PROB_MAP, num_agents=2)
+        self.env.reset()
+
+        # Check that the permitted waste area is correct
+        self.assertEqual(self.env.compute_permitted_area(), 1)
+
+        # Check that the potential waste area is correct
+        self.assertEqual(self.env.potential_waste_area, 5)
+
+        # Check that the apple spawn probability is zero if there's too much
+        # waste
+        self.assertTrue(np.isclose(self.env.current_apple_spawn_prob, 0))
+        # Check that the waste spawn probability is zero if there's too much
+        # waste
+        self.assertTrue(np.isclose(self.env.current_waste_spawn_prob, 0))
+
+        # Check that the waste spawn probability is computed correctly
+        # TODO(ev) this test depends on the answer to issue # 110
+        self.rotate_agent('agent-0', 'UP')
+        self.rotate_agent('agent-1', 'UP')
+        self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN'],
+                       'agent-1': CLEANUP_ACTION_MAP['CLEAN']})
+        self.env.step({})
+        self.assertTrue(np.isclose(self.env.current_waste_spawn_prob, 0.5))
+
+        # TODO(ev) this test depends on the answer to issue # 110
+        # check that the apple spawn probability is computed correctly
+        while True:
+            self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN'],
+                           'agent-1': CLEANUP_ACTION_MAP['CLEAN']})
+            self.env.step({})
+            if self.env.compute_permitted_area() == 4:
+                break
+        # self.assertTrue(np.isclose(self.env.current_apple_spawn_prob, 0.125))
+
 
     def clear_agents(self):
         # FIXME(ev) this doesn't clear agent positions off the board
