@@ -1,4 +1,5 @@
 import numpy as np
+import random
 
 from social_dilemmas.constants import CLEANUP_MAP
 from social_dilemmas.envs.map_env import MapEnv, ACTIONS, ORIENTATIONS
@@ -38,6 +39,7 @@ class CleanupEnv(MapEnv):
         self.potential_waste_area = counts_dict.get('H', 0) + counts_dict.get('R', 0)
         self.current_apple_spawn_prob = appleRespawnProbability
         self.current_waste_spawn_prob = wasteSpawnProbability
+        self.compute_probabilities()
 
         # make a list of the potential apple and waste spawn points
         self.apple_points = []
@@ -82,6 +84,7 @@ class CleanupEnv(MapEnv):
         self.update_map_waste(self.waste_start_points)
         self.update_map_river(self.river_points)
         self.update_map_stream(self.stream_points)
+        self.compute_probabilities()
 
     def custom_action(self, agent, action):
         """Allows agents to take actions that are not move or turn"""
@@ -165,9 +168,9 @@ class CleanupEnv(MapEnv):
 
         # spawn one waste point
         if not np.isclose(self.current_waste_spawn_prob, 0):
-            while True:
-                spawn_index = np.random.randint(0, len(self.waste_points))
-                row, col = self.waste_points[spawn_index]
+            random.shuffle(self.waste_points)
+            for i in range(len(self.waste_points)):
+                row, col = self.waste_points[i]
                 if self.map[row, col] != 'P' and self.map[row, col] != 'H':
                     rand_num = np.random.rand(1)[0]
                     if rand_num < self.current_waste_spawn_prob:
@@ -176,7 +179,9 @@ class CleanupEnv(MapEnv):
         return spawn_points
 
     def compute_probabilities(self):
-        waste_density = 1 - self.compute_permitted_area() / self.potential_waste_area
+        waste_density = 0
+        if self.potential_waste_area > 0:
+            waste_density = 1 - self.compute_permitted_area() / self.potential_waste_area
         if waste_density >= thresholdDepletion:
             self.current_apple_spawn_prob = 0
             self.current_waste_spawn_prob = 0
@@ -191,7 +196,7 @@ class CleanupEnv(MapEnv):
 
     def compute_permitted_area(self):
         """How many cells can we spawn waste on?"""
-        unique, counts = np.unique(self.map, return_counts=True)
+        unique, counts = np.unique(self.post_clean_map, return_counts=True)
         counts_dict = dict(zip(unique, counts))
         current_area = counts_dict.get('H', 0)
         free_area = self.potential_waste_area - current_area
@@ -201,7 +206,12 @@ class CleanupEnv(MapEnv):
         for i in range(len(new_waste_points)):
             row, col = new_waste_points[i]
             # TODO(ev) can waste spawn where an agent or beam is?
-            if self.map[row, col] != 'P' and self.map[row, col] != 'C':
+            # You can spawn under a beam, but you'll be hidden
+            if self.map[row, col] == 'F':
+                self.append_hiddens([row, col], 'H')
+            # Don't spawn waste where an agent is standing or where
+            # a cleaning beam is
+            elif self.map[row, col] != 'P' and self.map[row, col] != 'C':
                 self.map[row, col] = 'H'
 
     def update_map_apples(self, new_apple_points):
