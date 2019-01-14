@@ -956,7 +956,6 @@ class TestCleanupEnv(unittest.TestCase):
                 break
         # self.assertTrue(np.isclose(self.env.current_apple_spawn_prob, 0.125))
 
-
     def clear_agents(self):
         # FIXME(ev) this doesn't clear agent positions off the board
         self.env.agents = {}
