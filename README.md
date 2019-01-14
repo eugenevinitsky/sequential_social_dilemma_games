@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/eugenevinitsky/sequential_social_dilemma_games.svg?branch=master)](https://travis-ci.com/eugenevinitsky/sequential_social_dilemma_games)
+
 # Sequential Social Dilemma Games
 Repo for reproductions of deepmind gridworld papers
 
