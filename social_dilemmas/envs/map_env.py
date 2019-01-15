@@ -212,9 +212,9 @@ class MapEnv(MultiAgentEnv):
 
         for agent_id, agent in self.agents.items():
             char_id = str(int(agent_id[-1]) + 1)
-            
+
             # If agent is not within map, skip.
-            if not(agent.pos[0] >= 0 and agent.pos[0] < grid.shape[0] and \
+            if not(agent.pos[0] >= 0 and agent.pos[0] < grid.shape[0] and
                     agent.pos[1] >= 0 and agent.pos[1] < grid.shape[1]):
                 continue
 
