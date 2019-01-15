@@ -183,6 +183,11 @@ class TestMapEnv(unittest.TestCase):
         agent_id = 'agent-0'
         self.construct_map(TEST_MAP_1, agent_id, [3, 3], 'UP')
 
+        def convert_empty_cells(view):
+            """Change all empty cells marked with '0' to '' for consistency."""
+            view[view == '0'] = ''
+            return view
+
         # check if the view is correct if there are no walls
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
@@ -209,6 +214,7 @@ class TestMapEnv(unittest.TestCase):
         # check if if the view is correct if the view exceeds the top view
         self.move_agent(agent_id, [1, 3])
         agent_view = self.env.agents[agent_id].get_state()
+        agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [[''] * 5,
              ['@'] * 5,
@@ -233,6 +239,7 @@ class TestMapEnv(unittest.TestCase):
         # check if if the view is correct if the view exceeds the left view
         self.move_agent(agent_id, [3, 1])
         agent_view = self.env.agents[agent_id].get_state()
+        agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [[''] + ['@'] + [' '] * 3,
              [''] + ['@'] + [' '] * 3,
@@ -257,6 +264,7 @@ class TestMapEnv(unittest.TestCase):
         # check if if the view is correct if the view exceeds the bot view
         self.move_agent(agent_id, [5, 3])
         agent_view = self.env.agents[agent_id].get_state()
+        agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [[' '] * 5,
              [' '] * 5,
@@ -281,6 +289,7 @@ class TestMapEnv(unittest.TestCase):
         # check if if the view is correct if the view exceeds the right view
         self.move_agent(agent_id, [3, 5])
         agent_view = self.env.agents[agent_id].get_state()
+        agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [[' '] * 3 + ['@'] + [''],
              [' '] * 3 + ['@'] + [''],
@@ -293,6 +302,7 @@ class TestMapEnv(unittest.TestCase):
         # check if if the view is correct if the agent is in the bottom right corner
         self.move_agent(agent_id, [5, 5])
         agent_view = self.env.agents[agent_id].get_state()
+        agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [[' '] * 3 + ['@'] + [''],
              [' '] * 3 + ['@'] + [''],
