@@ -21,10 +21,10 @@ tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 1,
+    'num_cpus', 2,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
-    'num_gpus', 0,
+    'num_gpus', 1,
     'Number of available GPUs')
 tf.app.flags.DEFINE_boolean(
     'use_gpus_for_workers', False,
