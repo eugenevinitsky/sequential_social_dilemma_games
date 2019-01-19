@@ -373,7 +373,19 @@ class MapEnv(MultiAgentEnv):
         raise NotImplementedError
 
     def execute_reservations(self):
-        """Takes all the reserved slots and decides which move has priority"""
+        """Takes all the reserved slots and make the moves. Handles conflicting reservations.
+
+           This method works by finding all conflicts over a cell and randomly assigning them
+           to one of the agents that desires the slot. It then sets all of the other agents
+           that wanted the cell to have a move of staying. For moves that do not directly
+           conflict with another agent for a cell, but may not be temporarily resolvable
+           due to an agent currently being in the desired cell, we continually loop through
+           the actions until all moves have been satisfied or deemed impossible.
+           For example, agent 1 may want to move from [1,2] to [2,2] but agent 2 is in [2,2].
+           Agent 2, however, is moving into [3,2]. Agent-1's action is first in the order so at the
+           first pass it is skipped but agent-2 moves to [3,2]. In the second pass, agent-1 will
+           then be able to move into [2,2].
+        """
         curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
         agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
 
@@ -405,7 +417,13 @@ class MapEnv(MultiAgentEnv):
             unique_move, indices, return_count = np.unique(move_slots, return_index=True,
                                                            return_counts=True, axis=0)
             search_list = np.array(move_slots)
-            # if there are any conflicts over a space
+
+            # first go through and remove moves that can't possible happen. Three types
+            # 1. Trying to move into an agent that has been issued a stay command
+            # 2. Trying to move into the spot of an agent that doesn't have a move
+            # 3. Two agents trying to walk through one another
+
+            # Resolve all conflicts over a space
             if np.any(return_count > 1):
                 for move, index, count in zip(unique_move, indices, return_count):
                     if count > 1:
@@ -414,39 +432,85 @@ class MapEnv(MultiAgentEnv):
 
                         # TODO(ev) this should be a method from ---- to -----
                         # -------------------------------------
-                        new_pos, old_pos = \
-                            self.agents[agent_to_slot[index]].update_agent_pos(move)
-                        new_pos = new_pos.tolist()
-                        old_pos = old_pos.tolist()
-                        hidden_pos_arr = np.array(hidden_pos)
-                        search_rows = np.where((hidden_pos_arr == old_pos).all(axis=1))[0].tolist()
-                        # only put back and delete elements that are not 'P'
-                        found_index = 0
-                        for index in search_rows:
-                            if hidden_char[index] != 'P':
-                                found_index = index
-                                break
-                        self.map[old_pos[0], old_pos[1]] = self.hidden_cells[found_index][2]
-                        del self.hidden_cells[found_index]
-                        char = self.map[new_pos[0], new_pos[1]]
-                        self.append_hiddens(new_pos, char, 'P')
-                        self.map[new_pos[0], new_pos[1]] = 'P'
+                        # check that the cell you are fighting over doesn't currently
+                        # contain an agent that isn't going to move for one of the agents
+                        # If it does, all the agents commands should become STAY
+                        # since no moving will be possible
+                        conflict_indices = np.where((search_list == move).all(axis=1))[0]
+                        all_agents_id = [agent_to_slot[i] for i in conflict_indices]
+                        # all other agents now stay in place so update their moves
+                        # to reflect this
+                        conflict_cell_free = True
+                        for agent_id in all_agents_id:
+                            moves_copy = agent_moves.copy()
+                            # TODO(ev) code duplication, simplify
+                            if move.tolist() in curr_agent_pos:
+                                # find the agent that is currently at that spot and make sure
+                                # that the move is possible. If it won't be, remove it.
+                                conflicting_agent_id = agent_by_pos[tuple(move)]
+                                curr_pos = self.agents[agent_id].get_pos().tolist()
+                                curr_conflict_pos = self.agents[conflicting_agent_id].\
+                                    get_pos().tolist()
+                                conflict_move = agent_moves.get(conflicting_agent_id,
+                                                                curr_conflict_pos)
+                                # Condition (1):
+                                # a STAY command has been issued
+                                if agent_id == conflicting_agent_id:
+                                    conflict_cell_free = False
+                                # Condition (2)
+                                # its command is to stay
+                                # or you are trying to move into an agent that hasn't
+                                # received a command
+                                elif conflicting_agent_id not in moves_copy.keys() or \
+                                        curr_conflict_pos == conflict_move:
+                                    conflict_cell_free = False
+
+                                # Condition (3)
+                                # It is trying to move into you and you are moving into it
+                                elif conflicting_agent_id in moves_copy.keys():
+                                    if agent_moves[conflicting_agent_id] == curr_pos and \
+                                            move.tolist() == self.agents[conflicting_agent_id]\
+                                            .get_pos().tolist():
+                                        conflict_cell_free = False
+
+                        if conflict_cell_free:
+                            new_pos, old_pos = \
+                                self.agents[agent_to_slot[index]].update_agent_pos(move)
+                            new_pos = new_pos.tolist()
+                            old_pos = old_pos.tolist()
+                            hidden_pos_arr = np.array(hidden_pos)
+                            search_rows = np.where((hidden_pos_arr == old_pos)
+                                                   .all(axis=1))[0].tolist()
+                            # only put back and delete elements that are not 'P'
+                            found_index = 0
+                            for index in search_rows:
+                                if hidden_char[index] != 'P':
+                                    found_index = index
+                                    break
+                            self.map[old_pos[0], old_pos[1]] = self.hidden_cells[found_index][2]
+                            del self.hidden_cells[found_index]
+                            char = self.map[new_pos[0], new_pos[1]]
+                            # FIXME(ev) this can cause you
+                            if char != 'P':
+                                self.append_hiddens(new_pos, char, 'P')
+                            self.map[new_pos[0], new_pos[1]] = 'P'
+                            # update the positions for resolving future conflicts
+                            curr_agent_pos = [agent.get_pos().tolist() for
+                                              agent in self.agents.values()]
+                            agent_by_pos = {tuple(agent.get_pos()):
+                                            agent.agent_id for agent in self.agents.values()}
                         # ------------------------------------
                         # remove all the other moves that would have conflicted
                         remove_indices = np.where((search_list == move).all(axis=1))[0]
                         all_agents_id = [agent_to_slot[i] for i in remove_indices]
                         # all other agents now stay in place so update their moves
-                        # to reflect this
+                        # to stay in place
                         for agent_id in all_agents_id:
                             agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
-                        # update the positions for resolving future conflicts
-                        curr_agent_pos = [agent.get_pos().tolist() for
-                                          agent in self.agents.values()]
-                        agent_by_pos = {tuple(agent.get_pos()):
-                                        agent.agent_id for agent in self.agents.values()}
 
             # make the remaining un-conflicted moves
             while len(agent_moves.items()) > 0:
+                num_moves = len(agent_moves.items())
                 moves_copy = agent_moves.copy()
                 del_keys = []
                 for agent_id, move in moves_copy.items():
@@ -455,8 +519,8 @@ class MapEnv(MultiAgentEnv):
                     hidden_pos = [hidden_cell[0: 2] for hidden_cell in self.hidden_cells]
                     hidden_char = [hidden_cell[2] for hidden_cell in self.hidden_cells]
                     if move in curr_agent_pos:
-                        # find the agent that is currently at that spot, check where they will
-                        # be next if they're going to move away, go ahead and move into their spot
+                        # find the agent that is currently at that spot and make sure
+                        # that the move is possible. If it won't be, remove it.
                         conflicting_agent_id = agent_by_pos[tuple(move)]
                         curr_pos = self.agents[agent_id].get_pos().tolist()
                         curr_conflict_pos = self.agents[conflicting_agent_id].get_pos().tolist()
@@ -482,30 +546,48 @@ class MapEnv(MultiAgentEnv):
                                 del agent_moves[agent_id]
                                 del_keys.append(agent_id)
                                 del_keys.append(conflicting_agent_id)
-                    # this move is unconflicted
+                    # this move is unconflicted so go ahead and move
                     else:
                         new_pos, old_pos = self.agents[agent_id].update_agent_pos(move)
+                        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
                         new_pos = new_pos.tolist()
                         old_pos = old_pos.tolist()
-                        hidden_pos_arr = np.array(hidden_pos)
-                        search_rows = np.where((hidden_pos_arr == old_pos).all(axis=1))[0].tolist()
-                        # only put back and delete elements that are not 'P'
-                        found_index = 0
-                        for index in search_rows:
-                            if hidden_char[index] != 'P':
-                                found_index = index
-                                break
-                        self.map[old_pos[0], old_pos[1]] = self.hidden_cells[found_index][2]
-                        del self.hidden_cells[found_index]
-                        char = self.map[new_pos[0], new_pos[1]]
-                        self.append_hiddens(new_pos, char, 'P')
+
+                        # Don't delete and update your old cell and hidden info
+                        # if there's an agent there, they should take over the hidden info
+                        if old_pos not in curr_agent_pos:
+                            hidden_pos_arr = np.array(hidden_pos)
+                            search_rows = np.where((hidden_pos_arr == old_pos).
+                                                   all(axis=1))[0].tolist()
+                            # only put back and delete elements that are not 'P'
+                            found_index = 0
+                            for index in search_rows:
+                                if hidden_char[index] != 'P':
+                                    found_index = index
+                                    break
+                            self.map[old_pos[0], old_pos[1]] = self.hidden_cells[found_index][2]
+                            del self.hidden_cells[found_index]
+                            char = self.map[new_pos[0], new_pos[1]]
+                            self.append_hiddens(new_pos, char, 'P')
                         self.map[new_pos[0], new_pos[1]] = 'P'
                         del agent_moves[agent_id]
                         del_keys.append(agent_id)
-                        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+
+                # no agent is able to move freely, so just move them all
+                # no updates to hidden cells are needed since all the
+                # same cells will be covered
+                if len(agent_moves) == num_moves:
+                    for agent_id, move in agent_moves.items():
+                        self.agents[agent_id].update_agent_pos(move)
+                    break
 
         self.execute_custom_reservations()
         self.reserved_slots = []
+
+    def clear_impossible_moves(self):
+        """Given a proposed move, check if the cell that will be moved into is possible
+           If not,
+        """
 
     def spawn_point(self):
         """Returns a randomly selected spawn point."""
