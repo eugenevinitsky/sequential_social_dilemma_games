@@ -599,6 +599,64 @@ class TestMapEnv(unittest.TestCase):
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.map)
 
+        # agent 3 wants to move into space [3,2] as does agent-2
+        # agent-1 will move out of the way so one of them should successfully
+        # get the cell
+        self.move_agent('agent-0', [3, 2])
+        self.move_agent('agent-2', [2, 2])
+        # move this agent out of the way
+        self.move_agent('agent-1', [4, 4])
+        self.move_agent('agent-3', [3, 3])
+        agent_2_success = 0
+        for i in range(100):
+            self.env.step({'agent-0': ACTION_MAP['MOVE_RIGHT'],
+                           'agent-2': ACTION_MAP['MOVE_RIGHT'],
+                           'agent-3': ACTION_MAP['MOVE_UP']})
+            if self.env.agents['agent-2'].get_pos().tolist() == [3, 2]:
+                agent_2_success += 1
+                expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                         ['@', ' ', ' ', ' ', ' ', '@'],
+                                         ['@', ' ', ' ', ' ', ' ', '@'],
+                                         ['@', ' ', 'P', 'P', ' ', '@'],
+                                         ['@', ' ', 'P', ' ', 'P', '@'],
+                                         ['@', '@', '@', '@', '@', '@']])
+                np.testing.assert_array_equal(expected_map, self.env.map)
+            else:
+                expected_map = np.array([['@', '@', '@', '@', '@', '@'],
+                                         ['@', ' ', ' ', ' ', ' ', '@'],
+                                         ['@', ' ', 'P', ' ', ' ', '@'],
+                                         ['@', ' ', 'P', ' ', ' ', '@'],
+                                         ['@', ' ', 'P', ' ', 'P', '@'],
+                                         ['@', '@', '@', '@', '@', '@']])
+                np.testing.assert_array_equal(expected_map, self.env.map)
+            self.move_agent('agent-0', [3, 2])
+            self.move_agent('agent-2', [2, 2])
+            # move this agent out of the way
+            self.move_agent('agent-1', [4, 4])
+            self.move_agent('agent-3', [3, 3])
+        success_percent = agent_2_success/100.0
+        within_bounds = (.4 < success_percent) and (success_percent < .6)
+        self.assertTrue(within_bounds)
+
+        # a counterclockwise rotation of a square of agents should work
+        # properly
+        self.move_agent('agent-0', [3, 2])
+        self.move_agent('agent-2', [2, 2])
+        # move this agent out of the way
+        self.move_agent('agent-1', [2, 3])
+        self.move_agent('agent-3', [3, 3])
+        self.env.step({'agent-0': ACTION_MAP['MOVE_LEFT'],
+                       'agent-1': ACTION_MAP['MOVE_RIGHT'],
+                       'agent-2': ACTION_MAP['MOVE_DOWN'],
+                       'agent-3': ACTION_MAP['MOVE_UP']})
+        self.assertTrue(self.env.agents['agent-0'].get_pos().tolist() == [2, 2])
+        self.assertTrue(self.env.agents['agent-1'].get_pos().tolist() == [3, 3])
+        self.assertTrue(self.env.agents['agent-2'].get_pos().tolist() == [2, 3])
+        self.assertTrue(self.env.agents['agent-3'].get_pos().tolist() == [3, 2])
+
+
+
+
     def move_agent(self, agent_id, new_pos):
         self.env.reserved_slots.append([new_pos[0], new_pos[1], 'P', agent_id])
         self.env.execute_reservations()
