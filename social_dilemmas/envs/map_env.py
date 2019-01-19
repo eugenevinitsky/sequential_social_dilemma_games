@@ -557,7 +557,8 @@ class MapEnv(MultiAgentEnv):
                         # if there's an agent there, they should take over the hidden info
                         if old_pos not in curr_agent_pos:
                             hidden_pos_arr = np.array(hidden_pos)
-                            search_rows = np.where((hidden_pos_arr == old_pos).all(axis=1))[0].tolist()
+                            search_rows = np.where((hidden_pos_arr == old_pos).
+                                                   all(axis=1))[0].tolist()
                             # only put back and delete elements that are not 'P'
                             found_index = 0
                             for index in search_rows:

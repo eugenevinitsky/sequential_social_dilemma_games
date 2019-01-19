@@ -654,9 +654,6 @@ class TestMapEnv(unittest.TestCase):
         self.assertTrue(self.env.agents['agent-2'].get_pos().tolist() == [2, 3])
         self.assertTrue(self.env.agents['agent-3'].get_pos().tolist() == [3, 2])
 
-
-
-
     def move_agent(self, agent_id, new_pos):
         self.env.reserved_slots.append([new_pos[0], new_pos[1], 'P', agent_id])
         self.env.execute_reservations()
