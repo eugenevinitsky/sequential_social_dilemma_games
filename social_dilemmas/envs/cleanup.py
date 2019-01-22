@@ -2,7 +2,7 @@ import numpy as np
 import random
 
 from social_dilemmas.constants import CLEANUP_MAP
-from social_dilemmas.envs.map_env import MapEnv, ACTIONS, ORIENTATIONS
+from social_dilemmas.envs.map_env import MapEnv, ACTIONS
 from social_dilemmas.envs.agent import CleanupAgent, CLEANUP_VIEW_SIZE
 import utility_funcs as util
 
@@ -43,8 +43,6 @@ class CleanupEnv(MapEnv):
 
         # make a list of the potential apple and waste spawn points
         self.apple_points = []
-        self.firing_points = []
-        self.cleanup_points = []
         self.waste_start_points = []
         self.waste_points = []
         self.river_points = []
@@ -79,70 +77,38 @@ class CleanupEnv(MapEnv):
 
     def custom_reset(self):
         """Initialize the walls and the waste"""
-        self.firing_points = []
-        self.cleanup_points = []
-        self.update_map_waste(self.waste_start_points)
-        self.update_map_river(self.river_points)
-        self.update_map_stream(self.stream_points)
+        for waste_start_point in self.waste_start_points:
+            self.world_map[waste_start_point[0], waste_start_point[1]] = 'H'
+        for river_point in self.river_points:
+            self.world_map[river_point[0], river_point[1]] = 'R'
+        for stream_point in self.stream_points:
+            self.world_map[stream_point[0], stream_point[1]] = 'S'
         self.compute_probabilities()
 
     def custom_action(self, agent, action):
         """Allows agents to take actions that are not move or turn"""
-        agent.fire_beam()
         if action == 'FIRE':
-            self.reserved_slots += self.update_map_fire(agent.get_pos().tolist(),
-                                                        agent.get_orientation())
+            agent.fire_beam('F')
+            beam_pos, updates = self.update_map_fire(agent.get_pos().tolist(),
+                                                     agent.get_orientation(), ACTIONS['FIRE'],
+                                                     fire_char='F',
+                                                     blocking_cells=['H'])
         elif action == 'CLEAN':
-            self.reserved_slots += self.update_map_clean(agent.get_pos().tolist(),
-                                                         agent.get_orientation())
+            agent.fire_beam('C')
+            beam_pos, updates = self.update_map_fire(agent.get_pos().tolist(),
+                                                     agent.get_orientation(),
+                                                     ACTIONS['FIRE'],
+                                                     fire_char='C',
+                                                     cell_types=['H'],
+                                                     update_char=['R'],
+                                                     blocking_cells=['H'])
+        self.beam_pos += beam_pos
+        return updates
 
     def custom_map_update(self):
-        """Custom map updates that don't have to do with agent actions"""
-        # spawn the apples
+        """"Update the probabilities and then spawn"""
         self.compute_probabilities()
-        new_apples_and_waste = self.spawn_apples_and_waste()
-        if len(new_apples_and_waste) > 0:
-            self.reserved_slots += new_apples_and_waste
-
-    def execute_custom_reservations(self):
-        """Execute firing and then apple spawning"""
-        apple_pos = []
-        firing_pos = []
-        clean_pos = []
-        waste_pos = []
-        for slot in self.reserved_slots:
-            row, col = slot[0], slot[1]
-            if slot[2] == 'A':
-                apple_pos.append([row, col])
-            elif slot[2] == 'H':
-                waste_pos.append([row, col])
-            elif slot[2] == 'F':
-                firing_pos.append([row, col])
-            elif slot[2] == 'C':
-                clean_pos.append([row, col])
-        for pos in firing_pos:
-            row, col = pos
-            self.map[row, col] = 'F'
-            self.firing_points.append([row, col])
-        for pos in clean_pos:
-            row, col = pos
-            self.map[row, col] = 'C'
-            self.cleanup_points.append([row, col])
-
-        # update the apples and waste
-        self.update_map_apples(apple_pos)
-        self.update_map_waste(waste_pos)
-
-    def append_hiddens(self, new_pos, old_char, new_char=None):
-        """Add hidden cells to self.hidden_cells that should be put back when cleaning"""
-        # an apple is gone once an agent walks over it
-        if old_char == 'A' and new_char == 'P':
-            self.hidden_cells.append(new_pos + [' '])
-        # a waste cell is gone if a cleanup cell hits it
-        if old_char == 'H' and new_char == 'C':
-            self.hidden_cells.append(new_pos + ['R'])
-        else:
-            self.hidden_cells.append(new_pos + [old_char])
+        self.update_map(self.spawn_apples_and_waste())
 
     def setup_agents(self):
         """Constructs all the agents in self.agent"""
@@ -161,7 +127,8 @@ class CleanupEnv(MapEnv):
         spawn_points = []
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
-            if self.map[row, col] != 'P' and self.map[row, col] != 'A':
+            # don't spawn apples where agents already are
+            if [row, col] not in self.agent_pos and self.world_map[row, col] != 'A':
                 rand_num = np.random.rand(1)[0]
                 if rand_num < self.current_apple_spawn_prob:
                     spawn_points.append((row, col, 'A'))
@@ -171,7 +138,8 @@ class CleanupEnv(MapEnv):
             random.shuffle(self.waste_points)
             for i in range(len(self.waste_points)):
                 row, col = self.waste_points[i]
-                if self.map[row, col] != 'P' and self.map[row, col] != 'H':
+                # don't spawn waste where it already is
+                if self.world_map[row, col] != 'H':
                     rand_num = np.random.rand(1)[0]
                     if rand_num < self.current_waste_spawn_prob:
                         spawn_points.append((row, col, 'H'))
@@ -196,85 +164,8 @@ class CleanupEnv(MapEnv):
 
     def compute_permitted_area(self):
         """How many cells can we spawn waste on?"""
-        unique, counts = np.unique(self.post_clean_map, return_counts=True)
+        unique, counts = np.unique(self.world_map, return_counts=True)
         counts_dict = dict(zip(unique, counts))
         current_area = counts_dict.get('H', 0)
         free_area = self.potential_waste_area - current_area
         return free_area
-
-    def update_map_waste(self, new_waste_points):
-        for i in range(len(new_waste_points)):
-            row, col = new_waste_points[i]
-            # TODO(ev) can waste spawn where an agent or beam is?
-            # You can spawn under a beam, but you'll be hidden
-            if self.map[row, col] == 'F':
-                self.append_hiddens([row, col], 'H')
-            # Don't spawn waste where an agent is standing or where
-            # a cleaning beam is
-            elif self.map[row, col] != 'P' and self.map[row, col] != 'C':
-                self.map[row, col] = 'H'
-
-    def update_map_apples(self, new_apple_points):
-        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
-        for i in range(len(new_apple_points)):
-            row, col = new_apple_points[i]
-            if self.map[row, col] != 'P' and self.map[row, col] != 'F':
-                self.map[row, col] = 'A'
-            # you can't spawn apples if an agent is there but hidden by a beam,
-            elif self.map[row, col] == 'F' and [row, col] not in curr_agent_pos:
-                self.append_hiddens([row, col], 'A')
-
-    def update_map_river(self, new_river_points):
-        for i in range(len(new_river_points)):
-            row, col = new_river_points[i]
-            self.map[row, col] = 'R'
-
-    def update_map_stream(self, new_stream_points):
-        for i in range(len(new_stream_points)):
-            row, col = new_stream_points[i]
-            self.map[row, col] = 'S'
-
-    # TODO(ev) this is in two classes already
-    def update_map_fire(self, firing_pos, firing_orientation):
-        num_fire_cells = ACTIONS['FIRE']
-        start_pos = np.asarray(firing_pos)
-        firing_direction = ORIENTATIONS[firing_orientation]
-        # compute the other two starting positions
-        right_shift = self.rotate_right(firing_direction)
-        firing_pos = [start_pos, start_pos + right_shift - firing_direction,
-                      start_pos - right_shift - firing_direction]
-        firing_points = []
-        for pos in firing_pos:
-            for i in range(num_fire_cells):
-                next_cell = pos + firing_direction
-                if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
-                    char = self.map[next_cell[0], next_cell[1]]
-                    self.append_hiddens([next_cell[0], next_cell[1]], char, 'F')
-                    firing_points.append((next_cell[0], next_cell[1], 'F'))
-                    pos += firing_direction
-                else:
-                    break
-        return firing_points
-
-    def update_map_clean(self, cleanup_pos, cleanup_orientation):
-        num_fire_cells = ACTIONS['CLEAN']
-        start_pos = np.asarray(cleanup_pos)
-        firing_direction = ORIENTATIONS[cleanup_orientation]
-        # compute the other two starting positions
-        right_shift = self.rotate_right(firing_direction)
-        firing_pos = [start_pos, start_pos + right_shift - firing_direction,
-                      start_pos - right_shift - firing_direction]
-        cleanup_points = []
-        for pos in firing_pos:
-            for i in range(num_fire_cells):
-                next_cell = pos + firing_direction
-                if self.test_if_in_bounds(next_cell) and self.map[next_cell[0], next_cell[1]] != '@':
-                    char = self.map[next_cell[0], next_cell[1]]
-                    self.append_hiddens([next_cell[0], next_cell[1]], char, 'C')
-                    cleanup_points.append((next_cell[0], next_cell[1], 'C'))
-                    pos += firing_direction
-                    if char == 'H':
-                        break
-                else:
-                    break
-        return cleanup_points

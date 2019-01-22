@@ -78,15 +78,9 @@ class Agent(object):
         return self.grid
 
     def compute_reward(self):
-        ego_pos = self.translate_pos_to_egocentric_coord(self.get_pos())
-        self.reward_from_pos(ego_pos)
         reward = self.reward_this_turn
         self.reward_this_turn = 0
         return reward
-
-    def reward_from_pos(self, new_pos):
-        """Given the position agent is moving to, compute the reward"""
-        raise NotImplementedError
 
     def set_pos(self, new_pos):
         self.pos = np.array(new_pos)
@@ -121,7 +115,6 @@ class Agent(object):
         old_pos = self.get_pos()
         ego_new_pos = self.translate_pos_to_egocentric_coord(new_pos)
         new_row, new_col = ego_new_pos
-        self.reward_from_pos(ego_new_pos)
         # you can't walk through walls
         if self.grid[new_row, new_col] == '@':
             new_pos = self.get_pos()
@@ -132,6 +125,14 @@ class Agent(object):
 
     def update_agent_rot(self, new_rot):
         self.set_orientation(new_rot)
+
+    def hit(self, char):
+        """Defines how an agent responds to being hit by a beam of type char"""
+        raise NotImplementedError
+
+    def consume(self, char):
+        """Defines how an agent interacts with the char it is standing on"""
+        raise NotImplementedError
 
 
 HARVEST_ACTIONS = BASE_ACTIONS.copy()
@@ -163,23 +164,24 @@ class HarvestAgent(Agent):
         return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
                                              2 * self.view_len + 1, 3), dtype=np.float32)
 
-    def reward_from_pos(self, query_pos):
-        """Gets reward from moving to a query position.
-
-        Note: query_pos must be in egocentric coordinates of
-        agent's own partially observable view of the map
-        """
-        row, col = query_pos
-        if self.grid[row, col] == 'A':
-            self.reward_this_turn += 1
-        elif self.grid[row, col] == 'F':
+    def hit(self, char):
+        if char == 'F':
             self.reward_this_turn -= 50
 
-    def fire_beam(self):
-        self.reward_this_turn -= 1
+    def fire_beam(self, char):
+        if char == 'F':
+            self.reward_this_turn -= 1
 
     def get_done(self):
         return False
+
+    def consume(self, char):
+        """Defines how an agent interacts with the char it is standing on"""
+        if char == 'A':
+            self.reward_this_turn += 1
+            return ' '
+        else:
+            return char
 
 
 CLEANUP_ACTIONS = BASE_ACTIONS.copy()
@@ -212,20 +214,21 @@ class CleanupAgent(Agent):
         """Maps action_number to a desired action in the map"""
         return CLEANUP_ACTIONS[action_number]
 
-    def reward_from_pos(self, query_pos):
-        """Gets reward from moving to a query position.
-
-        Note: query_pos must be in egocentric coordinates of
-        agent's own partially observable view of the map
-        """
-        row, col = query_pos
-        if self.grid[row, col] == 'A':
-            self.reward_this_turn += 1
-        elif self.grid[row, col] == 'F':
-            self.reward_this_turn -= 50
-
-    def fire_beam(self):
-        self.reward_this_turn -= 1
+    def fire_beam(self, char):
+        if char == 'F':
+            self.reward_this_turn -= 1
 
     def get_done(self):
         return False
+
+    def hit(self, char):
+        if char == 'F':
+            self.reward_this_turn -= 50
+
+    def consume(self, char):
+        """Defines how an agent interacts with the char it is standing on"""
+        if char == 'A':
+            self.reward_this_turn += 1
+            return ' '
+        else:
+            return char
