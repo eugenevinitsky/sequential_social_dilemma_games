@@ -3,6 +3,7 @@
 import unittest
 
 import numpy as np
+import random
 
 from gym.spaces import Discrete
 from social_dilemmas.envs.agent import Agent
@@ -905,7 +906,6 @@ class TestHarvestEnv(unittest.TestCase):
         np.testing.assert_array_equal(expected_map, self.env.test_map)
 
     def clear_agents(self):
-        # FIXME(ev) this doesn't clear agent positions off the board
         self.env.agents = {}
 
     def add_agent(self, agent_id, start_pos, start_orientation, env, view_len):
@@ -1004,7 +1004,9 @@ class TestCleanupEnv(unittest.TestCase):
 
         # check that you can clean up waste that an agent is standing on
         self.move_agent('agent-1', [2, 2])
-        self.rotate_agent('agent-0', 'UP')
+        self.move_agent('agent-0', [1, 3])
+        self.rotate_agent('agent-0', 'RIGHT')
+        random.seed(6)
         self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN']})
         self.assertTrue(self.env.world_map[2, 2] == 'R')
 
@@ -1099,8 +1101,10 @@ class TestCleanupEnv(unittest.TestCase):
         self.assertTrue(np.isclose(self.env.current_apple_spawn_prob, 0.1))
 
         # test that you can spawn waste under an agent
-        self.move_agent('agent-0', [3, 2])
-        self.assertTrue(self.env.world_map[3, 2] == 'H')
+        self.move_agent('agent-0', [2, 2])
+        random.seed(2)
+        self.env.step({})
+        self.assertTrue(self.env.world_map[2, 2] == 'H')
 
     def clear_agents(self):
         self.env.agents = {}
