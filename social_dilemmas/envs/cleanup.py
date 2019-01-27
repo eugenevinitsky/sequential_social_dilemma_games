@@ -87,22 +87,21 @@ class CleanupEnv(MapEnv):
 
     def custom_action(self, agent, action):
         """Allows agents to take actions that are not move or turn"""
+        updates = []
         if action == 'FIRE':
             agent.fire_beam('F')
-            beam_pos, updates = self.update_map_fire(agent.get_pos().tolist(),
-                                                     agent.get_orientation(), ACTIONS['FIRE'],
-                                                     fire_char='F',
-                                                     blocking_cells=['H'])
+            updates = self.update_map_fire(agent.get_pos().tolist(),
+                                           agent.get_orientation(), ACTIONS['FIRE'],
+                                           fire_char='F')
         elif action == 'CLEAN':
             agent.fire_beam('C')
-            beam_pos, updates = self.update_map_fire(agent.get_pos().tolist(),
-                                                     agent.get_orientation(),
-                                                     ACTIONS['FIRE'],
-                                                     fire_char='C',
-                                                     cell_types=['H'],
-                                                     update_char=['R'],
-                                                     blocking_cells=['H'])
-        self.beam_pos += beam_pos
+            updates = self.update_map_fire(agent.get_pos().tolist(),
+                                           agent.get_orientation(),
+                                           ACTIONS['FIRE'],
+                                           fire_char='C',
+                                           cell_types=['H'],
+                                           update_char=['R'],
+                                           blocking_cells=['H'])
         return updates
 
     def custom_map_update(self):
@@ -125,6 +124,7 @@ class CleanupEnv(MapEnv):
 
     def spawn_apples_and_waste(self):
         spawn_points = []
+        # spawn apples, multiple can spawn per step
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
             # don't spawn apples where agents already are
@@ -133,7 +133,7 @@ class CleanupEnv(MapEnv):
                 if rand_num < self.current_apple_spawn_prob:
                     spawn_points.append((row, col, 'A'))
 
-        # spawn one waste point
+        # spawn one waste point, only one can spawn per step
         if not np.isclose(self.current_waste_spawn_prob, 0):
             random.shuffle(self.waste_points)
             for i in range(len(self.waste_points)):
