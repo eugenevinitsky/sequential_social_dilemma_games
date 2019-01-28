@@ -25,7 +25,7 @@ def make_video_from_image_dir(vid_path, img_folder, video_name='trajectory', fps
 
 
 def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory',
-                             fps=5, format="XVID", resize=(640, 480)):
+                             fps=5, format="mp4v", resize=(640, 480)):
     """
     Create a video from a list of rgb arrays
     """
@@ -51,9 +51,9 @@ def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory',
             image = cv2.resize(image, resize, interpolation=cv2.INTER_NEAREST)
         video.write(image)
 
-    cv2.destroyAllWindows()
     video.release()
-
+    cv2.destroyAllWindows()
+    
 
 def return_view(grid, pos, row_size, col_size):
     """Given a map grid, position and view window, returns correct map part

@@ -26,7 +26,7 @@ The above plot shows the empirical Schelling diagrams for both Cleanup (A) and H
 Run `python setup.py develop`
 Then, activate your environment by running `source activate causal`.
 
-To then set up the branch of Ray on which we have build the causal influence code, clone the repo to your desired folder:
+To then set up the branch of Ray on which we have built the causal influence code, clone the repo to your desired folder:
 `git clone https://github.com/natashamjaques/ray.git`.
 
 Next, go to the rllib folder:
