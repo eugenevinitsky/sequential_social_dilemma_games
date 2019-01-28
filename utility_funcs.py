@@ -53,7 +53,7 @@ def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory',
 
     video.release()
     cv2.destroyAllWindows()
-    
+
 
 def return_view(grid, pos, row_size, col_size):
     """Given a map grid, position and view window, returns correct map part
