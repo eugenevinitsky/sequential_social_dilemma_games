@@ -1010,22 +1010,40 @@ class TestCleanupEnv(unittest.TestCase):
         self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN']})
         self.assertTrue(self.env.world_map[2, 2] == 'R')
 
+        # check that the beams add constructively, i.e. that if one beam clears
+        # some waste then the next agents beam is not blocked by it and can hit
+        # formerly blocked cells
+        random.seed(7)
+        self.move_agent('agent-1', [2, 3])
+        self.move_agent('agent-0', [4, 3])
+        # put some waste back where it's needed
+        self.env.update_map([[2, 2, 'H']])
+        self.env.update_map([[3, 1, 'H']])
+        self.rotate_agent('agent-0', 'UP')
+        self.rotate_agent('agent-1', 'UP')
+        self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN'],
+                       'agent-1': CLEANUP_ACTION_MAP['CLEAN']})
+        self.assertTrue(self.env.world_map[3, 1] == 'R')
+
     def test_firing_beam(self):
         self.env = CleanupEnv(ascii_map=FIRING_CLEANUP_MAP, num_agents=2)
         self.env.reset()
         self.move_agent('agent-0', [3, 3])
         self.move_agent('agent-1', [4, 2])
         self.rotate_agent('agent-0', 'UP')
-        # check that firing beam does not clean anything and is blocked correctly
 
+        # check that firing beam does not clean anything and is not blocked
+        # by anything
         self.env.step({'agent-0': CLEANUP_ACTION_MAP['FIRE']})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
-                                 ['@', 'H', 'F', 'F', ' ', '@'],
-                                 ['@', 'R', 'F', 'P', ' ', '@'],
+                                 ['@', 'F', 'F', 'F', ' ', '@'],
+                                 ['@', 'F', 'F', 'P', ' ', '@'],
                                  ['@', 'H', 'F', 'F', ' ', '@'],
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.test_map)
+        # check that the firing beam is removed correctly after one step
+        # it should not remove any waste, rivers, or agents
         self.env.step({})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
@@ -1101,7 +1119,7 @@ class TestCleanupEnv(unittest.TestCase):
         self.assertTrue(np.isclose(self.env.current_apple_spawn_prob, 0.1))
 
         # test that you can spawn waste under an agent
-        self.move_agent('agent-0', [2, 2])
+        self.move_agent('agent-0', [3, 2])
         random.seed(2)
         self.env.step({})
         self.assertTrue(self.env.world_map[2, 2] == 'H')

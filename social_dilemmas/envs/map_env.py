@@ -147,6 +147,12 @@ class MapEnv(MultiAgentEnv):
     def step(self, actions):
         """Takes in a dict of actions and converts them to a map update
 
+        Parameters
+        ----------
+        actions: dict {agent-id: int}
+            dict of actions, keyed by agent-id that are passed to the agent. The agent
+            interprets the int and converts it to a command
+
         Returns
         -------
         observations: dict of arrays representing agent observations
@@ -169,9 +175,7 @@ class MapEnv(MultiAgentEnv):
             self.world_map[pos[0], pos[1]] = new_char
 
         # execute custom moves like firing
-        updates = self.update_custom_moves(agent_actions)
-        if len(updates) > 0:
-            self.update_map(updates)
+        self.update_custom_moves(agent_actions)
 
         # execute spawning events
         self.custom_map_update()
@@ -509,13 +513,13 @@ class MapEnv(MultiAgentEnv):
                     break
 
     def update_custom_moves(self, agent_actions):
-        updates = []
         for agent_id, action in agent_actions.items():
             # check its not a move based action
             if 'MOVE' not in action and 'STAY' not in action and 'TURN' not in action:
                 agent = self.agents[agent_id]
-                updates += self.custom_action(agent, action)
-        return updates
+                updates = self.custom_action(agent, action)
+                if len(updates) > 0:
+                    self.update_map(updates)
 
     def update_map(self, new_points):
         """For points in new_points, place desired char on the map"""
@@ -532,6 +536,18 @@ class MapEnv(MultiAgentEnv):
     def update_map_fire(self, firing_pos, firing_orientation, fire_len, fire_char, cell_types=[],
                         update_char=[], blocking_cells='P'):
         """From a firing position, fire a beam that may clean or hit agents
+
+        Notes:
+            (1) Beams are blocked by agents
+            (2) A beam travels along until it hits a blocking cell at which beam the beam
+                covers that cell and stops
+            (3) If a beam hits a cell whose character is in cell_types, it replaces it with
+                the corresponding index in update_char
+            (4) As per the rules, the beams fire from in front of the agent and on its
+                sides so the beam that starts in front of the agent travels out one
+                cell further than it does along the sides.
+            (5) This method updates the beam_pos, an internal representation of how
+                which cells need to be rendered with fire_char in the agent view
 
         Parameters
         ----------
@@ -551,7 +567,7 @@ class MapEnv(MultiAgentEnv):
             cells that block the firing beam
         Returns
         -------
-        firing_points: (tuple (row, col, char))
+        updates: (tuple (row, col, char))
             the cells that have been hit by the beam and what char will be placed there
         """
         agent_by_pos = {tuple(agent.get_pos()): agent_id for agent_id, agent in self.agents.items()}
@@ -569,7 +585,7 @@ class MapEnv(MultiAgentEnv):
                 if self.test_if_in_bounds(next_cell) and \
                         self.world_map[next_cell[0], next_cell[1]] != '@':
 
-                    # FIXME(ev) simplify this logic, it has duplications
+                    # FIXME(ev) code duplication
                     # agents absorb beams
                     # activate the agents hit function if needed
                     if [next_cell[0], next_cell[1]] in self.agent_pos:
@@ -598,7 +614,8 @@ class MapEnv(MultiAgentEnv):
                 else:
                     break
 
-        return firing_points, updates
+        self.beam_pos += firing_points
+        return updates
 
     def spawn_point(self):
         """Returns a randomly selected spawn point."""
