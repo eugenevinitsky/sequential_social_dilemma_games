@@ -7,7 +7,11 @@ This repo is an open-source implementation of DeepMind's Sequential Social Dilem
 
 * **Cleanup**: A public goods dilemma in which agents get a reward for consuming apples, but must use a cleaning beam to clean a river in order for apples to grow. While an agent is cleaning the river, other agents can exploit it by consuming the apples that appear.
 
+<img src="images/cleanup.png" alt="Image of the cleanup game" width="340" height="492"/>
+
 * **Harvest**: A tragedy-of-the-commons dilemma in which apples regrow at a rate that depends on the amount of nearby apples. If individual agents employ an exploitative strategy by greedily consuming too many apples, the collective reward of all agents is reduced.
+
+<img src="images/harvest.png" alt="Image of the Harvest game" width="967" height="374"/>
 
 <img src="images/schelling.png" alt="Schelling diagrams for Harvest and Cleanup" width="953" height="352"/>
 
