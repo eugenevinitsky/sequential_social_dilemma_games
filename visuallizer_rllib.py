@@ -92,7 +92,7 @@ def visualizer_rllib(args):
         env = agent.local_evaluator.env
 
     if args.save_video:
-        shape = env.map.shape
+        shape = env.base_map.shape
         full_obs = [np.zeros((shape[0], shape[1], 3), dtype=np.uint8)
                     for i in range(config["horizon"])]
 
