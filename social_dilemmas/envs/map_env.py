@@ -303,7 +303,7 @@ class MapEnv(MultiAgentEnv):
             3-dim numpy array consisting of color map
         """
         if map is None:
-            map = self.world_map
+            map = self.get_map_with_agents()
         if color_map is None:
             color_map = self.color_map
 
