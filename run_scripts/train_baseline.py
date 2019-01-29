@@ -106,7 +106,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
     # hyperparams
     config.update({
-                "train_batch_size": 30000,
+                "train_batch_size": 128,
                 "horizon": 1000,
                 "lr_schedule":
                 [[0, hparams['lr_init']],
@@ -145,7 +145,7 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 200
+                "training_iteration": 300000
             },
             'checkpoint_freq': 20,
             "config": config,
