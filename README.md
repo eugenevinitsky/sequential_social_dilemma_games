@@ -39,7 +39,7 @@ Next, go to the rllib folder:
 ` cd ray/python/ray/rllib ` and run the script `python setup-rllib-dev.py`. This will copy the rllib folder into the pip install of Ray and allow you to use the version of RLlib that is in your local folder by creating a softlink. 
 
 # Tests
-Tests are located in the test folder and can be run individually or run by running `python -m pytest`
+Tests are located in the test folder and can be run individually or run by running `python -m pytest`. Many of the less obviously defined rules for the games can be understood by reading the tests, each of which outline some aspect of the game. 
 
 # Constructing new environments
 Every environment that subclasses MapEnv probably needs to implement the following methods
