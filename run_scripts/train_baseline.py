@@ -147,7 +147,7 @@ def main(unused_argv):
             "stop": {
                 "training_iteration": 300000
             },
-            'checkpoint_freq': 20,
+            'checkpoint_freq': 1000,
             "config": config,
         }
     })
