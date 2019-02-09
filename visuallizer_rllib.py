@@ -87,6 +87,7 @@ def visualizer_rllib(args):
     agent = agent_cls(env=env_name, config=config)
     checkpoint = result_dir + '/checkpoint_' + args.checkpoint_num
     checkpoint = checkpoint + '/checkpoint-' + args.checkpoint_num
+    print('Loading checkpoint', checkpoint)
     agent.restore(checkpoint)
     if hasattr(agent, "local_evaluator"):
         env = agent.local_evaluator.env
@@ -148,9 +149,12 @@ def visualizer_rllib(args):
         for agent_id, rew in rets.items():
             print('Round {}, Return: {} for agent {}'.format(
                 i, ret, agent_id))
+
     for agent_id, rew in rets.items():
         print('Average, std return: {}, {} for agent {}'.format(
             np.mean(rew), np.std(rew), agent_id))
+    sum_reward = np.sum([np.sum(r) for r in rets.values()])
+    print('Average collective reward:', sum_reward / len(rets))
 
     if args.save_video:
         path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
