@@ -7,6 +7,7 @@ import numpy as np
 import os
 import shutil
 import sys
+import pdb
 
 import ray
 from ray.rllib.agents.registry import get_agent_class
@@ -121,6 +122,7 @@ def visualizer_rllib(args):
             ret = 0
         for j in range(config["horizon"]):
             action = {}
+            print('Reminder: world map dimensions are:', env.world_map.shape)
             for agent_id in state.keys():
                 if use_lstm:
                     action[agent_id], state_init, logits = agent.compute_action(
@@ -128,7 +130,17 @@ def visualizer_rllib(args):
                 else:
                     action[agent_id] = agent.compute_action(
                         state[agent_id], policy_id=policy_map_fn(agent_id))
-            observations, reward, done, _ = env.step(action)
+                print(agent_id, 'took action', action[agent_id],
+                      env.agents[agent_id].action_map(action[agent_id]),
+                      'from position', env.agents[agent_id].pos)
+
+            try:
+                observations, reward, done, _ = env.step(action)
+            except Exception as e:
+                print('EXCEPTION OCCURED!')
+                print(str(e))
+                pdb.set_trace()
+
             if args.render:
                 env.render_map()
             if args.save_video:
