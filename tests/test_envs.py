@@ -657,6 +657,18 @@ class TestMapEnv(unittest.TestCase):
         self.assertTrue(self.env.agents['agent-2'].get_pos().tolist() == [2, 3])
         self.assertTrue(self.env.agents['agent-3'].get_pos().tolist() == [3, 2])
 
+        # do a check that the conflict resolution still works right
+        # if one of the agents is trying to walk through a wall
+        self.move_agent('agent-0', [2, 1])
+        self.move_agent('agent-1', [1, 1])
+        # move these agent out of the way
+        self.move_agent('agent-2', [4, 4])
+        self.move_agent('agent-3', [3, 3])
+        curr_map = self.env.test_map.copy()
+        self.env.step({'agent-0': ACTION_MAP['MOVE_UP'],
+                       'agent-1': ACTION_MAP['MOVE_RIGHT']})
+        np.testing.assert_array_equal(self.env.test_map, curr_map)
+
     def move_agent(self, agent_id, new_pos):
         self.env.agents[agent_id].update_agent_pos(new_pos)
         map_with_agents = self.env.get_map_with_agents()
