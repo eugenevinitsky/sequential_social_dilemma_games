@@ -360,6 +360,8 @@ class MapEnv(MultiAgentEnv):
                 # rotate the selected action appropriately
                 rot_action = self.rotate_action(selected_action, agent.get_orientation())
                 new_pos = agent.get_pos() + rot_action
+                # allow the agents to confirm what position they can move to
+                new_pos = agent.get_next_pos(new_pos)
                 reserved_slots.append((*new_pos, 'P', agent_id))
             elif 'TURN' in action:
                 new_rot = self.update_rotation(action, agent.get_orientation())
@@ -449,6 +451,8 @@ class MapEnv(MultiAgentEnv):
                                             .get_pos().tolist():
                                         conflict_cell_free = False
 
+                        # if the conflict cell is open, let one of the conflicting agents
+                        # move into it
                         if conflict_cell_free:
                             self.agents[agent_to_slot[index]].update_agent_pos(move)
                             agent_by_pos = {tuple(agent.get_pos()):
