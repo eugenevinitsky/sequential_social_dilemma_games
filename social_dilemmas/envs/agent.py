@@ -103,7 +103,6 @@ class Agent(object):
         return self.grid
 
     def get_next_pos(self, new_pos):
-        old_pos = self.get_pos()
         ego_new_pos = self.translate_pos_to_egocentric_coord(new_pos)
         new_row, new_col = ego_new_pos
         # you can't walk through walls
