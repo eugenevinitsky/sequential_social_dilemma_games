@@ -130,8 +130,8 @@ class Agent(object):
         # you can't walk through walls
         temp_pos = new_pos.copy()
         if self.grid[new_row, new_col] == '@':
-            new_pos = self.get_pos()
-        self.set_pos(new_pos)
+            temp_pos = self.get_pos()
+        self.set_pos(temp_pos)
         # TODO(ev) list array consistency
         return self.get_pos(), np.array(old_pos)
 
