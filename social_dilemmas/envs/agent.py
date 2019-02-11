@@ -102,6 +102,17 @@ class Agent(object):
     def get_map(self):
         return self.grid
 
+    def return_valid_pos(self, new_pos):
+        """Checks that the next pos is legal, if not return current pos"""
+        ego_new_pos = self.translate_pos_to_egocentric_coord(new_pos)
+        new_row, new_col = ego_new_pos
+        # you can't walk through walls
+        temp_pos = new_pos.copy()
+        if self.grid[new_row, new_col] == '@':
+            temp_pos = self.get_pos()
+
+        return temp_pos
+
     def update_agent_pos(self, new_pos):
         """Updates the agents internal positions
 
@@ -114,9 +125,26 @@ class Agent(object):
         """
         old_pos = self.get_pos()
         ego_new_pos = self.translate_pos_to_egocentric_coord(new_pos)
+        if new_pos[0] <= 0 or new_pos[0] == 16 or new_pos[1] <= 0 or new_pos[1] == 38:
+            ego_2 = self.translate_pos_to_egocentric_coord(old_pos)
+
+            #print('a local view around old pos is', self.grid[ego_2[0] - 1:ego_2[0] + 2, ego_2[1] - 1:ego_2[1] + 2])
+            print('the local view is',self.grid)
+            print('the old pos is {}'.format(old_pos))
+            print('the new_pos is {}'.format(new_pos))
+            print('the shape of the ego grid is', self.grid.shape)
+            offset_pos = new_pos - self.get_pos()
+            print('predicted offset pos is {}', offset_pos)
+            ego_centre = [self.row_size, self.col_size]
+            print('ego center is is {}'.format(ego_centre))
+            print('the ego pos is {}'.format(ego_new_pos))
+            print('the grid element at ego_pos is', self.grid[ego_new_pos[0], ego_new_pos[1]])
+            print('a local view is', self.grid[ego_new_pos[0]-1:ego_new_pos[0]+2, ego_new_pos[1]-1:ego_new_pos[1]+2])
+            print('----------------------------------------------------------------')
         new_row, new_col = ego_new_pos
         # you can't walk through walls
         if self.grid[new_row, new_col] == '@':
+            print('we have hit a wall')
             new_pos = self.get_pos()
 
         self.set_pos(new_pos)

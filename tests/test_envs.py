@@ -372,9 +372,16 @@ class TestMapEnv(unittest.TestCase):
 
         # if an agent tries to move through a wall they should stay in the same place
         self.rotate_agent(agent_id, 'UP')
-        self.move_agent(agent_id, [2, 1])
+        self.move_agent(agent_id, [1, 1])
         self.env.step({agent_id: ACTION_MAP['MOVE_UP']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 1])
+        self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 1])
+        self.move_agent(agent_id, [5, 5])
+        self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [5, 5])
+        self.env.step({agent_id: ACTION_MAP['MOVE_DOWN']})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [5, 5])
 
         # rotations correctly update the agent state
         self.rotate_agent(agent_id, 'UP')

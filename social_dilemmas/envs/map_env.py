@@ -169,6 +169,10 @@ class MapEnv(MultiAgentEnv):
 
         # move
         self.update_moves(agent_actions)
+        #print('the world shape is {}'.format(self.world_map.shape))
+        #for agent_id in sorted(list(self.agents.keys())):
+            #print('agent {} has position {}'.format(agent_id, self.agents[agent_id].get_pos()))
+
         for agent in self.agents.values():
             pos = agent.get_pos()
             new_char = agent.consume(self.world_map[pos[0], pos[1]])
@@ -360,6 +364,13 @@ class MapEnv(MultiAgentEnv):
                 # rotate the selected action appropriately
                 rot_action = self.rotate_action(selected_action, agent.get_orientation())
                 new_pos = agent.get_pos() + rot_action
+                # if new_pos[0] <= 0 or new_pos[1] <= 0 or new_pos[0] == 16 or new_pos[1] == 38:
+                #     print('new pos is {}'.format(new_pos))
+                #     print('old pos is {}'.format(agent.get_pos()))
+                #     agent.return_valid_pos(new_pos)
+                #     print('the cell at pos is {}'.format(self.world_map[new_pos[0], new_pos[1]]))
+                # allow the agents to confirm what position they can move to
+                new_pos = agent.return_valid_pos(new_pos)
                 reserved_slots.append((*new_pos, 'P', agent_id))
             elif 'TURN' in action:
                 new_rot = self.update_rotation(action, agent.get_orientation())
