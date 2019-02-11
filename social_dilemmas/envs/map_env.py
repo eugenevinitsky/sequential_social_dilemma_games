@@ -451,6 +451,8 @@ class MapEnv(MultiAgentEnv):
                                             .get_pos().tolist():
                                         conflict_cell_free = False
 
+                        # if the conflict cell is open, let one of the conflicting agents
+                        # move into it
                         if conflict_cell_free:
                             self.agents[agent_to_slot[index]].update_agent_pos(move)
                             agent_by_pos = {tuple(agent.get_pos()):
