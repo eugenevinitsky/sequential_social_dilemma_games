@@ -3,8 +3,7 @@ import random
 
 from social_dilemmas.constants import CLEANUP_MAP
 from social_dilemmas.envs.map_env import MapEnv, ACTIONS
-from social_dilemmas.envs.agent import CleanupAgent, CLEANUP_VIEW_SIZE
-import utility_funcs as util
+from social_dilemmas.envs.agent import CleanupAgent  # CLEANUP_VIEW_SIZE
 
 # Add custom actions to the agent
 ACTIONS['FIRE'] = 5  # length of firing beam
@@ -113,9 +112,10 @@ class CleanupEnv(MapEnv):
             agent_id = 'agent-' + str(i)
             spawn_point = self.spawn_point()
             rotation = self.spawn_rotation()
-            grid = util.return_view(map_with_agents, spawn_point,
-                                    CLEANUP_VIEW_SIZE, CLEANUP_VIEW_SIZE)
-            agent = CleanupAgent(agent_id, spawn_point, rotation, grid)
+            # grid = util.return_view(map_with_agents, spawn_point,
+            #                         CLEANUP_VIEW_SIZE, CLEANUP_VIEW_SIZE)
+            # agent = CleanupAgent(agent_id, spawn_point, rotation, grid)
+            agent = CleanupAgent(agent_id, spawn_point, rotation, map_with_agents)
             self.agents[agent_id] = agent
 
     def spawn_apples_and_waste(self):

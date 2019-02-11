@@ -126,8 +126,9 @@ class DummyMapEnv(MapEnv):
             agent_id = 'agent-' + str(i)
             spawn_point = self.spawn_point()
             rotation = self.spawn_rotation()
-            grid = util.return_view(map_with_agents, spawn_point,
-                                    2, 2)
+            grid = map_with_agents
+            # grid = util.return_view(map_with_agents, spawn_point,
+            #                         2, 2)
             agent = DummyAgent(agent_id, spawn_point, rotation, grid, 2, 2)
             self.agents[agent_id] = agent
 
@@ -371,17 +372,32 @@ class TestMapEnv(unittest.TestCase):
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
 
         # if an agent tries to move through a wall they should stay in the same place
+        # we check that this works correctly for both corner and non-corner edges
         self.rotate_agent(agent_id, 'UP')
         self.move_agent(agent_id, [1, 1])
         self.env.step({agent_id: ACTION_MAP['MOVE_UP']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 1])
         self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 1])
-        self.move_agent(agent_id, [5, 5])
+        self.move_agent(agent_id, [4, 4])
+        self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
+        self.env.step({agent_id: ACTION_MAP['MOVE_DOWN']})
         self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [5, 5])
         self.env.step({agent_id: ACTION_MAP['MOVE_DOWN']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [5, 5])
+        self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
+        self.env.step({agent_id: ACTION_MAP['MOVE_DOWN']})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [4, 5])
+        self.move_agent(agent_id, [5, 4])
+        self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [5, 4])
+        self.move_agent(agent_id, [1, 2])
+        self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
+        self.move_agent(agent_id, [2, 1])
+        self.env.step({agent_id: ACTION_MAP['MOVE_UP']})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
 
         # rotations correctly update the agent state
         self.rotate_agent(agent_id, 'UP')
@@ -665,11 +681,13 @@ class TestMapEnv(unittest.TestCase):
         self.assertTrue(self.env.agents['agent-3'].get_pos().tolist() == [3, 2])
 
     def move_agent(self, agent_id, new_pos):
-        self.env.agents[agent_id].update_agent_pos(new_pos)
+        self.env.agents[agent_id].set_pos(new_pos)
         map_with_agents = self.env.get_map_with_agents()
         agent = self.env.agents[agent_id]
-        agent.grid = util.return_view(map_with_agents, agent.pos,
-                                      agent.row_size, agent.col_size)
+        agent.grid = map_with_agents
+        # agent.grid = util.return_view(map_with_agents, agent.pos,
+        #                               agent.row_size, agent.col_size)
+        self.env.agents[agent_id].update_agent_pos(new_pos)
 
     def rotate_agent(self, agent_id, new_rot):
         self.env.agents[agent_id].update_agent_rot(new_rot)
@@ -691,8 +709,9 @@ class TestMapEnv(unittest.TestCase):
 
         for agent in env.agents.values():
             # Update each agent's view of the world
-            agent.grid = util.return_view(map_with_agents, agent.pos,
-                                          agent.row_size, agent.col_size)
+            agent.grid = map_with_agents
+            # agent.grid = util.return_view(map_with_agents, agent.pos,
+            #                               agent.row_size, agent.col_size)
         self.env.agent_pos.append(start_pos)
 
 
@@ -924,16 +943,18 @@ class TestHarvestEnv(unittest.TestCase):
 
         for agent in env.agents.values():
             # Update each agent's view of the world
-            agent.grid = util.return_view(map_with_agents, agent.pos,
-                                          agent.row_size, agent.col_size)
+            agent.grid = map_with_agents
+            # agent.grid = util.return_view(map_with_agents, agent.pos,
+            #                               agent.row_size, agent.col_size)
         self.env.agent_pos.append(start_pos)
 
     def move_agent(self, agent_id, new_pos):
         self.env.agents[agent_id].update_agent_pos(new_pos)
         map_with_agents = self.env.get_map_with_agents()
         agent = self.env.agents[agent_id]
-        agent.grid = util.return_view(map_with_agents, agent.pos,
-                                      agent.row_size, agent.col_size)
+        agent.grid = map_with_agents
+        # agent.grid = util.return_view(map_with_agents, agent.pos,
+        #                               agent.row_size, agent.col_size)
 
     def rotate_agent(self, agent_id, new_rot):
         self.env.agents[agent_id].update_agent_rot(new_rot)
@@ -1143,16 +1164,18 @@ class TestCleanupEnv(unittest.TestCase):
 
         for agent in env.agents.values():
             # Update each agent's view of the world
-            agent.grid = util.return_view(map_with_agents, agent.pos,
-                                          agent.row_size, agent.col_size)
+            agent.grid = map_with_agents
+            # agent.grid = util.return_view(map_with_agents, agent.pos,
+            #                               agent.row_size, agent.col_size)
         self.env.agent_pos.append(start_pos)
 
     def move_agent(self, agent_id, new_pos):
         self.env.agents[agent_id].update_agent_pos(new_pos)
         map_with_agents = self.env.get_map_with_agents()
         agent = self.env.agents[agent_id]
-        agent.grid = util.return_view(map_with_agents, agent.pos,
-                                      agent.row_size, agent.col_size)
+        agent.grid = map_with_agents
+        # agent.grid = util.return_view(map_with_agents, agent.pos,
+        #                               agent.row_size, agent.col_size)
 
     def rotate_agent(self, agent_id, new_rot):
         self.env.agents[agent_id].update_agent_rot(new_rot)

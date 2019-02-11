@@ -6,7 +6,6 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 from ray.rllib.env import MultiAgentEnv
-import utility_funcs as util
 
 ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
            'MOVE_RIGHT': [1, 0],  # Move right
@@ -169,9 +168,6 @@ class MapEnv(MultiAgentEnv):
 
         # move
         self.update_moves(agent_actions)
-        #print('the world shape is {}'.format(self.world_map.shape))
-        #for agent_id in sorted(list(self.agents.keys())):
-            #print('agent {} has position {}'.format(agent_id, self.agents[agent_id].get_pos()))
 
         for agent in self.agents.values():
             pos = agent.get_pos()
@@ -191,8 +187,7 @@ class MapEnv(MultiAgentEnv):
         dones = {}
         info = {}
         for agent in self.agents.values():
-            agent.grid = util.return_view(map_with_agents, agent.pos,
-                                          agent.row_size, agent.col_size)
+            agent.grid = map_with_agents
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
@@ -222,8 +217,9 @@ class MapEnv(MultiAgentEnv):
 
         observations = {}
         for agent in self.agents.values():
-            agent.grid = util.return_view(map_with_agents, agent.pos,
-                                          agent.row_size, agent.col_size)
+            agent.grid = map_with_agents
+            # agent.grid = util.return_view(map_with_agents, agent.pos,
+            #                               agent.row_size, agent.col_size)
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
         return observations
@@ -364,11 +360,6 @@ class MapEnv(MultiAgentEnv):
                 # rotate the selected action appropriately
                 rot_action = self.rotate_action(selected_action, agent.get_orientation())
                 new_pos = agent.get_pos() + rot_action
-                # if new_pos[0] <= 0 or new_pos[1] <= 0 or new_pos[0] == 16 or new_pos[1] == 38:
-                #     print('new pos is {}'.format(new_pos))
-                #     print('old pos is {}'.format(agent.get_pos()))
-                #     agent.return_valid_pos(new_pos)
-                #     print('the cell at pos is {}'.format(self.world_map[new_pos[0], new_pos[1]]))
                 # allow the agents to confirm what position they can move to
                 new_pos = agent.return_valid_pos(new_pos)
                 reserved_slots.append((*new_pos, 'P', agent_id))
@@ -613,6 +604,7 @@ class MapEnv(MultiAgentEnv):
                     if self.world_map[next_cell[0], next_cell[1]] in cell_types:
                         type_index = cell_types.index(self.world_map[next_cell[0], next_cell[1]])
                         updates.append((next_cell[0], next_cell[1], update_char[type_index]))
+
                     firing_points.append((next_cell[0], next_cell[1], fire_char))
 
                     # check if the cell blocks beams. For example, waste blocks beams.
