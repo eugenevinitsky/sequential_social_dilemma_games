@@ -17,9 +17,15 @@ FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string(
     'env', 'cleanup',
     'Name of the environment to rollout. Can be cleanup or harvest.')
+tf.app.flags.DEFINE_string(
+    'algorithm', 'A3C',
+    'Name of the rllib algorithm to use.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
+tf.app.flags.DEFINE_integer(
+    'train_batch_size', 30000,
+    'Size of the total dataset over which one epoch is computed.')
 tf.app.flags.DEFINE_integer(
     'num_cpus', 2,
     'Number of available CPUs')
@@ -47,8 +53,9 @@ cleanup_default_params = {
     'entropy_coeff': -.00176}
 
 
-def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
-          use_gpu_for_driver=False, num_workers_per_device=1):
+def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
+          num_agents, use_gpus_for_workers=False, use_gpu_for_driver=False,
+          num_workers_per_device=1):
 
     if env == 'harvest':
         def env_creator(_):
@@ -81,7 +88,6 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
     model_name = "conv_to_fc_net"
     ModelCatalog.register_custom_model(model_name, ConvToFCNet)
 
-    algorithm = 'A3C'
     agent_cls = get_agent_class(algorithm)
     config = agent_cls._default_config.copy()
 
@@ -106,7 +112,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
     # hyperparams
     config.update({
-                "train_batch_size": 128,
+                "train_batch_size": train_batch_size,
                 "horizon": 1000,
                 "lr_schedule":
                 [[0, hparams['lr_init']],
@@ -134,7 +140,9 @@ def main(unused_argv):
         hparams = harvest_default_params
     else:
         hparams = cleanup_default_params
-    alg_run, env_name, config = setup(FLAGS.env, hparams, FLAGS.num_cpus,
+    alg_run, env_name, config = setup(FLAGS.env, hparams, FLAGS.algorithm,
+                                      FLAGS.train_batch_size,
+                                      FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,
                                       FLAGS.use_gpu_for_driver,
