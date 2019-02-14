@@ -15,6 +15,9 @@ from models.conv_to_fc_net import ConvToFCNet
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
+    'exp_name', None,
+    'Name of the ray_results experiment directory where results are stored.')
+tf.app.flags.DEFINE_string(
     'env', 'cleanup',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_string(
@@ -148,8 +151,14 @@ def main(unused_argv):
                                       FLAGS.use_gpu_for_driver,
                                       FLAGS.num_workers_per_device)
 
+    if FLAGS.exp_name is None:
+        exp_name = FLAGS.env + '_' + FLAGS.algorithm
+    else:
+        exp_name = FLAGS.exp_name
+    print('Commencing experiment', exp_name)
+
     run_experiments({
-        "harvest_test": {
+        exp_name: {
             "run": alg_run,
             "env": env_name,
             "stop": {
