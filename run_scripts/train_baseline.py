@@ -30,6 +30,12 @@ tf.app.flags.DEFINE_integer(
     'train_batch_size', 30000,
     'Size of the total dataset over which one epoch is computed.')
 tf.app.flags.DEFINE_integer(
+    'checkpoint_frequency', 20,
+    'Number of steps before a checkpoint is saved.')
+tf.app.flags.DEFINE_integer(
+    'training_iterations', 10000,
+    'Total number of steps to train for')
+tf.app.flags.DEFINE_integer(
     'num_cpus', 2,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
@@ -162,9 +168,9 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 300000
+                "training_iteration": FLAGS.training_iterations
             },
-            'checkpoint_freq': 1000,
+            'checkpoint_freq': FLAGS.checkpoint_frequency,
             "config": config,
         }
     })
