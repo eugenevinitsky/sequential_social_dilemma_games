@@ -13,9 +13,9 @@ from ray.rllib.models.model import Model
 import tensorflow.contrib.slim as slim
 
 
-class ConvToFCNet(Model):
+class ConvToFCNetActions(Model):
     def _build_layers_v2(self, input_dict, num_outputs, options):
-
+        import pdb; pdb.set_trace()
         inputs = input_dict["obs"]
 
         hiddens = [32, 32]
