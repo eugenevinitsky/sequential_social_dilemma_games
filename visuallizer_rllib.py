@@ -104,18 +104,10 @@ def visualizer_rllib(args):
     for key in config['multiagent']['policy_graphs'].keys():
         rets[key] = []
 
-    if config['model']['use_lstm']:
-        use_lstm = True
-        state_init = [
-            np.zeros(config['model']['lstm_cell_size'], np.float32),
-            np.zeros(config['model']['lstm_cell_size'], np.float32)
-        ]
-    else:
-        use_lstm = False
-
     for i in range(args.num_rollouts):
         state = env.reset()
         done = False
+        hidden_state_keys = {}
         if multiagent:
             ret = {key: [0] for key in rets.keys()}
         else:
@@ -124,9 +116,16 @@ def visualizer_rllib(args):
             action = {}
             print('Reminder: world map dimensions are:', env.world_map.shape)
             for agent_id in state.keys():
-                if use_lstm:
-                    action[agent_id], state_init, logits = agent.compute_action(
-                        state[agent_id], state=state_init, policy_id=policy_map_fn(agent_id))
+                if config['model']['use_lstm']:
+                    if agent_id not in hidden_state_keys.keys():
+                        hidden_state_keys[agent_id] = [
+                            np.zeros(config['model']['lstm_cell_size'], np.float32),
+                            np.zeros(config['model']['lstm_cell_size'], np.float32)
+                        ]
+                    action[agent_id], hidden_state_keys[agent_id], \
+                        logits = agent.compute_action(
+                            state[agent_id], state=hidden_state_keys[agent_id],
+                            policy_id=policy_map_fn(agent_id))
                 else:
                     action[agent_id] = agent.compute_action(
                         state[agent_id], policy_id=policy_map_fn(agent_id))
