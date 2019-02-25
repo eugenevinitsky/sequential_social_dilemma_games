@@ -102,15 +102,6 @@ def visualizer_rllib(args):
     for key in config['multiagent']['policy_graphs'].keys():
         rets[key] = []
 
-    if config['model']['use_lstm']:
-        use_lstm = True
-        state_init = [
-            np.zeros(config['model']['lstm_cell_size'], np.float32),
-            np.zeros(config['model']['lstm_cell_size'], np.float32)
-        ]
-    else:
-        use_lstm = False
-
     for i in range(args.num_rollouts):
         state = env.reset()
         done = False
@@ -122,7 +113,7 @@ def visualizer_rllib(args):
         for j in range(config["horizon"]):
             action = {}
             for agent_id in state.keys():
-                if use_lstm:
+                if config['model']['use_lstm']:
                     if agent_id not in hidden_state_keys.keys():
                         hidden_state_keys[agent_id] = [
                             np.zeros(config['model']['lstm_cell_size'], np.float32),
