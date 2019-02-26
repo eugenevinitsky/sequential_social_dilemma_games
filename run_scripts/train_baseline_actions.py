@@ -66,13 +66,15 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
     act_space = single_env.action_space
 
     # Each policy can have a different configuration (including custom model)
-    def gen_policy():
-        return (DQNPolicyGraph, obs_space, act_space, {'num_other_agents': num_agents - 1})
+    def gen_policy(agent_id):
+        return (DQNPolicyGraph, obs_space, act_space, {'num_other_agents': num_agents - 1,
+                                                       'agent_id': agent_id})
 
     # Setup PPO with an ensemble of `num_policies` different policy graphs
     policy_graphs = {}
     for i in range(num_agents):
-        policy_graphs['agent-' + str(i)] = gen_policy()
+        agent_id = 'agent-' + str(i)
+        policy_graphs[agent_id] = gen_policy(agent_id)
 
     def policy_mapping_fn(agent_id):
         return agent_id
