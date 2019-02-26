@@ -15,7 +15,14 @@ import tensorflow.contrib.slim as slim
 
 class ConvToFCNetActions(Model):
     def _build_layers_v2(self, input_dict, num_outputs, options):
-        import pdb; pdb.set_trace()
+        others_actions = input_dict["other_actions"]
+        num_other_agents = options["custom_options"]["num_other_agents"]
+        # Reshape others actions into size:
+        # [batch_size, num_outputs * num_other_agents]
+        others_actions = tf.reshape(others_actions,
+                                    [-1, num_outputs * num_other_agents])
+        others_actions = tf.cast(others_actions, tf.float32)
+
         inputs = input_dict["obs"]
 
         hiddens = [32, 32]
@@ -38,10 +45,17 @@ class ConvToFCNetActions(Model):
                     activation_fn=tf.nn.relu,
                     scope=label)
                 i += 1
+
+            # Add the others_actions in as input directly to the LSTM
+            last_layer = tf.concat([last_layer, others_actions], 1)
+
+            # Add an output layer just in case
             output = slim.fully_connected(
                 last_layer,
                 num_outputs,
-                weights_initializer=normc_initializer(0.01),
-                activation_fn=None,
-                scope="fc_out")
+                weights_initializer=normc_initializer(1.0),
+                activation_fn=tf.nn.relu,
+                scope="output_layer",
+            )
+
             return output, last_layer

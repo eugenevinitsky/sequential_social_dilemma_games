@@ -1,7 +1,7 @@
 import ray
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
-from ray.rllib.agents.dqn.dqn_policy_graph import DQNPolicyGraph
+from ray.rllib.agents.causal_dqn.dqn_policy_graph import DQNPolicyGraph
 from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
@@ -67,7 +67,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
     # Each policy can have a different configuration (including custom model)
     def gen_policy():
-        return (DQNPolicyGraph, obs_space, act_space, {})
+        return (DQNPolicyGraph, obs_space, act_space, {'num_other_agents': num_agents - 1})
 
     # Setup PPO with an ensemble of `num_policies` different policy graphs
     policy_graphs = {}
@@ -78,8 +78,8 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         return agent_id
 
     # register the custom model
-    model_name = "conv_to_fc_net"
-    ModelCatalog.register_custom_model(model_name, ConvToFCNet)
+    model_name = "conv_to_fc_net_actions"
+    ModelCatalog.register_custom_model(model_name, ConvToFCNetActions)
 
     algorithm = 'DQN'
     agent_cls = get_agent_class(algorithm)
@@ -117,8 +117,9 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
                 },
-                "model": {"custom_model": "conv_to_fc_net", "use_lstm": False,
-                          "lstm_cell_size": 128}
+                "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": False,
+                          "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
+                          "custom_options": {"num_other_agents": num_agents - 1}}
 
     })
     return algorithm, env_name, config
