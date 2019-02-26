@@ -1156,7 +1156,7 @@ class TestCleanupEnv(unittest.TestCase):
             if self.env.compute_permitted_area() == 4:
                 break
         self.env.compute_probabilities()
-        self.assertTrue(np.isclose(self.env.current_apple_spawn_prob, 0.1))
+        self.assertTrue(np.isclose(self.env.current_apple_spawn_prob, 0.025))
 
         # test that you can spawn waste under an agent
         self.move_agent('agent-0', [3, 2])
