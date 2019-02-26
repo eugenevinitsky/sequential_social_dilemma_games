@@ -12,9 +12,9 @@ ACTIONS['CLEAN'] = 5  # length of cleanup beam
 
 # Custom colour dictionary
 CLEANUP_COLORS = {'C': [100, 255, 255],  # Cyan cleaning beam
-                  'S': [99, 156, 194],  # Light grey-blue stream cell
-                  'H': [113, 75, 24],  # brown waste cells
-                  'R': [99, 156, 194]}  # Light grey-blue river cell
+                  'S': [113, 75, 24],  # Light grey-blue stream cell
+                  'H': [99, 156, 194],  # brown waste cells
+                  'R': [113, 75, 24]}  # Light grey-blue river cell
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
@@ -28,10 +28,6 @@ class CleanupEnv(MapEnv):
 
     def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False):
         super().__init__(ascii_map, num_agents, render)
-
-        # FIXME(ev) this is a temporary way to prevent agent views
-        # FIXME(ev) from hiding firing beams
-        self.no_update_cells = ['F', 'C']
 
         # compute potential waste area
         unique, counts = np.unique(self.base_map, return_counts=True)
