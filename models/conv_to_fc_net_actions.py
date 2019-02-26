@@ -49,12 +49,12 @@ class ConvToFCNetActions(Model):
             # Add the others_actions in as input directly to the LSTM
             last_layer = tf.concat([last_layer, others_actions], 1)
 
-            # Add an output layer just in case
+            # Add an output layer just in case LSTM not used
             output = slim.fully_connected(
                 last_layer,
                 num_outputs,
-                weights_initializer=normc_initializer(1.0),
-                activation_fn=tf.nn.relu,
+                weights_initializer=normc_initializer(.01),
+                activation_fn=None,
                 scope="output_layer",
             )
 
