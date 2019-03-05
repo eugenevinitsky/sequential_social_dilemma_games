@@ -9,7 +9,7 @@ import tensorflow as tf
 
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
-from models.conv_to_fc_net import ConvToFCNet
+from models.conv_to_fc_net_no_lstm import ConvToFCNet
 
 
 FLAGS = tf.app.flags.FLAGS
@@ -78,7 +78,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         return agent_id
 
     # register the custom model
-    model_name = "conv_to_fc_net"
+    model_name = "conv_to_fc_net_no_lstm"
     ModelCatalog.register_custom_model(model_name, ConvToFCNet)
 
     algorithm = 'DQN'
@@ -117,8 +117,8 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
                 },
-                "model": {"custom_model": "conv_to_fc_net", "use_lstm": False,
-                          "lstm_cell_size": 128}
+                "model": {"custom_model": "conv_to_fc_net_no_lstm",
+                          "use_lstm": False, "lstm_cell_size": 128}
 
     })
     return algorithm, env_name, config

@@ -13,14 +13,8 @@ from ray.rllib.models.model import Model
 import tensorflow.contrib.slim as slim
 
 
-class ConvToFCNetActions(Model):
+class ConvToFCNet(Model):
     def _build_layers_v2(self, input_dict, num_outputs, options):
-        # Extract other agents' actions
-        actions_batch = input_dict["other_actions"]
-        num_other_agents = options["custom_options"]["num_other_agents"]
-        one_hot_actions = tf.one_hot(actions_batch, num_outputs)
-        others_actions = tf.reshape(one_hot_actions, [-1, num_outputs * num_other_agents])
-        others_actions = tf.cast(others_actions, tf.float32)
 
         inputs = input_dict["obs"]
 
@@ -44,17 +38,10 @@ class ConvToFCNetActions(Model):
                     activation_fn=tf.nn.relu,
                     scope=label)
                 i += 1
-
-            # Add the others_actions in as input directly to the LSTM
-            last_layer = tf.concat([last_layer, others_actions], 1)
-
-            # Add an output layer just in case LSTM not used
             output = slim.fully_connected(
                 last_layer,
                 num_outputs,
-                weights_initializer=normc_initializer(.01),
+                weights_initializer=normc_initializer(0.01),
                 activation_fn=None,
-                scope="output_layer",
-            )
-
+                scope="fc_out")
             return output, last_layer
