@@ -1,7 +1,7 @@
 import ray
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
-from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
+from ray.rllib.agents.a3c.a3c_tf_policy_graph import A3CPolicyGraph
 from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
@@ -67,7 +67,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
     # Each policy can have a different configuration (including custom model)
     def gen_policy():
-        return (PPOPolicyGraph, obs_space, act_space, {})
+        return (A3CPolicyGraph, obs_space, act_space, {})
 
     # Setup PPO with an ensemble of `num_policies` different policy graphs
     policy_graphs = {}
@@ -108,15 +108,14 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
     config.update({
                 "train_batch_size": 128,
                 "horizon": 1000,
-                "lr_schedule":
-                [[0, hparams['lr_init']],
-                    [20000000, hparams['lr_final']]],
+                "lr_schedule": [[0, tune.grid_search([5e-4, 5e-3])],
+                                [20000000, tune.grid_search([5e-4, 5e-5, 5e-6])]],
                 "num_workers": num_workers,
                 "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
                 "num_cpus_for_driver": cpus_for_driver,
                 "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
                 "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-                "entropy_coeff": hparams['entropy_coeff'],
+                "entropy_coeff": tune.grid_search([-5e3, -5e4, -5e5]),
                 "multiagent": {
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -147,7 +146,7 @@ def main(unused_argv):
             "stop": {
                 "training_iteration": 300000
             },
-            'checkpoint_freq': 10000,
+            'checkpoint_freq': 1000,
             "config": config,
         }
     })
