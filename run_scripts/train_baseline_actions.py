@@ -143,7 +143,7 @@ def main(unused_argv):
                                       FLAGS.num_workers_per_device)
 
     if FLAGS.exp_name is None:
-        exp_name = FLAGS.env + '_' + FLAGS.algorithm
+        exp_name = FLAGS.env + '_DQN_actions'
     else:
         exp_name = FLAGS.exp_name
     print('Commencing experiment', exp_name)
