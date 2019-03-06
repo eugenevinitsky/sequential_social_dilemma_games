@@ -42,12 +42,12 @@ tf.app.flags.DEFINE_float(
 harvest_default_params = {
     'lr_init': 0.00136,
     'lr_final': 0.000028,
-    'entropy_coeff': -.000687}
+    'entropy_coeff': .000687}
 
 cleanup_default_params = {
     'lr_init': 0.00126,
     'lr_final': 0.000012,
-    'entropy_coeff': -.00176}
+    'entropy_coeff': .00176}
 
 
 def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
@@ -112,13 +112,13 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                 "train_batch_size": 128,
                 "horizon": 1000,
                 "lr_schedule": [[0, tune.grid_search([5e-4, 5e-3])],
-                                [20000000, tune.grid_search([5e-4, 5e-5, 5e-6])]],
+                                [20000000, tune.grid_search([5e-4, 5e-5])]],
                 "num_workers": num_workers,
                 "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
                 "num_cpus_for_driver": cpus_for_driver,
                 "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
                 "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-                "entropy_coeff": tune.grid_search([-5e-3, -5e-4, -5e-5]),
+                "entropy_coeff": tune.grid_search([5e-3, 5e-4, 5e-5]),
                 "multiagent": {
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
