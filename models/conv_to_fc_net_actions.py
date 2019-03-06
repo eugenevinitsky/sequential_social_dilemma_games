@@ -44,7 +44,7 @@ class ConvToFCNetActions(Model):
                     activation_fn=tf.nn.relu,
                     scope=label)
                 i += 1
-            
+
             # Add the others_actions in as input directly to the LSTM
             last_layer = tf.concat([last_layer, others_actions], 1)
 

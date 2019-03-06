@@ -70,7 +70,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
     # Each policy can have a different configuration (including custom model)
     def gen_policy(agent_id):
-        return (A3CPolicyGraph, obs_space, act_space, 
+        return (A3CPolicyGraph, obs_space, act_space,
                 {'num_other_agents': num_agents - 1, 'agent_id': agent_id})
 
     # Setup A3C with an ensemble of `num_policies` different policy graphs
