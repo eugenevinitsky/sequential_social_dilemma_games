@@ -131,7 +131,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
 
 def main(unused_argv):
-    ray.init(num_cpus=FLAGS.num_cpus, redirect_output=True)
+    ray.init(num_cpus=FLAGS.num_cpus)
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
