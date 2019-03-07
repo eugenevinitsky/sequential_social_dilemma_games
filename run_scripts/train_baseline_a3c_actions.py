@@ -54,7 +54,7 @@ cleanup_default_params = {
 
 
 def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
-          use_gpu_for_driver=False, num_workers_per_device=1, tune=False):
+          use_gpu_for_driver=False, num_workers_per_device=1, tune_hparams=False):
 
     if env == 'harvest':
         def env_creator(_):
@@ -115,7 +115,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         num_cpus_per_worker = spare_cpus / num_workers
 
     # hyperparams
-    if tune:
+    if tune_hparams:
         config.update({
                     "train_batch_size": 128,
                     "horizon": 1000,
@@ -132,8 +132,8 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                         "policy_mapping_fn": tune.function(policy_mapping_fn),
                     },
                     "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
-                            "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
-                            "custom_options": {"num_other_agents": num_agents - 1}}
+                              "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
+                              "custom_options": {"num_other_agents": num_agents - 1}}
 
         })
     else:
@@ -153,8 +153,8 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                         "policy_mapping_fn": tune.function(policy_mapping_fn),
                     },
                     "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
-                            "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
-                            "custom_options": {"num_other_agents": num_agents - 1}}
+                              "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
+                              "custom_options": {"num_other_agents": num_agents - 1}}
 
         })
     return algorithm, env_name, config
