@@ -16,7 +16,7 @@ import tensorflow.contrib.slim as slim
 class ConvToFCNetActions(Model):
     def _build_layers_v2(self, input_dict, num_outputs, options):
         # Extract other agents' actions
-        actions_batch = input_dict["other_actions"]
+        actions_batch = input_dict["others_actions"]
         num_other_agents = options["custom_options"]["num_other_agents"]
         one_hot_actions = tf.one_hot(actions_batch, num_outputs)
         others_actions = tf.reshape(one_hot_actions, [-1, num_outputs * num_other_agents])

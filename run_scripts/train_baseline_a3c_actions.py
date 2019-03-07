@@ -38,6 +38,9 @@ tf.app.flags.DEFINE_boolean(
 tf.app.flags.DEFINE_float(
     'num_workers_per_device', 2,
     'Number of workers to place on a single device (CPU or GPU)')
+tf.app.flags.DEFINE_boolean(
+    'tune', False,
+    'Set to true to do hyperparameter tuning.')
 
 harvest_default_params = {
     'lr_init': 0.00136,
@@ -51,16 +54,18 @@ cleanup_default_params = {
 
 
 def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
-          use_gpu_for_driver=False, num_workers_per_device=1):
+          use_gpu_for_driver=False, num_workers_per_device=1, tune=False):
 
     if env == 'harvest':
         def env_creator(_):
             return HarvestEnv(num_agents=num_agents)
         single_env = HarvestEnv()
+        default_hparams = harvest_default_params
     else:
         def env_creator(_):
             return CleanupEnv(num_agents=num_agents)
         single_env = CleanupEnv()
+        default_hparams = cleanup_default_params
 
     env_name = env + "_env"
     register_env(env_name, env_creator)
@@ -110,26 +115,48 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         num_cpus_per_worker = spare_cpus / num_workers
 
     # hyperparams
-    config.update({
-                "train_batch_size": 128,
-                "horizon": 1000,
-                "lr_schedule": [[0, tune.grid_search([5e-4, 5e-3])],
-                                [20000000, tune.grid_search([5e-4, 5e-5, 5e-6])]],
-                "num_workers": num_workers,
-                "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
-                "num_cpus_for_driver": cpus_for_driver,
-                "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
-                "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-                "entropy_coeff": tune.grid_search([5e-3, 5e-4, 5e-5]),
-                "multiagent": {
-                    "policy_graphs": policy_graphs,
-                    "policy_mapping_fn": tune.function(policy_mapping_fn),
-                },
-                "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
-                          "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
-                          "custom_options": {"num_other_agents": num_agents - 1}}
+    if tune:
+        config.update({
+                    "train_batch_size": 128,
+                    "horizon": 1000,
+                    "lr_schedule": [[0, tune.grid_search([5e-4, 5e-3])],
+                                    [20000000, tune.grid_search([5e-4, 5e-5, 5e-6])]],
+                    "num_workers": num_workers,
+                    "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
+                    "num_cpus_for_driver": cpus_for_driver,
+                    "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
+                    "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
+                    "entropy_coeff": tune.grid_search([5e-3, 5e-4, 5e-5]),
+                    "multiagent": {
+                        "policy_graphs": policy_graphs,
+                        "policy_mapping_fn": tune.function(policy_mapping_fn),
+                    },
+                    "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
+                            "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
+                            "custom_options": {"num_other_agents": num_agents - 1}}
 
-    })
+        })
+    else:
+        config.update({
+                    "train_batch_size": 128,
+                    "horizon": 1000,
+                    "lr_schedule": [[0, default_hparams['lr_init']],
+                                    [20000000, default_hparams['lr_final']]],
+                    "num_workers": num_workers,
+                    "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
+                    "num_cpus_for_driver": cpus_for_driver,
+                    "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
+                    "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
+                    "entropy_coeff": default_hparams['entropy_coeff'],
+                    "multiagent": {
+                        "policy_graphs": policy_graphs,
+                        "policy_mapping_fn": tune.function(policy_mapping_fn),
+                    },
+                    "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
+                            "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
+                            "custom_options": {"num_other_agents": num_agents - 1}}
+
+        })
     return algorithm, env_name, config
 
 
@@ -143,7 +170,7 @@ def main(unused_argv):
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,
                                       FLAGS.use_gpu_for_driver,
-                                      FLAGS.num_workers_per_device)
+                                      FLAGS.num_workers_per_device, FLAGS.tune)
 
     if FLAGS.exp_name is None:
         exp_name = FLAGS.env + '_A3C_actions'
