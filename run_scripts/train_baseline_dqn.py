@@ -159,7 +159,7 @@ def main(unused_argv):
             "config": config,
             "resume": FLAGS.resume,
         }
-    })
+    }, resume=FLAGS.resume)
 
 
 if __name__ == '__main__':

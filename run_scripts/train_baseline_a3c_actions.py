@@ -187,9 +187,8 @@ def main(unused_argv):
             },
             'checkpoint_freq': 1000,
             "config": config,
-            "resume": FLAGS.resume,
         }
-    })
+    }, resume=FLAGS.resume)
 
 
 if __name__ == '__main__':
