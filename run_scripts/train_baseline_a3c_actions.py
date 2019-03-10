@@ -36,7 +36,7 @@ tf.app.flags.DEFINE_boolean(
     'use_gpu_for_driver', False,
     'Set to true to run driver on GPU rather than CPU.')
 tf.app.flags.DEFINE_float(
-    'num_workers_per_device', 2,
+    'num_workers_per_device', 1,
     'Number of workers to place on a single device (CPU or GPU)')
 tf.app.flags.DEFINE_boolean(
     'tune', False,
@@ -187,6 +187,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 1000,
             "config": config,
+            "resume": FLAGS.resume,
         }
     })
 

@@ -38,6 +38,9 @@ tf.app.flags.DEFINE_boolean(
 tf.app.flags.DEFINE_float(
     'num_workers_per_device', 1,
     'Number of workers to place on a single device (CPU or GPU)')
+tf.app.flags.DEFINE_boolean(
+    'resume', False,
+    'Set to true to resume a previously stopped experiment.')
 
 harvest_default_params = {
     'lr_init': 0.00136,
@@ -157,6 +160,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 1000,
             "config": config,
+            "resume": FLAGS.resume,
         }
     })
 
