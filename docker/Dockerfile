@@ -31,6 +31,7 @@ RUN wget https://www.python.org/ftp/python/3.6.7/Python-3.6.7.tar.xz \
 # Install project-specific python libraries
 RUN pip install tensorflow-gpu==1.12.0 gym matplotlib opencv-python lz4 psutil flake8 ray
 
+# Symlinking for making ray work
 RUN rm -r /usr/local/lib/python3.6/site-packages/ray/rllib \
 	&& ln -s /ray/python/ray/rllib /usr/local/lib/python3.6/site-packages/ray/rllib \
 	&& rm -r /usr/local/lib/python3.6/site-packages/ray/tune \
