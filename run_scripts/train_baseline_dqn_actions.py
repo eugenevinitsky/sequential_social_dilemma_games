@@ -86,7 +86,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         return agent_id
 
     # register the custom model
-    model_name = "conv_to_fc_net_actions_no_lstm"
+    model_name = "conv_to_fc_net_actions"
     ModelCatalog.register_custom_model(model_name, ConvToFCNetActions)
 
     algorithm = 'DQN'
@@ -125,8 +125,8 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
                 },
-                "model": {"custom_model": "conv_to_fc_net_actions_no_lstm", "use_lstm": False,
-                          "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
+                "model": {"custom_model": "conv_to_fc_net_actions", 
+                          "lstm_cell_size": 128, "use_lstm": False,
                           "custom_options": {"num_other_agents": num_agents - 1}}
 
     })
