@@ -31,4 +31,6 @@ RUN wget https://www.python.org/ftp/python/3.6.7/Python-3.6.7.tar.xz \
 # Install project-specific python libraries
 RUN pip install tensorflow-gpu==1.12.0 gym matplotlib opencv-python lz4 psutil flake8 ray
 
+RUN ln -s /ray/python/ray/rllib /usr/local/lib/python3.6/site-packages/ray/rllib
+
 WORKDIR /project
