@@ -41,6 +41,12 @@ tf.app.flags.DEFINE_float(
 tf.app.flags.DEFINE_boolean(
     'tune', False,
     'Set to true to do hyperparameter tuning.')
+tf.app.flags.DEFINE_boolean(
+    'debug', False,
+    'Set to true to run in a debugging / testing mode with less memory.')
+tf.app.flags.DEFINE_boolean(
+    'resume', False,
+    'Set to true to resume a previously stopped experiment.')
 
 harvest_default_params = {
     'lr_init': 0.00136,
@@ -161,8 +167,12 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
 
 def main(unused_argv):
-    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(2e10), 
-             redis_max_memory=int(1e10))
+    if FLAGS.debug:
+        ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e9), 
+                 redis_max_memory=int(1e9))
+    else:
+        ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(2e10), 
+                 redis_max_memory=int(1e10))
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
