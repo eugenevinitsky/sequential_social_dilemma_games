@@ -125,7 +125,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
                 },
-                "model": {"custom_model": "conv_to_fc_net_actions", 
+                "model": {"custom_model": "conv_to_fc_net_actions",
                           "lstm_cell_size": 128, "use_lstm": False,
                           "custom_options": {"num_other_agents": num_agents - 1}}
 
@@ -134,7 +134,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
 
 def main(unused_argv):
-    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(2e10), 
+    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(2e10),
              redis_max_memory=int(1e10))
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
