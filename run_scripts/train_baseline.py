@@ -49,6 +49,7 @@ cleanup_default_params = {
     'lr_final': 0.000012,
     'entropy_coeff': -.00176}
 
+n_cpus = 50
 
 def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
           use_gpu_for_driver=False, num_workers_per_device=1):
@@ -109,17 +110,17 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
     # hyperparams
     config.update({
-                "train_batch_size": 128,
+                "train_batch_size": 2000,
                 "horizon": 1000,
-                "lr_schedule":
-                [[0, hparams['lr_init']],
-                    [20000000, hparams['lr_final']]],
-                "num_workers": num_workers,
-                "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
-                "num_cpus_for_driver": cpus_for_driver,
-                "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
-                "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-                "entropy_coeff": hparams['entropy_coeff'],
+                # "lr_schedule":
+                # [[0, hparams['lr_init']],
+                #     [20000000, hparams['lr_final']]],
+                "num_workers": n_cpus,
+                # "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
+                # "num_cpus_for_driver": cpus_for_driver,
+                # "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
+                # "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
+                # "entropy_coeff": hparams['entropy_coeff'],
                 "multiagent": {
                     "policy_graphs": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -159,6 +160,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 10000,
             "config": config,
+            'upload_dir': 's3://eugene.experiments/causal_dqn'
         }
     })
 

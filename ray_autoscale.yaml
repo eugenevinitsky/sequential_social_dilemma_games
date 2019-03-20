@@ -42,7 +42,7 @@ auth:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
     InstanceType: m4.10xlarge
-    ImageId: ami-0e9354081933c4fd8 # Flow AMI (Ubuntu)
+    ImageId: ami-032c0cb1a90909f2d # Flow AMI (Ubuntu)
     InstanceMarketOptions:
         MarketType: spot
          #Additional options can be found in the boto docs, e.g.
@@ -62,7 +62,7 @@ head_node:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
     InstanceType: m4.10xlarge
-    ImageId: ami-0e9354081933c4fd8 # Flow AMI (Ubuntu)
+    ImageId: ami-032c0cb1a90909f2d # Flow AMI (Ubuntu)
 
     #Run workers on spot by default. Comment this out to use on-demand.
     InstanceMarketOptions:
@@ -80,13 +80,11 @@ setup_commands:
     # checkout your desired branch on all worker nodes
     - echo 'export PATH="/home/ubuntu/anaconda3/bin:$PATH"' >> ~/.bashrc
     - git clone https://github.com/eugenevinitsky/sequential_social_dilemma_games
-    - cd sequential_social_dilemma_games && conda env create -f environment.yml --yes
-    - source activate causal && cd sequential_social_dilemma_games && python setup.py develop
+    - cd sequential_social_dilemma_games && pip install -r requirements_autoscale.txt
+    - cd sequential_social_dilemma_games && python setup.py develop
     - cd sequential_social_dilemma_games && git checkout visible_actions
     - git clone https://github.com/natashamjaques/ray
     - cd ray/python/ray/rllib && git checkout causal_a3c && python setup-rllib-dev.py --yes
-    - cd sequential_social_dilemma_games && git fetch && git pull origin master
-    # - cd LQR/cpremote_run && pip install -r requirements.txt
 
 # Custom commands that will be run on the head node after common setup.
 head_setup_commands:
