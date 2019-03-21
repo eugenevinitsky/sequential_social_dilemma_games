@@ -3,6 +3,7 @@
 from gym.spaces import Box
 from gym.spaces import Discrete
 import numpy as np
+import utility_funcs as util
 
 # basic moves every agent should do
 BASE_ACTIONS = {0: 'MOVE_LEFT',  # Move left
@@ -75,7 +76,8 @@ class Agent(object):
         raise NotImplementedError
 
     def get_state(self):
-        return self.grid
+        return util.return_view(self.grid, self.get_pos(),
+                                self.row_size, self.col_size)
 
     def compute_reward(self):
         reward = self.reward_this_turn
@@ -102,6 +104,16 @@ class Agent(object):
     def get_map(self):
         return self.grid
 
+    def return_valid_pos(self, new_pos):
+        """Checks that the next pos is legal, if not return current pos"""
+        ego_new_pos = new_pos  # self.translate_pos_to_egocentric_coord(new_pos)
+        new_row, new_col = ego_new_pos
+        # you can't walk through walls
+        temp_pos = new_pos.copy()
+        if self.grid[new_row, new_col] == '@':
+            temp_pos = self.get_pos()
+        return temp_pos
+
     def update_agent_pos(self, new_pos):
         """Updates the agents internal positions
 
@@ -113,13 +125,13 @@ class Agent(object):
             2 element array describing the agent positions
         """
         old_pos = self.get_pos()
-        ego_new_pos = self.translate_pos_to_egocentric_coord(new_pos)
+        ego_new_pos = new_pos  # self.translate_pos_to_egocentric_coord(new_pos)
         new_row, new_col = ego_new_pos
         # you can't walk through walls
+        temp_pos = new_pos.copy()
         if self.grid[new_row, new_col] == '@':
-            new_pos = self.get_pos()
-
-        self.set_pos(new_pos)
+            temp_pos = self.get_pos()
+        self.set_pos(temp_pos)
         # TODO(ev) list array consistency
         return self.get_pos(), np.array(old_pos)
 

@@ -20,11 +20,23 @@ tf.app.flags.DEFINE_string(
 tf.app.flags.DEFINE_string(
     'env', 'harvest',
     'Name of the environment to rollout. Can be cleanup or harvest.')
+tf.app.flags.DEFINE_string(
+    'algorithm', 'A3C',
+    'Name of the rllib algorithm to use.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 39,
+    'train_batch_size', 30000,
+    'Size of the total dataset over which one epoch is computed.')
+tf.app.flags.DEFINE_integer(
+    'checkpoint_frequency', 20,
+    'Number of steps before a checkpoint is saved.')
+tf.app.flags.DEFINE_integer(
+    'training_iterations', 10000,
+    'Total number of steps to train for')
+tf.app.flags.DEFINE_integer(
+    'num_cpus', 2,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
     'num_gpus', 0,
@@ -50,8 +62,9 @@ cleanup_default_params = {
     'entropy_coeff': -.00176}
 
 
-def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
-          use_gpu_for_driver=False, num_workers_per_device=1):
+def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
+          num_agents, use_gpus_for_workers=False, use_gpu_for_driver=False,
+          num_workers_per_device=1):
 
     if env == 'harvest':
         def env_creator(_):
@@ -84,7 +97,6 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
     model_name = "conv_to_fc_net"
     ModelCatalog.register_custom_model(model_name, ConvToFCNet)
 
-    algorithm = 'A3C'
     agent_cls = get_agent_class(algorithm)
     config = agent_cls._default_config.copy()
 
@@ -109,7 +121,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
     # hyperparams
     config.update({
-                "train_batch_size": 2000,
+                "train_batch_size": train_batch_size,
                 "horizon": 1000,
                 # "lr_schedule":
                 # [[0, hparams['lr_init']],
@@ -138,7 +150,9 @@ def main(unused_argv):
         hparams = harvest_default_params
     else:
         hparams = cleanup_default_params
-    alg_run, env_name, config = setup(FLAGS.env, hparams, FLAGS.num_cpus,
+    alg_run, env_name, config = setup(FLAGS.env, hparams, FLAGS.algorithm,
+                                      FLAGS.train_batch_size,
+                                      FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,
                                       FLAGS.use_gpu_for_driver,
@@ -155,9 +169,9 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 10000
+      "training_iteration": FLAGS.training_iterations
             },
-            'checkpoint_freq': 500,
+            'checkpoint_freq': FLAGS.checkpoint_frequency,
             "config": config,
             'upload_dir': 's3://eugene.experiments/causal_reward/test_baseline_harvest2'
         }
