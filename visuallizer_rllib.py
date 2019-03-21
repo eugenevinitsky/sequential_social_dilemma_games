@@ -204,5 +204,5 @@ def create_parser():
 if __name__ == '__main__':
     parser = create_parser()
     args = parser.parse_args()
-    ray.init(num_cpus=2, redirect_output=False)
+    ray.init(num_cpus=2)
     visualizer_rllib(args)

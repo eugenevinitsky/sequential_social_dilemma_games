@@ -1,7 +1,7 @@
 import ray
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
-from ray.rllib.agents.ppo.ppo_policy_graph import PPOPolicyGraph
+from ray.rllib.agents.a3c.a3c_tf_policy_graph import A3CPolicyGraph
 from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
@@ -15,19 +15,19 @@ from models.conv_to_fc_net import ConvToFCNet
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', None,
+    'exp_name', 'test_dir',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
-    'env', 'cleanup',
+    'env', 'harvest',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 2,
+    'num_cpus', 39,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
-    'num_gpus', 1,
+    'num_gpus', 0,
     'Number of available GPUs')
 tf.app.flags.DEFINE_boolean(
     'use_gpus_for_workers', False,
@@ -36,7 +36,7 @@ tf.app.flags.DEFINE_boolean(
     'use_gpu_for_driver', False,
     'Set to true to run driver on GPU rather than CPU.')
 tf.app.flags.DEFINE_float(
-    'num_workers_per_device', 2,
+    'num_workers_per_device', 1,
     'Number of workers to place on a single device (CPU or GPU)')
 
 harvest_default_params = {
@@ -49,7 +49,6 @@ cleanup_default_params = {
     'lr_final': 0.000012,
     'entropy_coeff': -.00176}
 
-n_cpus = 50
 
 def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
           use_gpu_for_driver=False, num_workers_per_device=1):
@@ -71,9 +70,9 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
     # Each policy can have a different configuration (including custom model)
     def gen_policy():
-        return (PPOPolicyGraph, obs_space, act_space, {})
+        return (A3CPolicyGraph, obs_space, act_space, {})
 
-    # Setup PPO with an ensemble of `num_policies` different policy graphs
+    # Setup A3C with an ensemble of `num_policies` different policy graphs
     policy_graphs = {}
     for i in range(num_agents):
         policy_graphs['agent-' + str(i)] = gen_policy()
@@ -115,7 +114,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                 # "lr_schedule":
                 # [[0, hparams['lr_init']],
                 #     [20000000, hparams['lr_final']]],
-                "num_workers": n_cpus,
+                "num_workers": num_workers,
                 "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
                 "num_cpus_for_driver": cpus_for_driver,
                 "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
@@ -156,11 +155,11 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 300000
+                "training_iteration": 10000
             },
-            'checkpoint_freq': 10000,
+            'checkpoint_freq': 500,
             "config": config,
-            'upload_dir': 's3://eugene.experiments/causal_dqn'
+            'upload_dir': 's3://eugene.experiments/causal_reward/test_baseline_harvest2'
         }
     })
 
