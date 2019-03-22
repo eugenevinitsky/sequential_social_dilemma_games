@@ -7,6 +7,7 @@ import numpy as np
 import os
 import shutil
 import sys
+import pdb
 
 import ray
 from ray.rllib.agents.registry import get_agent_class
@@ -87,6 +88,7 @@ def visualizer_rllib(args):
     agent = agent_cls(env=env_name, config=config)
     checkpoint = result_dir + '/checkpoint_' + args.checkpoint_num
     checkpoint = checkpoint + '/checkpoint-' + args.checkpoint_num
+    print('Loading checkpoint', checkpoint)
     agent.restore(checkpoint)
     if hasattr(agent, "local_evaluator"):
         env = agent.local_evaluator.env
@@ -102,34 +104,44 @@ def visualizer_rllib(args):
     for key in config['multiagent']['policy_graphs'].keys():
         rets[key] = []
 
-    if config['model']['use_lstm']:
-        use_lstm = True
-        state_init = [
-            np.zeros(config['model']['lstm_cell_size'], np.float32),
-            np.zeros(config['model']['lstm_cell_size'], np.float32)
-        ]
-    else:
-        use_lstm = False
-
     for i in range(args.num_rollouts):
         state = env.reset()
         done = False
+        hidden_state_keys = {}
         if multiagent:
             ret = {key: [0] for key in rets.keys()}
         else:
             ret = 0
         for j in range(config["horizon"]):
             action = {}
+            print('Reminder: world map dimensions are:', env.world_map.shape)
             for agent_id in state.keys():
-                if use_lstm:
-                    action[agent_id], state_init, logits = agent.compute_action(
-                        state[agent_id], state=state_init, policy_id=policy_map_fn(agent_id))
+                if config['model']['use_lstm']:
+                    if agent_id not in hidden_state_keys.keys():
+                        hidden_state_keys[agent_id] = [
+                            np.zeros(config['model']['lstm_cell_size'], np.float32),
+                            np.zeros(config['model']['lstm_cell_size'], np.float32)
+                        ]
+                    action[agent_id], hidden_state_keys[agent_id], \
+                        logits = agent.compute_action(
+                            state[agent_id], state=hidden_state_keys[agent_id],
+                            policy_id=policy_map_fn(agent_id))
                 else:
                     action[agent_id] = agent.compute_action(
                         state[agent_id], policy_id=policy_map_fn(agent_id))
-            observations, reward, done, _ = env.step(action)
+                print(agent_id, 'took action', action[agent_id],
+                      env.agents[agent_id].action_map(action[agent_id]),
+                      'from position', env.agents[agent_id].pos)
+
+            try:
+                observations, reward, done, _ = env.step(action)
+            except Exception as e:
+                print('EXCEPTION OCCURED!')
+                print(str(e))
+                pdb.set_trace()
+
             if args.render:
-                env.render_map()
+                env.render()
             if args.save_video:
                 rgb_arr = env.map_to_colors()
                 full_obs[j] = rgb_arr.astype(np.uint8)
@@ -148,9 +160,12 @@ def visualizer_rllib(args):
         for agent_id, rew in rets.items():
             print('Round {}, Return: {} for agent {}'.format(
                 i, ret, agent_id))
+
     for agent_id, rew in rets.items():
         print('Average, std return: {}, {} for agent {}'.format(
             np.mean(rew), np.std(rew), agent_id))
+    sum_reward = np.sum([np.sum(r) for r in rets.values()])
+    print('Average collective reward:', sum_reward / len(rets))
 
     if args.save_video:
         path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
@@ -204,5 +219,5 @@ def create_parser():
 if __name__ == '__main__':
     parser = create_parser()
     args = parser.parse_args()
-    ray.init(num_cpus=2, redirect_output=False)
+    ray.init(num_cpus=2)
     visualizer_rllib(args)

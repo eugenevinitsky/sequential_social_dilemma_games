@@ -6,7 +6,6 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 from ray.rllib.env import MultiAgentEnv
-import utility_funcs as util
 
 ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
            'MOVE_RIGHT': [1, 0],  # Move right
@@ -169,6 +168,7 @@ class MapEnv(MultiAgentEnv):
 
         # move
         self.update_moves(agent_actions)
+
         for agent in self.agents.values():
             pos = agent.get_pos()
             new_char = agent.consume(self.world_map[pos[0], pos[1]])
@@ -187,8 +187,7 @@ class MapEnv(MultiAgentEnv):
         dones = {}
         info = {}
         for agent in self.agents.values():
-            agent.grid = util.return_view(map_with_agents, agent.pos,
-                                          agent.row_size, agent.col_size)
+            agent.grid = map_with_agents
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
@@ -218,8 +217,9 @@ class MapEnv(MultiAgentEnv):
 
         observations = {}
         for agent in self.agents.values():
-            agent.grid = util.return_view(map_with_agents, agent.pos,
-                                          agent.row_size, agent.col_size)
+            agent.grid = map_with_agents
+            # agent.grid = util.return_view(map_with_agents, agent.pos,
+            #                               agent.row_size, agent.col_size)
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             observations[agent.agent_id] = rgb_arr
         return observations
@@ -360,6 +360,8 @@ class MapEnv(MultiAgentEnv):
                 # rotate the selected action appropriately
                 rot_action = self.rotate_action(selected_action, agent.get_orientation())
                 new_pos = agent.get_pos() + rot_action
+                # allow the agents to confirm what position they can move to
+                new_pos = agent.return_valid_pos(new_pos)
                 reserved_slots.append((*new_pos, 'P', agent_id))
             elif 'TURN' in action:
                 new_rot = self.update_rotation(action, agent.get_orientation())
@@ -449,6 +451,8 @@ class MapEnv(MultiAgentEnv):
                                             .get_pos().tolist():
                                         conflict_cell_free = False
 
+                        # if the conflict cell is open, let one of the conflicting agents
+                        # move into it
                         if conflict_cell_free:
                             self.agents[agent_to_slot[index]].update_agent_pos(move)
                             agent_by_pos = {tuple(agent.get_pos()):
@@ -602,6 +606,7 @@ class MapEnv(MultiAgentEnv):
                     if self.world_map[next_cell[0], next_cell[1]] in cell_types:
                         type_index = cell_types.index(self.world_map[next_cell[0], next_cell[1]])
                         updates.append((next_cell[0], next_cell[1], update_char[type_index]))
+
                     firing_points.append((next_cell[0], next_cell[1], fire_char))
 
                     # check if the cell blocks beams. For example, waste blocks beams.
