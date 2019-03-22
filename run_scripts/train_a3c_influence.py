@@ -181,7 +181,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                     },
                     "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
                               "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
-                              "custom_options": {"num_other_agents": num_agents - 1,
+                              "custom_options": {"num_other_agents": num_agents,
                                                  "moa_weight": tune.grid_search[5.0, 10.0, 20.0]}}
 
         })
@@ -203,7 +203,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                     },
                     "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
                               "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
-                              "custom_options": {"num_other_agents": num_agents - 1,
+                              "custom_options": {"num_other_agents": num_agents,
                                                  "moa_weight": 12.0}}
 
         })
