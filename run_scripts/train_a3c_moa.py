@@ -228,7 +228,7 @@ def main(unused_argv):
                                       FLAGS.num_workers_per_device, FLAGS.tune)
 
     if FLAGS.exp_name is None:
-        exp_name = FLAGS.env + '_A3C_influence'
+        exp_name = FLAGS.env + '_A3C_moa'
     else:
         exp_name = FLAGS.exp_name
     print('Commencing experiment', exp_name)
