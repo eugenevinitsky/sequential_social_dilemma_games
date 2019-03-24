@@ -185,7 +185,8 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                                                  "moa_weight": tune.grid_search[5.0, 10.0, 20.0],
                                                  "influence_reward_clip": 10,
                                                  "influence_divergence_measure": 'kl',
-                                                 "influence_reward_weight": tune.grid_search[0.5, 1.0, 2.0]}}
+                                                 "influence_reward_weight": tune.grid_search[0.5, 1.0, 2.0],
+                                                 "influence_curriculum_steps": tune.grid_search[50,100,250]}}
 
         })
     else:
@@ -210,7 +211,8 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                                                  "moa_weight": 12.0,
                                                  "influence_reward_clip": 10,
                                                  "influence_divergence_measure": 'kl',
-                                                 "influence_reward_weight": 2.5}}
+                                                 "influence_reward_weight": 2.5,
+                                                 "influence_curriculum_steps": 225e6}}
 
         })
     return algorithm, env_name, config
