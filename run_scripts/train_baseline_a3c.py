@@ -133,7 +133,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
             },
             "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
-                        "lstm_cell_size": 128}
+                      "lstm_cell_size": 128}
         })
     else:
         config.update({
@@ -152,7 +152,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
             },
             "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
-                        "lstm_cell_size": 128}
+                      "lstm_cell_size": 128}
         })
     return algorithm, env_name, config
 

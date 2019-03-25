@@ -58,41 +58,6 @@ cleanup_default_params = {
     'entropy_coeff': .00176}
 
 
-def on_episode_start(info):
-    # import pdb; pdb.set_trace()
-    episode = info["episode"]
-    # print("episode {} started".format(episode.episode_id))
-
-
-def on_episode_step(info):
-    # import pdb; pdb.set_trace()
-    episode = info["episode"]
-    # pole_angle = abs(episode.last_observation_for()[2])
-
-
-def on_episode_end(info):
-    # import pdb; pdb.set_trace()
-    episode = info["episode"]
-    # pole_angle = np.mean(episode.user_data["pole_angles"])
-    # print("episode {} ended with length {} and pole angles {}".format(
-    #     episode.episode_id, episode.length, pole_angle))
-    # episode.custom_metrics["pole_angle"] = pole_angle
-
-
-def on_sample_end(info):
-    # import pdb; pdb.set_trace()
-    # print("returned sample batch of size {}".format(info["samples"].count))
-    pass
-
-
-def on_train_result(info):
-    # import pdb; pdb.set_trace()
-    print("agent.train() result: {} -> {} episodes".format(
-        info["agent"], info["result"]["episodes_this_iter"]))
-    # you can mutate the result dict to add new fields to return
-    info["result"]["callback_ok"] = True
-
-
 def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
           use_gpu_for_driver=False, num_workers_per_device=1, tune_hparams=False):
     if env == 'harvest':
@@ -140,15 +105,6 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
     config['env_config']['func_create'] = tune.function(env_creator)
     config['env_config']['env_name'] = env_name
     config['env_config']['run'] = algorithm
-
-    # Add callbacks to compute custom metrics
-    config['callbacks'] = {
-        "on_episode_start": tune.function(on_episode_start),
-        "on_episode_step": tune.function(on_episode_step),
-        "on_episode_end": tune.function(on_episode_end),
-        "on_sample_end": tune.function(on_sample_end),
-        "on_train_result": tune.function(on_train_result),
-    }
 
     # Calculate device configurations
     gpus_for_driver = int(use_gpu_for_driver)
