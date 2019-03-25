@@ -194,8 +194,13 @@ class MapEnv(MultiAgentEnv):
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
+
+            # Add other agent visibility
+            if agent.agent_id not in info:
+                info[agent.agent_id] = {}
             info[agent.agent_id]['visible_agents'] = \
                 self.find_visible_agents(agent.agent_id)
+
         dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, info
 
