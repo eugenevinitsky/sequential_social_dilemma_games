@@ -65,7 +65,7 @@ def return_view(grid, pos, row_size, col_size):
     ----------
     grid: 2D array
         map array containing characters representing
-    pos: list
+    pos: np.ndarray
         list consisting of row and column at which to search
     row_size: int
         how far the view should look in the row dimension

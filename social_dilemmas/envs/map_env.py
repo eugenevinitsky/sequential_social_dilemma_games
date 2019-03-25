@@ -39,6 +39,7 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    '8': [250, 204, 255],  # Pink
                    '9': [238, 223, 16]}  # Yellow
 
+
 # the axes look like
 # graphic is here to help me get my head in order
 # WARNING: increasing array position in the direction of down
@@ -193,6 +194,7 @@ class MapEnv(MultiAgentEnv):
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
+            info[agent.agent_id] = self.find_visible_agents(agent.agent_id)
         dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, info
 
@@ -267,8 +269,8 @@ class MapEnv(MultiAgentEnv):
             char_id = str(int(agent_id[-1]) + 1)
 
             # If agent is not within map, skip.
-            if not(agent.pos[0] >= 0 and agent.pos[0] < grid.shape[0] and
-                   agent.pos[1] >= 0 and agent.pos[1] < grid.shape[1]):
+            if not (agent.pos[0] >= 0 and agent.pos[0] < grid.shape[0] and
+                    agent.pos[1] >= 0 and agent.pos[1] < grid.shape[1]):
                 continue
 
             grid[agent.pos[0], agent.pos[1]] = char_id
@@ -285,7 +287,7 @@ class MapEnv(MultiAgentEnv):
 
         # check for multiple agents
         for i in range(self.num_agents):
-            if count_dict[str(i+1)] != 1:
+            if count_dict[str(i + 1)] != 1:
                 print('Error! Wrong number of agent', i, 'in map!')
                 return False
         return True
@@ -315,12 +317,38 @@ class MapEnv(MultiAgentEnv):
 
         return rgb_arr
 
+    def find_visible_agents(self, agent_id):
+        """Returns all the agents that can be seen by agent with agent_id
+
+        Args
+        ----
+        agent_id: str
+            The id of the agent whose visible agents we are asking about
+
+        Returns
+        -------
+        visible_agents: list
+            which agents can be seen by the agent with id "agent_id"
+
+        """
+        agent_pos = self.agents[agent_id].get_pos()
+        upper_lim = int(agent_pos[0] + self.agents[agent_id].row_size)
+        lower_lim = int(agent_pos[0] - self.agents[agent_id].row_size)
+        left_lim = int(agent_pos[1] - self.agents[agent_id].col_size)
+        right_lim = int(agent_pos[1] + self.agents[agent_id].col_size)
+
+        other_agent_pos = [(agent.get_pos(), other_agent_id) for other_agent_id, agent in
+                           self.agents.items() if other_agent_id != agent_id]
+        return [agent_tup[1] for agent_tup in other_agent_pos if
+                (lower_lim <= agent_tup[0][0] <= upper_lim
+                 and left_lim <= agent_tup[0][1] <= right_lim)]
+
     def render(self, filename=None):
         """ Creates an image of the map to plot or save.
 
         Args:
-            path: If a string is passed, will save the image
-                to disk at this location.
+            filename: If a string is passed, will save the image
+                      to disk at this location.
         """
         map_with_agents = self.get_map_with_agents()
 
@@ -457,7 +485,7 @@ class MapEnv(MultiAgentEnv):
                         if conflict_cell_free:
                             self.agents[agent_to_slot[index]].update_agent_pos(move)
                             agent_by_pos = {tuple(agent.get_pos()):
-                                            agent.agent_id for agent in self.agents.values()}
+                                                agent.agent_id for agent in self.agents.values()}
                         # ------------------------------------
                         # remove all the other moves that would have conflicted
                         remove_indices = np.where((search_list == move).all(axis=1))[0]
