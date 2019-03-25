@@ -189,6 +189,7 @@ class MapEnv(MultiAgentEnv):
         for agent in self.agents.values():
             agent.grid = map_with_agents
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
+            rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
             observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
@@ -639,6 +640,28 @@ class MapEnv(MultiAgentEnv):
         """Return a randomly selected initial rotation for an agent"""
         rand_int = np.random.randint(len(ORIENTATIONS.keys()))
         return list(ORIENTATIONS.keys())[rand_int]
+
+    def rotate_view(self, orientation, view):
+        """Takes a view of the map and rotates it the agent orientation
+        Parameters
+        ----------
+        orientation: str
+            str in {'UP', 'LEFT', 'DOWN', 'RIGHT'}
+        view: np.ndarray (row, column, channel)
+        Returns
+        -------
+        a rotated view
+        """
+        if orientation == 'UP':
+            return view
+        elif orientation == 'LEFT':
+            return np.rot90(view, k=1, axes=(0, 1))
+        elif orientation == 'DOWN':
+            return np.rot90(view, k=2, axes=(0, 1))
+        elif orientation == 'RIGHT':
+            return np.rot90(view, k=3, axes=(0, 1))
+        else:
+            raise ValueError('Orientation {} is not valid'.format(orientation))
 
     def build_walls(self):
         for i in range(len(self.wall_points)):

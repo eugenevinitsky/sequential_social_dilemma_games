@@ -943,6 +943,29 @@ class TestHarvestEnv(unittest.TestCase):
                                  ['@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.test_map)
 
+    def test_rotation(self):
+        # confirms that the rotations of agent views work correctly
+        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
+        rot_matrix = np.array([[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]]])
+        rot_left = self.env.rotate_view('LEFT', rot_matrix)
+        rot_left_true = np.array([[[2, 2, 2], [4, 4, 4]], [[1, 1, 1], [3, 3, 3]]])
+        np.testing.assert_array_equal(rot_left, rot_left_true)
+
+        rot_matrix = np.array([[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]]])
+        rot_up = self.env.rotate_view('UP', rot_matrix)
+        rot_up_true = np.array([[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]]])
+        np.testing.assert_array_equal(rot_up, rot_up_true)
+
+        rot_matrix = np.array([[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]]])
+        rot_down = self.env.rotate_view('DOWN', rot_matrix)
+        rot_down_true = np.array([[[4, 4, 4], [3, 3, 3]], [[2, 2, 2], [1, 1, 1]]])
+        np.testing.assert_array_equal(rot_down, rot_down_true)
+
+        rot_matrix = np.array([[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]]])
+        rot_right = self.env.rotate_view('RIGHT', rot_matrix)
+        rot_right_true = np.array([[[3, 3, 3], [1, 1, 1]], [[4, 4, 4], [2, 2, 2]]])
+        np.testing.assert_array_equal(rot_right, rot_right_true)
+
     def clear_agents(self):
         self.env.agents = {}
 
