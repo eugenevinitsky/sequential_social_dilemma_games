@@ -11,11 +11,10 @@ from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
 from models.conv_to_fc_net import ConvToFCNet
 
-
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', 'test_dir',
+    'exp_name', 'harvest_test',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
     'env', 'harvest',
