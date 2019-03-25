@@ -643,11 +643,13 @@ class MapEnv(MultiAgentEnv):
 
     def rotate_view(self, orientation, view):
         """Takes a view of the map and rotates it the agent orientation
+
         Parameters
         ----------
         orientation: str
             str in {'UP', 'LEFT', 'DOWN', 'RIGHT'}
         view: np.ndarray (row, column, channel)
+
         Returns
         -------
         a rotated view
