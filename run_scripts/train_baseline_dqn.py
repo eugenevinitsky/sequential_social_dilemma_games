@@ -11,7 +11,6 @@ from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
 from models.conv_to_fc_net_no_lstm import ConvToFCNet
 
-
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
@@ -55,14 +54,15 @@ cleanup_default_params = {
 
 def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
           use_gpu_for_driver=False, num_workers_per_device=1):
-
     if env == 'harvest':
         def env_creator(_):
             return HarvestEnv(num_agents=num_agents)
+
         single_env = HarvestEnv()
     else:
         def env_creator(_):
             return CleanupEnv(num_agents=num_agents)
+
         single_env = CleanupEnv()
 
     env_name = env + "_env"
@@ -112,19 +112,19 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
     # hyperparams
     config.update({
-                "train_batch_size": 128,
-                "horizon": 1000,
-                "num_workers": num_workers,
-                "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
-                "num_cpus_for_driver": cpus_for_driver,
-                "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
-                "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-                "multiagent": {
-                    "policy_graphs": policy_graphs,
-                    "policy_mapping_fn": tune.function(policy_mapping_fn),
-                },
-                "model": {"custom_model": "conv_to_fc_net_no_lstm",
-                          "use_lstm": False, "lstm_cell_size": 128}
+        "train_batch_size": 128,
+        "horizon": 1000,
+        "num_workers": num_workers,
+        "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
+        "num_cpus_for_driver": cpus_for_driver,
+        "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
+        "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
+        "multiagent": {
+            "policy_graphs": policy_graphs,
+            "policy_mapping_fn": tune.function(policy_mapping_fn),
+        },
+        "model": {"custom_model": "conv_to_fc_net_no_lstm",
+                  "use_lstm": False, "lstm_cell_size": 128}
 
     })
     return algorithm, env_name, config
