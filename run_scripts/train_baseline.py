@@ -65,14 +65,15 @@ cleanup_default_params = {
 def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
           num_agents, use_gpus_for_workers=False, use_gpu_for_driver=False,
           num_workers_per_device=1):
-
     if env == 'harvest':
         def env_creator(_):
             return HarvestEnv(num_agents=num_agents)
+
         single_env = HarvestEnv()
     else:
         def env_creator(_):
             return CleanupEnv(num_agents=num_agents)
+
         single_env = CleanupEnv()
 
     env_name = env + "_env"
@@ -121,23 +122,23 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
     # hyperparams
     config.update({
-                "train_batch_size": train_batch_size,
-                "horizon": 1000,
-                # "lr_schedule":
-                # [[0, hparams['lr_init']],
-                #     [20000000, hparams['lr_final']]],
-                "num_workers": num_workers,
-                "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
-                "num_cpus_for_driver": cpus_for_driver,
-                "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
-                "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-                "entropy_coeff": hparams['entropy_coeff'],
-                "multiagent": {
-                    "policy_graphs": policy_graphs,
-                    "policy_mapping_fn": tune.function(policy_mapping_fn),
-                },
-                "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
-                          "lstm_cell_size": 128}
+        "train_batch_size": train_batch_size,
+        "horizon": 1000,
+        # "lr_schedule":
+        # [[0, hparams['lr_init']],
+        #     [20000000, hparams['lr_final']]],
+        "num_workers": num_workers,
+        "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
+        "num_cpus_for_driver": cpus_for_driver,
+        "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
+        "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
+        "entropy_coeff": hparams['entropy_coeff'],
+        "multiagent": {
+            "policy_graphs": policy_graphs,
+            "policy_mapping_fn": tune.function(policy_mapping_fn),
+        },
+        "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
+                  "lstm_cell_size": 128}
 
     })
     return algorithm, env_name, config
@@ -169,11 +170,11 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-      "training_iteration": FLAGS.training_iterations
+                "training_iteration": FLAGS.training_iterations
             },
             'checkpoint_freq': FLAGS.checkpoint_frequency,
             "config": config,
-            'upload_dir': 's3://eugene.experiments/causal_reward/test_baseline_harvest2'
+            'upload_dir': 's3://eugene.experiments/causal_reward/test_baseline_harvest3'
         }
     })
 
