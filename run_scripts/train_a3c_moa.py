@@ -14,7 +14,7 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', None,
+    'exp_name', 'causal_moa',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
     'env', 'cleanup',
@@ -23,10 +23,10 @@ tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 2,
+    'num_cpus', 38,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
-    'num_gpus', 1,
+    'num_gpus', 0,
     'Number of available GPUs')
 tf.app.flags.DEFINE_boolean(
     'use_gpus_for_workers', False,
@@ -173,11 +173,11 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
 def main(unused_argv):
     if FLAGS.debug:
-        ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e9),
-                 redis_max_memory=int(1e9))
+        ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
+                 redis_max_memory=int(2e10))
     else:
-        ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(2e10),
-                 redis_max_memory=int(1e10))
+        ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
+                 redis_max_memory=int(2e10))
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
@@ -199,10 +199,11 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 300000
+                "training_iteration": 10000
             },
-            'checkpoint_freq': 1000,
+            'checkpoint_freq': 100,
             "config": config,
+            'upload_dir': 's3://njaques.experiments/first_reproduction/a3c_causal_moa'
         }
     }, resume=FLAGS.resume)
 

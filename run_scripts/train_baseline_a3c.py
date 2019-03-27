@@ -15,7 +15,7 @@ from models.conv_to_fc_net import ConvToFCNet
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', None,
+    'exp_name', 'train_baseline_a3c',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
     'env', 'cleanup',
@@ -24,10 +24,10 @@ tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 2,
+    'num_cpus', 38,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
-    'num_gpus', 1,
+    'num_gpus', 0,
     'Number of available GPUs')
 tf.app.flags.DEFINE_boolean(
     'use_gpus_for_workers', False,
@@ -36,7 +36,7 @@ tf.app.flags.DEFINE_boolean(
     'use_gpu_for_driver', False,
     'Set to true to run driver on GPU rather than CPU.')
 tf.app.flags.DEFINE_float(
-    'num_workers_per_device', 2,
+    'num_workers_per_device', 1,
     'Number of workers to place on a single device (CPU or GPU)')
 tf.app.flags.DEFINE_boolean(
     'resume', False,
@@ -158,8 +158,8 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
 
 def main(unused_argv):
-    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(2e10),
-             redis_max_memory=int(1e10))
+    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
+             redis_max_memory=int(2e10))
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
@@ -181,10 +181,11 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 300000
+                "training_iteration": 10000
             },
             'checkpoint_freq': 1000,
             "config": config,
+            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_influence_baseline2'
         }
     }, resume=FLAGS.resume)
 

@@ -14,7 +14,7 @@ from models.conv_to_fc_net import ConvToFCNet
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', 'harvest_test',
+    'exp_name', 'a3c_baseline',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
     'env', 'harvest',
@@ -26,16 +26,16 @@ tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'train_batch_size', 30000,
+    'train_batch_size', 2000,
     'Size of the total dataset over which one epoch is computed.')
 tf.app.flags.DEFINE_integer(
-    'checkpoint_frequency', 20,
+    'checkpoint_frequency', 100,
     'Number of steps before a checkpoint is saved.')
 tf.app.flags.DEFINE_integer(
     'training_iterations', 10000,
     'Total number of steps to train for')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 2,
+    'num_cpus', 38,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
     'num_gpus', 0,
@@ -144,8 +144,8 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
 
 def main(unused_argv):
-    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(2e10),
-             redis_max_memory=int(1e10))
+    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
+             redis_max_memory=int(2e10))
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
@@ -173,7 +173,8 @@ def main(unused_argv):
             },
             'checkpoint_freq': FLAGS.checkpoint_frequency,
             "config": config,
-            'upload_dir': 's3://eugene.experiments/causal_reward/test_baseline_harvest3'
+            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_basline'
+
         }
     })
 
