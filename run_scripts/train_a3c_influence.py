@@ -213,7 +213,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/first_reproduction/a3c_causal_influence'
+            'upload_dir': 's3://njaques.experiments/first_reproduction/a3c_causal_influence_cleanup'
         }
     }, resume=FLAGS.resume)
 

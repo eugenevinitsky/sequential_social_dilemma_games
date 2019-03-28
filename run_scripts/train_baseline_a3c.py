@@ -185,7 +185,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_influence_baseline_harvest'
+            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_influence_baseline_cleanup'
         }
     }, resume=FLAGS.resume)
 
