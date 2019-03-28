@@ -23,7 +23,7 @@ tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 38,
+    'num_cpus', 3,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
     'num_gpus', 0,
@@ -123,7 +123,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
     # hyperparams
     if tune_hparams:
         config.update({
-            "train_batch_size": 128,
+            "train_batch_size": 2000,
             "horizon": 1000,
             "lr_schedule": [[0, tune.grid_search([5e-4, 5e-3])],
                             [20000000, tune.grid_search([5e-4, 5e-5, 5e-6])]],
@@ -152,16 +152,16 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         })
     else:
         config.update({
-            "train_batch_size": 128,
+            # "train_batch_size": 2000,
             "horizon": 1000,
-            "lr_schedule": [[0, default_hparams['lr_init']],
-                            [20000000, default_hparams['lr_final']]],
+            # "lr_schedule": [[0, default_hparams['lr_init']],
+            #                 [20000000, default_hparams['lr_final']]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            "entropy_coeff": default_hparams['entropy_coeff'],
+            # "entropy_coeff": default_hparams['entropy_coeff'],
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -184,7 +184,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 def main(unused_argv):
     if FLAGS.debug:
         ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
-                 redis_max_memory=int(1e10))
+                 redis_max_memory=int(2e10))
     else:
         ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
                  redis_max_memory=int(2e10))

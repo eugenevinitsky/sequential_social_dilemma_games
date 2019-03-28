@@ -18,7 +18,7 @@ tf.app.flags.DEFINE_string(
     'exp_name', 'train_baseline_a3c',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
-    'env', 'cleanup',
+    'env', 'harvest',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
@@ -181,11 +181,11 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 10000
+                "training_iteration": 2000
             },
-            'checkpoint_freq': 1000,
+            'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_influence_baseline2'
+            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_influence_baseline_harvest'
         }
     }, resume=FLAGS.resume)
 
