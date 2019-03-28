@@ -15,10 +15,10 @@ from models.conv_to_fc_net import ConvToFCNet
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', 'train_baseline_a3c_cleanup',
+    'exp_name', 'train_baseline_a3c_harvest',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
-    'env', 'cleanup',
+    'env', 'harvest',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
@@ -185,7 +185,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_influence_baseline_cleanup'
+            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_influence_baseline_harvest'
         }
     }, resume=FLAGS.resume)
 

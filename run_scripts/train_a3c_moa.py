@@ -14,10 +14,10 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', 'causal_moa_cleanup',
+    'exp_name', 'causal_moa_harvest',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
-    'env', 'cleanup',
+    'env', 'harvest',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
@@ -203,7 +203,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/first_reproduction/a3c_causal_moa_cleanup'
+            'upload_dir': 's3://njaques.experiments/first_reproduction/a3c_causal_moa_harvest'
         }
     }, resume=FLAGS.resume)
 

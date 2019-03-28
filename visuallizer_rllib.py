@@ -14,6 +14,8 @@ from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 from ray.cloudpickle import cloudpickle
+from ray.rllib.evaluation.sample_batch import DEFAULT_POLICY_ID
+# from ray.rllib.evaluation.sampler import clip_action
 
 from models.conv_to_fc_net import ConvToFCNet
 import utility_funcs
@@ -98,74 +100,70 @@ def visualizer_rllib(args):
         full_obs = [np.zeros((shape[0], shape[1], 3), dtype=np.uint8)
                     for i in range(config["horizon"])]
 
-    rets = {}
-    # map the agent id to its policy
-    policy_map_fn = config['multiagent']['policy_mapping_fn'].func
-    for key in config['multiagent']['policy_graphs'].keys():
-        rets[key] = []
+    if hasattr(agent, "local_evaluator"):
+        multiagent = agent.local_evaluator.multiagent
+        if multiagent:
+            policy_agent_mapping = agent.config["multiagent"][
+                "policy_mapping_fn"]
+            mapping_cache = {}
+        policy_map = agent.local_evaluator.policy_map
+        state_init = {p: m.get_initial_state() for p, m in policy_map.items()}
+        use_lstm = {p: len(s) > 0 for p, s in state_init.items()}
+    else:
+        multiagent = False
+        use_lstm = {DEFAULT_POLICY_ID: False}
 
-    for i in range(args.num_rollouts):
+    steps = 0
+    while steps < (config['horizon'] or steps + 1):
         state = env.reset()
         done = False
-        hidden_state_keys = {}
-        if multiagent:
-            ret = {key: [0] for key in rets.keys()}
-        else:
-            ret = 0
-        for j in range(config["horizon"]):
-            action = {}
-            print('Reminder: world map dimensions are:', env.world_map.shape)
-            for agent_id in state.keys():
-                if config['model']['use_lstm']:
-                    if agent_id not in hidden_state_keys.keys():
-                        hidden_state_keys[agent_id] = [
-                            np.zeros(config['model']['lstm_cell_size'], np.float32),
-                            np.zeros(config['model']['lstm_cell_size'], np.float32)
-                        ]
-                    action[agent_id], hidden_state_keys[agent_id], \
-                        logits = agent.compute_action(
-                            state[agent_id], state=hidden_state_keys[agent_id],
-                            policy_id=policy_map_fn(agent_id))
+        reward_total = 0.0
+        while not done and steps < (config['horizon'] or steps + 1):
+            if multiagent:
+                action_dict = {}
+                for agent_id in state.keys():
+                    a_state = state[agent_id]
+                    if a_state is not None:
+                        policy_id = mapping_cache.setdefault(
+                            agent_id, policy_agent_mapping(agent_id))
+                        p_use_lstm = use_lstm[policy_id]
+                        if p_use_lstm:
+                            a_action, p_state_init, _ = agent.compute_action(
+                                a_state,
+                                state=state_init[policy_id],
+                                policy_id=policy_id)
+                            state_init[policy_id] = p_state_init
+                        else:
+                            a_action = agent.compute_action(
+                                a_state, policy_id=policy_id)
+                        action_dict[agent_id] = a_action
+                action = action_dict
+            else:
+                if use_lstm[DEFAULT_POLICY_ID]:
+                    action, state_init, _ = agent.compute_action(
+                        state, state=state_init)
                 else:
-                    action[agent_id] = agent.compute_action(
-                        state[agent_id], policy_id=policy_map_fn(agent_id))
-                print(agent_id, 'took action', action[agent_id],
-                      env.agents[agent_id].action_map(action[agent_id]),
-                      'from position', env.agents[agent_id].pos)
+                    action = agent.compute_action(state)
 
-            try:
-                observations, reward, done, _ = env.step(action)
-            except Exception as e:
-                print('EXCEPTION OCCURED!')
-                print(str(e))
-                pdb.set_trace()
+            if agent.config["clip_actions"]:
+                #clipped_action = clip_action(action, env.action_space)
+                next_state, reward, done, _ = env.step(action)
+            else:
+                next_state, reward, done, _ = env.step(action)
 
-            if args.render:
-                env.render()
+            if multiagent:
+                done = done["__all__"]
+                reward_total += sum(reward.values())
+            else:
+                reward_total += reward
+
             if args.save_video:
                 rgb_arr = env.map_to_colors()
-                full_obs[j] = rgb_arr.astype(np.uint8)
+                full_obs[steps] = rgb_arr.astype(np.uint8)
 
-            for actor, rew in reward.items():
-                ret[policy_map_fn(actor)][0] += rew
-
-            if multiagent and done['__all__']:
-                break
-            if not multiagent and done:
-                break
-
-        for key in rets.keys():
-            rets[key].append(ret[key])
-
-        for agent_id, rew in rets.items():
-            print('Round {}, Return: {} for agent {}'.format(
-                i, ret, agent_id))
-
-    for agent_id, rew in rets.items():
-        print('Average, std return: {}, {} for agent {}'.format(
-            np.mean(rew), np.std(rew), agent_id))
-    sum_reward = np.sum([np.sum(r) for r in rets.values()])
-    print('Average collective reward:', sum_reward / len(rets))
+            steps += 1
+            state = next_state
+        print("Episode reward", reward_total)
 
     if args.save_video:
         path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
