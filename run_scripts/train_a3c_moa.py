@@ -14,10 +14,10 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', 'causal_moa',
+    'exp_name', 'causal_moa_cleanup',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
-    'env', 'harvest',
+    'env', 'cleanup',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
@@ -147,16 +147,16 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         })
     else:
         config.update({
-            "train_batch_size": 128,
+            # "train_batch_size": 128,
             "horizon": 1000,
-            "lr_schedule": [[0, default_hparams['lr_init']],
-                            [20000000, default_hparams['lr_final']]],
+            # "lr_schedule": [[0, default_hparams['lr_init']],
+            #                 [20000000, default_hparams['lr_final']]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            "entropy_coeff": default_hparams['entropy_coeff'],
+            # "entropy_coeff": default_hparams['entropy_coeff'],
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -199,7 +199,7 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 2000
+                "training_iteration": 10000
             },
             'checkpoint_freq': 100,
             "config": config,

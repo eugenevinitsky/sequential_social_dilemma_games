@@ -14,7 +14,7 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', 'causal_influence',
+    'exp_name', 'causal_influence_cleanup',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
     'env', 'cleanup',
@@ -23,7 +23,7 @@ tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 3,
+    'num_cpus', 38,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
     'num_gpus', 0,
