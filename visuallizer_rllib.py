@@ -120,6 +120,7 @@ def visualizer_rllib(args):
         state = env.reset()
         done = False
         reward_total = 0.0
+        last_actions = [0] * len(state.keys())  # Number of agents
         while not done and steps < (config['horizon'] or steps + 1):
             if multiagent:
                 action_dict = {}
@@ -133,13 +134,18 @@ def visualizer_rllib(args):
                             a_action, p_state_init, _ = agent.compute_action(
                                 a_state,
                                 state=state_init[policy_id],
-                                policy_id=policy_id)
+                                policy_id=policy_id,
+                                info={'all_agent_actions': last_actions})
                             state_init[policy_id] = p_state_init
                         else:
                             a_action = agent.compute_action(
-                                a_state, policy_id=policy_id)
+                                a_state, policy_id=policy_id, 
+                                info={'all_agent_actions': last_actions})
                         action_dict[agent_id] = a_action
                 action = action_dict
+                agent_ids = sorted(state.keys())
+                last_actions = [action_dict[a] for a in agent_ids]
+                import pdb; pdb.set_trace()
             else:
                 if use_lstm[DEFAULT_POLICY_ID]:
                     action, state_init, _ = agent.compute_action(
