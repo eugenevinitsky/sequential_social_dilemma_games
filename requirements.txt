@@ -34,7 +34,7 @@ pyparsing==2.3.1
 pytest==4.1.1
 python-dateutil==2.7.5
 PyYAML==3.13
-ray==0.6.1
+ray==0.6.4
 redis==3.0.1
 requests==2.21.0
 scipy==1.2.0

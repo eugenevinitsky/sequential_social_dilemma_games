@@ -14,16 +14,16 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', 'causal_actions_visible_harvest',
+    'exp_name', 'causal_actions_visible_cleanup',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
-    'env', 'harvest',
+    'env', 'cleanup',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 38,
+    'num_cpus', 14,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
     'num_gpus', 0,
@@ -38,7 +38,7 @@ tf.app.flags.DEFINE_float(
     'num_workers_per_device', 1,
     'Number of workers to place on a single device (CPU or GPU)')
 tf.app.flags.DEFINE_boolean(
-    'tune', False,
+    'tune', True,
     'Set to true to do hyperparameter tuning.')
 tf.app.flags.DEFINE_boolean(
     'debug', False,
@@ -132,7 +132,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            "entropy_coeff": tune.grid_search([5e-3, 5e-4, 5e-5]),
+            "entropy_coeff": tune.grid_search([0, 5e-3, 5e-4, 5e-5]),
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -144,16 +144,16 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         })
     else:
         config.update({
-            #"train_batch_size": 128,
+            "train_batch_size": 128,
             "horizon": 1000,
-            #"lr_schedule": [[0, default_hparams['lr_init']],
-            #                [20000000, default_hparams['lr_final']]],
+            "lr_schedule": [[0, default_hparams['lr_init']],
+                            [20000000, default_hparams['lr_final']]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            #"entropy_coeff": default_hparams['entropy_coeff'],
+            "entropy_coeff": default_hparams['entropy_coeff'],
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -168,11 +168,13 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
 def main(unused_argv):
     if FLAGS.debug:
-        ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
-                 redis_max_memory=int(2e10))
+        # ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(10e10),
+        #          redis_max_memory=int(50e10))
+        ray.init(redis_address="localhost:6379")
     else:
-        ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
-                 redis_max_memory=int(2e10))
+        # ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(25e10),
+        #          redis_max_memory=int(50e10))
+        ray.init(redis_address="localhost:6379")
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
@@ -194,11 +196,11 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 10000
+                "training_iteration": 20000
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_actions_harvest'
+            'upload_dir': 's3://njaques.experiments/third_reproduction/causal_actions_cleanup'
         }
     }, resume=FLAGS.resume)
 

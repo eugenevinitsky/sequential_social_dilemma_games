@@ -14,16 +14,16 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', 'causal_influence_harvest',
+    'exp_name', 'causal_influence_cleanup',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
-    'env', 'harvest',
+    'env', 'cleanup',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 38,
+    'num_cpus', 17,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
     'num_gpus', 0,
@@ -38,7 +38,7 @@ tf.app.flags.DEFINE_float(
     'num_workers_per_device', 1,
     'Number of workers to place on a single device (CPU or GPU)')
 tf.app.flags.DEFINE_boolean(
-    'tune', False,
+    'tune', True,
     'Set to true to do hyperparameter tuning.')
 tf.app.flags.DEFINE_boolean(
     'debug', False,
@@ -141,13 +141,13 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                       "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
                       "custom_options": {
                           "num_other_agents": num_agents,
-                          "moa_weight": tune.grid_search[5.0, 10.0, 20.0],
-                          "train_moa_only_when_visible": tune.grid_search[True, False],
+                          "moa_weight": tune.grid_search([5.0, 10.0, 20.0]),
+                          "train_moa_only_when_visible": tune.grid_search([True, False]),
                           "influence_reward_clip": 10,
                           "influence_divergence_measure": 'kl',
-                          "influence_reward_weight": tune.grid_search[0.5, 1.0, 2.0],
-                          "influence_curriculum_steps": tune.grid_search[50, 100, 250],
-                          "influence_only_when_visible": tune.grid_search[True, False]}}
+                          "influence_reward_weight": tune.grid_search([0.5, 1.0, 2.0]),
+                          "influence_curriculum_steps": tune.grid_search([50, 100, 250]),
+                          "influence_only_when_visible": tune.grid_search([True, False])}}
 
         })
     else:
@@ -182,12 +182,13 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
 
 def main(unused_argv):
-    if FLAGS.debug:
-        ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
-                 redis_max_memory=int(2e10))
-    else:
-        ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
-                 redis_max_memory=int(2e10))
+    # if FLAGS.debug:
+    #     ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(25e10),
+    #              redis_max_memory=int(50e10))
+    # else:
+    #     ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(25e10),
+    #              redis_max_memory=int(50e10))
+    ray.init(redis_address="localhost:6379")
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
@@ -209,11 +210,11 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 10000
+                "training_iteration": 20000
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/first_reproduction/a3c_causal_influence_harvest'
+            'upload_dir': 's3://njaques.experiments/third_reproduction/a3c_causal_influence_cleanup'
         }
     }, resume=FLAGS.resume)
 

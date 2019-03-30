@@ -15,16 +15,16 @@ from models.conv_to_fc_net import ConvToFCNet
 FLAGS = tf.app.flags.FLAGS
 
 tf.app.flags.DEFINE_string(
-    'exp_name', 'train_baseline_a3c_harvest',
+    'exp_name', 'train_baseline_a3c_cleanup',
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
-    'env', 'harvest',
+    'env', 'cleanup',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 38,
+    'num_cpus', 14,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
     'num_gpus', 0,
@@ -42,7 +42,7 @@ tf.app.flags.DEFINE_boolean(
     'resume', False,
     'Set to true to resume a previously stopped experiment.')
 tf.app.flags.DEFINE_boolean(
-    'tune', False,
+    'tune', True,
     'Set to true to tune hyperparameters.')
 
 harvest_default_params = {
@@ -113,7 +113,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         spare_cpus = (num_cpus - cpus_for_driver)
         num_workers = int(spare_cpus * num_workers_per_device)
         num_gpus_per_worker = 0
-        num_cpus_per_worker = spare_cpus / num_workers
+        num_cpus_per_worker = int(spare_cpus / num_workers)
 
     # hyperparams
     if tune_hparams:
@@ -127,7 +127,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-            "entropy_coeff": tune.grid_search([5e-3, 5e-4, 5e-5]),
+            "entropy_coeff": tune.grid_search([0, 5e-3, 5e-4, 5e-5]),
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -158,8 +158,9 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 
 
 def main(unused_argv):
-    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
-             redis_max_memory=int(2e10))
+    # ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(10e10),
+    #          redis_max_memory=int(20e10))
+    ray.init(redis_address="localhost:6379")
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
@@ -168,7 +169,7 @@ def main(unused_argv):
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,
                                       FLAGS.use_gpu_for_driver,
-                                      FLAGS.num_workers_per_device)
+                                      FLAGS.num_workers_per_device, FLAGS.tune)
 
     if FLAGS.exp_name is None:
         exp_name = FLAGS.env + '_A3C'
@@ -181,11 +182,11 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": 10000
+                "training_iteration": 20000
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_influence_baseline_harvest'
+            'upload_dir': 's3://njaques.experiments/third_reproduction/causal_influence_baseline_cleanup'
         }
     }, resume=FLAGS.resume)
 
