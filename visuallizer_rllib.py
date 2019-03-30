@@ -18,6 +18,7 @@ from ray.rllib.evaluation.sample_batch import DEFAULT_POLICY_ID
 # from ray.rllib.evaluation.sampler import clip_action
 
 from models.conv_to_fc_net import ConvToFCNet
+from models.conv_to_fc_net_actions import ConvToFCNetActions
 import utility_funcs
 
 
