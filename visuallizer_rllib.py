@@ -44,8 +44,6 @@ def visualizer_rllib(args):
     config = get_rllib_config(result_dir)
     pkl = get_rllib_pkl(result_dir)
 
-    import pdb; pdb.set_trace()
-
     # check if we have a multiagent scenario but in a
     # backwards compatible way
     if config.get('multiagent', {}).get('policy_graphs', {}):
@@ -60,6 +58,7 @@ def visualizer_rllib(args):
     register_env(env_name, env_creator.func)
 
     ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
+    ModelCatalog.register_custom_model("conv_to_fc_net_actions", ConvToFCNetActions)
 
     # Determine agent and checkpoint
     config_run = config['env_config']['run'] if 'run' in config['env_config'] \
@@ -201,6 +200,7 @@ def create_parser():
              'or PPO), or a user-defined trainable function or '
              'class registered in the tune registry. '
              'Required for results trained with flow-0.2.0 and before.')
+    # optional input parameters
     parser.add_argument(
         '--num-rollouts',
         type=int,
