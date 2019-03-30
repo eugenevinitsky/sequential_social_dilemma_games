@@ -44,6 +44,8 @@ def visualizer_rllib(args):
     config = get_rllib_config(result_dir)
     pkl = get_rllib_pkl(result_dir)
 
+    import pdb; pdb.set_trace()
+
     # check if we have a multiagent scenario but in a
     # backwards compatible way
     if config.get('multiagent', {}).get('policy_graphs', {}):
