@@ -127,7 +127,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-            "entropy_coeff": tune.grid_search([0, 5e-3, 5e-4, 5e-5]),
+            "entropy_coeff": tune.grid_search([0, -1e-1, -1e-2]),
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -186,7 +186,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/third_reproduction/causal_influence_baseline_cleanup'
+            'upload_dir': 's3://njaques.experiments/fourth_reproduction/causal_influence_baseline_cleanup'
         }
     }, resume=FLAGS.resume)
 

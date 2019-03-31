@@ -19,6 +19,8 @@ from ray.rllib.evaluation.sample_batch import DEFAULT_POLICY_ID
 
 from models.conv_to_fc_net import ConvToFCNet
 from models.conv_to_fc_net_actions import ConvToFCNetActions
+from models.conv_to_fc_net_actions_no_lstm import ConvToFCNetActions as ConvToFCNetActionsNoLSTM
+from models.conv_to_fc_net_no_lstm import ConvToFCNet as ConvToFCNetNoLSTM
 import utility_funcs
 
 
@@ -58,7 +60,15 @@ def visualizer_rllib(args):
     register_env(env_name, env_creator.func)
 
     ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
+<<<<<<< Updated upstream
     ModelCatalog.register_custom_model("conv_to_fc_net_actions", ConvToFCNetActions)
+=======
+    ModelCatalog.register_custom_model("conv_to_fc_net_no_lstm", ConvToFCNetNoLSTM)
+    ModelCatalog.register_custom_model("conv_to_fc_net_actions", ConvToFCNetActions)
+    ModelCatalog.register_custom_model("conv_to_fc_net_actions_no_lstm", ConvToFCNetActionsNoLSTM)
+
+
+>>>>>>> Stashed changes
 
     # Determine agent and checkpoint
     config_run = config['env_config']['run'] if 'run' in config['env_config'] \

@@ -132,7 +132,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            "entropy_coeff": tune.grid_search([5e-3, 5e-4, 5e-5]),
+            "entropy_coeff": tune.grid_search([0, -1e-1, -1e-2]),
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -146,7 +146,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                           "influence_reward_clip": 10,
                           "influence_divergence_measure": 'kl',
                           "influence_reward_weight": tune.grid_search([0.5, 1.0, 2.0]),
-                          "influence_curriculum_steps": tune.grid_search([50, 100, 250]),
+                          "influence_curriculum_steps": tune.grid_search([5e6, 10e6, 15e6]),
                           "influence_only_when_visible": tune.grid_search([True, False])}}
 
         })
@@ -174,7 +174,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                                          "influence_reward_clip": 10,
                                          "influence_divergence_measure": 'kl',
                                          "influence_reward_weight": 2.5,
-                                         "influence_curriculum_steps": 225e6,
+                                         "influence_curriculum_steps": 10e6,
                                          "influence_only_when_visible": True}}
 
         })
@@ -214,7 +214,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/third_reproduction/a3c_causal_influence_cleanup'
+            'upload_dir': 's3://njaques.experiments/fourth_reproduction/a3c_causal_influence_cleanup'
         }
     }, resume=FLAGS.resume)
 
