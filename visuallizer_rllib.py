@@ -18,6 +18,7 @@ from ray.rllib.evaluation.sample_batch import DEFAULT_POLICY_ID
 # from ray.rllib.evaluation.sampler import clip_action
 
 from models.conv_to_fc_net import ConvToFCNet
+from models.conv_to_fc_net_actions import ConvToFCNetActions
 import utility_funcs
 
 
@@ -57,6 +58,7 @@ def visualizer_rllib(args):
     register_env(env_name, env_creator.func)
 
     ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
+    ModelCatalog.register_custom_model("conv_to_fc_net_actions", ConvToFCNetActions)
 
     # Determine agent and checkpoint
     config_run = config['env_config']['run'] if 'run' in config['env_config'] \
@@ -118,6 +120,7 @@ def visualizer_rllib(args):
         state = env.reset()
         done = False
         reward_total = 0.0
+        last_actions = [0] * len(state.keys())  # Number of agents
         while not done and steps < (config['horizon'] or steps + 1):
             if multiagent:
                 action_dict = {}
@@ -131,13 +134,18 @@ def visualizer_rllib(args):
                             a_action, p_state_init, _ = agent.compute_action(
                                 a_state,
                                 state=state_init[policy_id],
-                                policy_id=policy_id)
+                                policy_id=policy_id,
+                                info={'all_agent_actions': last_actions})
                             state_init[policy_id] = p_state_init
                         else:
                             a_action = agent.compute_action(
-                                a_state, policy_id=policy_id)
+                                a_state, policy_id=policy_id, 
+                                info={'all_agent_actions': last_actions})
                         action_dict[agent_id] = a_action
                 action = action_dict
+                agent_ids = sorted(state.keys())
+                last_actions = [action_dict[a] for a in agent_ids]
+                import pdb; pdb.set_trace()
             else:
                 if use_lstm[DEFAULT_POLICY_ID]:
                     action, state_init, _ = agent.compute_action(
@@ -198,6 +206,7 @@ def create_parser():
              'or PPO), or a user-defined trainable function or '
              'class registered in the tune registry. '
              'Required for results trained with flow-0.2.0 and before.')
+    # optional input parameters
     parser.add_argument(
         '--num-rollouts',
         type=int,
