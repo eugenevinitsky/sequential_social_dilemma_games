@@ -125,14 +125,14 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         config.update({
             "train_batch_size": 2000,
             "horizon": 1000,
-            "lr_schedule": [[0, tune.grid_search([5e-4, 5e-3])],
-                            [20000000, tune.grid_search([5e-4, 5e-5, 5e-6])]],
+            # "lr_schedule": [[0, tune.grid_search([5e-4, 5e-3])],
+            #                 [20000000, tune.grid_search([5e-4, 5e-5, 5e-6])]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            "entropy_coeff": tune.grid_search([0, -1e-1, -1e-2]),
+            "entropy_coeff": tune.grid_search([0, -1e-1]),
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -141,12 +141,12 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                       "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
                       "custom_options": {
                           "num_other_agents": num_agents,
-                          "moa_weight": tune.grid_search([5.0, 10.0, 20.0]),
+                          "moa_weight": tune.grid_search([10.0]),
                           "train_moa_only_when_visible": tune.grid_search([True, False]),
                           "influence_reward_clip": 10,
                           "influence_divergence_measure": 'kl',
-                          "influence_reward_weight": tune.grid_search([0.5, 1.0, 2.0]),
-                          "influence_curriculum_steps": tune.grid_search([5e6, 10e6, 15e6]),
+                          "influence_reward_weight": tune.grid_search([1.0]),
+                          "influence_curriculum_steps": tune.grid_search([10e6]),
                           "influence_only_when_visible": tune.grid_search([True, False])}}
 
         })
