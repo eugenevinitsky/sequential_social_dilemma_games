@@ -79,9 +79,17 @@ class HarvestEnv(MapEnv):
             row, col = self.apple_points[i]
             # apples can't spawn where agents are standing or where an apple already is
             if [row, col] not in self.agent_pos and self.world_map[row, col] != 'A':
-                window = util.return_view(self.world_map, self.apple_points[i],
-                                          APPLE_RADIUS, APPLE_RADIUS)
-                num_apples = self.count_apples(window)
+                num_apples = 0
+                for j in range(-APPLE_RADIUS, APPLE_RADIUS + 1):
+                    for k in range(-APPLE_RADIUS, APPLE_RADIUS + 1):
+                        if j**2 + k**2 <= APPLE_RADIUS:
+                            x, y = self.apple_points[i]
+                            if 0 <= x + j < self.world_map.shape[0] and \
+                                    self.world_map.shape[1] > y + k >= 0:
+                                symbol = self.world_map[x + j, y + k]
+                                if symbol == 'A':
+                                    num_apples += 1
+
                 spawn_prob = SPAWN_PROB[min(num_apples, 3)]
                 rand_num = np.random.rand(1)[0]
                 if rand_num < spawn_prob:
