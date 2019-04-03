@@ -7,7 +7,6 @@ import numpy as np
 import os
 import shutil
 import sys
-import pdb
 
 import ray
 from ray.rllib.agents.registry import get_agent_class
@@ -149,7 +148,6 @@ def visualizer_rllib(args):
                 action = action_dict
                 agent_ids = sorted(state.keys())
                 last_actions = [action_dict[a] for a in agent_ids]
-                import pdb; pdb.set_trace()
             else:
                 if use_lstm[DEFAULT_POLICY_ID]:
                     action, state_init, _ = agent.compute_action(
@@ -158,7 +156,7 @@ def visualizer_rllib(args):
                     action = agent.compute_action(state)
 
             if agent.config["clip_actions"]:
-                #clipped_action = clip_action(action, env.action_space)
+                # clipped_action = clip_action(action, env.action_space)
                 next_state, reward, done, _ = env.step(action)
             else:
                 next_state, reward, done, _ = env.step(action)
