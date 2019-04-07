@@ -469,6 +469,8 @@ class MapEnv(MultiAgentEnv):
 
             # make the remaining un-conflicted moves
             while len(agent_moves.items()) > 0:
+                agent_by_pos = {tuple(agent.get_pos()):
+                                agent.agent_id for agent in self.agents.values()}
                 num_moves = len(agent_moves.items())
                 moves_copy = agent_moves.copy()
                 del_keys = []
