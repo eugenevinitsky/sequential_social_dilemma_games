@@ -2,6 +2,7 @@
    agent policies."""
 
 import argparse
+from collections import defaultdict
 import json
 import numpy as np
 import os
@@ -124,9 +125,10 @@ def visualizer_rllib(args):
         done = False
         reward_total = 0.0
         last_actions = [0] * len(state.keys())  # Number of agents
+        action_dict = defaultdict(int)
+        reward_dict = defaultdict(int)
         while not done and steps < (config['horizon'] or steps + 1):
             if multiagent:
-                action_dict = {}
                 for agent_id in state.keys():
                     a_state = state[agent_id]
                     if a_state is not None:
@@ -137,13 +139,17 @@ def visualizer_rllib(args):
                             a_action, p_state_init, _ = agent.compute_action(
                                 a_state,
                                 state=state_init[policy_id],
+                                prev_action=action_dict[agent_id],
+                                prev_reward=reward_dict[agent_id],
                                 policy_id=policy_id,
-                                info={'all_agent_actions': last_actions})
+                                info={'all_agents_actions': last_actions})
                             state_init[policy_id] = p_state_init
                         else:
                             a_action = agent.compute_action(
-                                a_state, policy_id=policy_id, 
-                                info={'all_agent_actions': last_actions})
+                                a_state, policy_id=policy_id,
+                                prev_action=action_dict[agent_id],
+                                prev_reward=reward_dict[agent_id],
+                                info={'all_agents_actions': last_actions})
                         action_dict[agent_id] = a_action
                 action = action_dict
                 agent_ids = sorted(state.keys())
@@ -160,7 +166,9 @@ def visualizer_rllib(args):
                 next_state, reward, done, _ = env.step(action)
             else:
                 next_state, reward, done, _ = env.step(action)
-
+            if multiagent:
+                for agent_id, rew in reward.items():
+                    reward_dict[agent_id] = rew
             if multiagent:
                 done = done["__all__"]
                 reward_total += sum(reward.values())
