@@ -147,6 +147,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                           "influence_divergence_measure": 'kl',
                           "influence_reward_weight": tune.grid_search([1.0]),
                           "influence_curriculum_steps": tune.grid_search([10e6]),
+                          "influence_scaledown_steps": tune.grid_search([100e6]),
                           "influence_only_when_visible": tune.grid_search([True, False])}}
 
         })
@@ -175,6 +176,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                                          "influence_divergence_measure": 'kl',
                                          "influence_reward_weight": 2.5,
                                          "influence_curriculum_steps": 10e6,
+                                         "influence_scaledown_steps": 100e6,
                                          "influence_only_when_visible": True}}
 
         })
@@ -188,7 +190,7 @@ def main(unused_argv):
     # else:
     #     ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(25e10),
     #              redis_max_memory=int(50e10))
-    ray.init(redis_address="localhost:6379")
+    ray.init()  # redis_address="localhost:6379"
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
