@@ -147,7 +147,9 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                           "influence_divergence_measure": 'kl',
                           "influence_reward_weight": tune.grid_search([1.0]),
                           "influence_curriculum_steps": tune.grid_search([10e6]),
-                          "influence_scaledown_steps": tune.grid_search([100e6]),
+                          "influence_scaledown_start": tune.grid_search([100e6]),
+                          "influence_scaledown_end": tune.grid_search([300e6]),
+                          "influence_scaledown_final_val": tune.grid_search([.5]),
                           "influence_only_when_visible": tune.grid_search([True, False])}}
 
         })
@@ -176,7 +178,9 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
                                          "influence_divergence_measure": 'kl',
                                          "influence_reward_weight": 2.5,
                                          "influence_curriculum_steps": 10e6,
-                                         "influence_scaledown_steps": 100e6,
+                                         "influence_scaledown_start": 100e6,
+                                         "influence_scaledown_end": 300e6,
+                                         "influence_scaledown_final_val": 0.5,
                                          "influence_only_when_visible": True}}
 
         })
