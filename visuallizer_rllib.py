@@ -2,6 +2,7 @@
    agent policies."""
 
 import argparse
+import collections
 from collections import defaultdict
 import json
 import numpy as np
@@ -10,11 +11,13 @@ import shutil
 import sys
 
 import ray
+from ray.cloudpickle import cloudpickle
 from ray.rllib.agents.registry import get_agent_class
+from ray.rllib.env import MultiAgentEnv
+from ray.rllib.env.base_env import _DUMMY_AGENT_ID
+from ray.rllib.evaluation.sample_batch import DEFAULT_POLICY_ID
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
-from ray.cloudpickle import cloudpickle
-from ray.rllib.evaluation.sample_batch import DEFAULT_POLICY_ID
 # from ray.rllib.evaluation.sampler import clip_action
 
 from models.conv_to_fc_net import ConvToFCNet
@@ -38,6 +41,18 @@ def get_rllib_pkl(path):
         pkldata = cloudpickle.load(file)
     return pkldata
 
+class DefaultMapping(collections.defaultdict):
+    """default_factory now takes as an argument the missing key."""
+
+    def __missing__(self, key):
+        self[key] = value = self.default_factory(key)
+        return value
+
+
+def default_policy_agent_mapping(unused_agent_id):
+    return DEFAULT_POLICY_ID
+
+
 
 def visualizer_rllib(args):
     result_dir = args.result_dir if args.result_dir[-1] != '/' \
@@ -60,9 +75,9 @@ def visualizer_rllib(args):
     register_env(env_name, env_creator.func)
 
     ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
-    ModelCatalog.register_custom_model("conv_to_fc_net_no_lstm", ConvToFCNetNoLSTM)
+    # ModelCatalog.register_custom_model("conv_to_fc_net_no_lstm", ConvToFCNetNoLSTM)
     ModelCatalog.register_custom_model("conv_to_fc_net_actions", ConvToFCNetActions)
-    ModelCatalog.register_custom_model("conv_to_fc_net_actions_no_lstm", ConvToFCNetActionsNoLSTM)
+    # ModelCatalog.register_custom_model("conv_to_fc_net_actions_no_lstm", ConvToFCNetActionsNoLSTM)
 
     # Determine agent and checkpoint
     config_run = config['env_config']['run'] if 'run' in config['env_config'] \
@@ -79,7 +94,7 @@ def visualizer_rllib(args):
     elif (config_run):
         agent_cls = get_agent_class(config_run)
     else:
-        print('visualizer_rllib.py: error: could not find flow parameter '
+        print('visualizer_rllib.py: error: could not find parameter '
               '\'run\' in params.json, '
               'add argument --run to provide the algorithm or model used '
               'to train the results\n e.g. '
@@ -98,77 +113,84 @@ def visualizer_rllib(args):
     checkpoint = checkpoint + '/checkpoint-' + args.checkpoint_num
     print('Loading checkpoint', checkpoint)
     agent.restore(checkpoint)
+
+    policy_agent_mapping = default_policy_agent_mapping
+
     if hasattr(agent, "local_evaluator"):
         env = agent.local_evaluator.env
+        multiagent = isinstance(env, MultiAgentEnv)
+        if agent.local_evaluator.multiagent:
+            policy_agent_mapping = agent.config["multiagent"][
+                "policy_mapping_fn"]
+
+        policy_map = agent.local_evaluator.policy_map
+        state_init = {p: m.get_initial_state() for p, m in policy_map.items()}
+        use_lstm = {p: len(s) > 0 for p, s in state_init.items()}
+        action_init = {
+            p: m.action_space.sample()
+            for p, m in policy_map.items()
+        }
+    else:
+        env = env_creator()
+        multiagent = False
+        use_lstm = {DEFAULT_POLICY_ID: False}
 
     if args.save_video:
         shape = env.base_map.shape
         full_obs = [np.zeros((shape[0], shape[1], 3), dtype=np.uint8)
                     for i in range(config["horizon"])]
 
-    if hasattr(agent, "local_evaluator"):
-        multiagent = agent.local_evaluator.multiagent
-        if multiagent:
-            policy_agent_mapping = agent.config["multiagent"][
-                "policy_mapping_fn"]
-            mapping_cache = {}
-        policy_map = agent.local_evaluator.policy_map
-        state_init = {p: m.get_initial_state() for p, m in policy_map.items()}
-        use_lstm = {p: len(s) > 0 for p, s in state_init.items()}
-    else:
-        multiagent = False
-        use_lstm = {DEFAULT_POLICY_ID: False}
-
     steps = 0
     while steps < (config['horizon'] or steps + 1):
-        state = env.reset()
+        mapping_cache = {}  # in case policy_agent_mapping is stochastic
+        obs = env.reset()
+        agent_states = DefaultMapping(
+            lambda agent_id: state_init[mapping_cache[agent_id]])
+        prev_actions = DefaultMapping(
+            lambda agent_id: action_init[mapping_cache[agent_id]])
+        prev_rewards = collections.defaultdict(lambda: 0.)
         done = False
+        last_actions = [0] * len(obs.keys())  # Number of agents
         reward_total = 0.0
-        last_actions = [0] * len(state.keys())  # Number of agents
-        action_dict = defaultdict(int)
-        reward_dict = defaultdict(int)
         while not done and steps < (config['horizon'] or steps + 1):
-            if multiagent:
-                for agent_id in state.keys():
-                    a_state = state[agent_id]
-                    if a_state is not None:
-                        policy_id = mapping_cache.setdefault(
-                            agent_id, policy_agent_mapping(agent_id))
-                        p_use_lstm = use_lstm[policy_id]
-                        if p_use_lstm:
-                            a_action, p_state_init, _ = agent.compute_action(
-                                a_state,
-                                state=state_init[policy_id],
-                                prev_action=action_dict[agent_id],
-                                prev_reward=reward_dict[agent_id],
-                                policy_id=policy_id,
-                                info={'all_agents_actions': last_actions})
-                            state_init[policy_id] = p_state_init
-                        else:
-                            a_action = agent.compute_action(
-                                a_state, policy_id=policy_id,
-                                prev_action=action_dict[agent_id],
-                                prev_reward=reward_dict[agent_id],
-                                info={'all_agents_actions': last_actions})
-                        action_dict[agent_id] = a_action
-                action = action_dict
-                agent_ids = sorted(state.keys())
-                last_actions = [action_dict[a] for a in agent_ids]
-            else:
-                if use_lstm[DEFAULT_POLICY_ID]:
-                    action, state_init, _ = agent.compute_action(
-                        state, state=state_init)
-                else:
-                    action = agent.compute_action(state)
+            multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
+            action_dict = {}
+            for agent_id, a_obs in multi_obs.items():
+                if a_obs is not None:
+                    policy_id = mapping_cache.setdefault(
+                        agent_id, policy_agent_mapping(agent_id))
+                    p_use_lstm = use_lstm[policy_id]
+                    if p_use_lstm:
+                        import ipdb; ipdb.set_trace()
+                        a_action, p_state, _ = agent.compute_action(
+                            a_obs,
+                            state=agent_states[agent_id],
+                            prev_action=prev_actions[agent_id],
+                            prev_reward=prev_rewards[agent_id],
+                            policy_id=policy_id,
+                            info={'all_agents_actions': last_actions})
+                        agent_states[agent_id] = p_state
+                    else:
+                        a_action = agent.compute_action(
+                            a_obs,
+                            prev_action=prev_actions[agent_id],
+                            prev_reward=prev_rewards[agent_id],
+                            policy_id=policy_id,
+                            info={'all_agents_actions': last_actions})
+                    action_dict[agent_id] = a_action
+                    prev_actions[agent_id] = a_action
+            agent_ids = sorted(obs.keys())
+            last_actions = [action_dict[a] for a in agent_ids]
+            action = action_dict
 
-            if agent.config["clip_actions"]:
-                # clipped_action = clip_action(action, env.action_space)
-                next_state, reward, done, _ = env.step(action)
-            else:
-                next_state, reward, done, _ = env.step(action)
+            action = action if multiagent else action[_DUMMY_AGENT_ID]
+            next_obs, reward, done, _ = env.step(action)
             if multiagent:
-                for agent_id, rew in reward.items():
-                    reward_dict[agent_id] = rew
+                for agent_id, r in reward.items():
+                    prev_rewards[agent_id] = r
+            else:
+                prev_rewards[_DUMMY_AGENT_ID] = reward
+
             if multiagent:
                 done = done["__all__"]
                 reward_total += sum(reward.values())
@@ -178,9 +200,8 @@ def visualizer_rllib(args):
             if args.save_video:
                 rgb_arr = env.map_to_colors()
                 full_obs[steps] = rgb_arr.astype(np.uint8)
-
             steps += 1
-            state = next_state
+            obs = next_obs
         print("Episode reward", reward_total)
 
     if args.save_video:

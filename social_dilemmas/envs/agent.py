@@ -173,7 +173,7 @@ class HarvestAgent(Agent):
 
     @property
     def observation_space(self):
-        return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+        return Box(low=-1.0, high=1.0, shape=(2 * self.view_len + 1,
                                              2 * self.view_len + 1, 3), dtype=np.float32)
 
     def hit(self, char):
@@ -217,7 +217,7 @@ class CleanupAgent(Agent):
 
     @property
     def observation_space(self):
-        return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+        return Box(low=-1.0, high=1.0, shape=(2 * self.view_len + 1,
                                              2 * self.view_len + 1, 3), dtype=np.float32)
 
     # Ugh, this is gross, this leads to the actions basically being
