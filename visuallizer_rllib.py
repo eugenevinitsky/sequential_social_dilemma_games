@@ -161,7 +161,6 @@ def visualizer_rllib(args):
                         agent_id, policy_agent_mapping(agent_id))
                     p_use_lstm = use_lstm[policy_id]
                     if p_use_lstm:
-                        import ipdb; ipdb.set_trace()
                         a_action, p_state, _ = agent.compute_action(
                             a_obs,
                             state=agent_states[agent_id],
