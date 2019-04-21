@@ -41,7 +41,7 @@ auth:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
-    InstanceType: c4.4xlarge
+    InstanceType: c4.8xlarge
     ImageId: ami-0077cb35e9589eada # Flow AMI (Ubuntu)
     InstanceMarketOptions:
         MarketType: spot
@@ -61,7 +61,7 @@ head_node:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
-    InstanceType: c4.4xlarge
+    InstanceType: c4.8xlarge
     ImageId: ami-0077cb35e9589eada # Flow AMI (Ubuntu)
 
     #Run workers on spot by default. Comment this out to use on-demand.
@@ -79,7 +79,7 @@ file_mounts: {
 setup_commands:
     # checkout your desired branch on all worker nodes
     - echo 'export PATH="/home/ubuntu/anaconda3/bin:$PATH"' >> ~/.bashrc
-    - cd sequential_social_dilemma_games && git fetch && git checkout testing_branch && git pull && pip install -r requirements_autoscale.txt
+    - cd sequential_social_dilemma_games && git fetch && git checkout visible_actions && git pull && pip install -r requirements_autoscale.txt
     - cd sequential_social_dilemma_games && python setup.py develop
     - cd ray/python/ray/rllib && git checkout causal_a3c && git pull && python setup-rllib-dev.py --yes
 

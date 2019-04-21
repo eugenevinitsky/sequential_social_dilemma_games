@@ -184,9 +184,9 @@ def main(unused_argv):
             "stop": {
                 "training_iteration": 20000
             },
-            'checkpoint_freq': 100,
+            'checkpoint_freq': 500,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/fourth_reproduction/causal_influence_baseline_cleanup'
+            'upload_dir': 's3://njaques.experiments/sixth_reproduction/causal_influence_baseline_harvest'
         }
     }, resume=FLAGS.resume)
 
