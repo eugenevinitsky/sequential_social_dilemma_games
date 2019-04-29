@@ -173,7 +173,6 @@ def main(unused_argv):
             },
             'checkpoint_freq': FLAGS.checkpoint_frequency,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_basline'
 
         }
     })

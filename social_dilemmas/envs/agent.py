@@ -174,7 +174,7 @@ class HarvestAgent(Agent):
     @property
     def observation_space(self):
         return Box(low=0, high=1.0, shape=(2 * self.view_len + 1,
-                                             2 * self.view_len + 1, 3), dtype=np.float32)
+                                           2 * self.view_len + 1, 3), dtype=np.float32)
 
     def hit(self, char):
         if char == 'F':

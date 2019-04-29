@@ -6,7 +6,7 @@ import numpy as np
 
 def save_img(rgb_arr, path, name):
     plt.imshow(rgb_arr, interpolation='nearest')
-    plt.savefig(path + name)
+    plt.savefig(os.path.abspath(os.path.join(os.path.dirname(__file__), path + name)))
 
 
 def make_video_from_image_dir(vid_path, img_folder, video_name='trajectory', fps=5):
@@ -44,6 +44,7 @@ def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory',
     video = cv2.VideoWriter(video_path, fourcc, float(fps), (width, height))
 
     for i, image in enumerate(rgb_arrs):
+        # save_img(image, 'videos/images', '/{}.png'.format(i))
         percent_done = int((i / len(rgb_arrs)) * 100)
         if percent_done % 20 == 0:
             print("\t...", percent_done, "% of frames rendered")

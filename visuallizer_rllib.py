@@ -3,7 +3,6 @@
 
 import argparse
 import collections
-from collections import defaultdict
 import json
 import numpy as np
 import os
@@ -18,12 +17,8 @@ from ray.rllib.env.base_env import _DUMMY_AGENT_ID
 from ray.rllib.evaluation.sample_batch import DEFAULT_POLICY_ID
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
-# from ray.rllib.evaluation.sampler import clip_action
 
 from models.conv_to_fc_net import ConvToFCNet
-from models.conv_to_fc_net_actions import ConvToFCNetActions
-from models.conv_to_fc_net_actions_no_lstm import ConvToFCNetActions as ConvToFCNetActionsNoLSTM
-from models.conv_to_fc_net_no_lstm import ConvToFCNet as ConvToFCNetNoLSTM
 import utility_funcs
 
 
@@ -41,6 +36,7 @@ def get_rllib_pkl(path):
         pkldata = cloudpickle.load(file)
     return pkldata
 
+
 class DefaultMapping(collections.defaultdict):
     """default_factory now takes as an argument the missing key."""
 
@@ -51,7 +47,6 @@ class DefaultMapping(collections.defaultdict):
 
 def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
-
 
 
 def visualizer_rllib(args):
@@ -75,9 +70,6 @@ def visualizer_rllib(args):
     register_env(env_name, env_creator.func)
 
     ModelCatalog.register_custom_model("conv_to_fc_net", ConvToFCNet)
-    # ModelCatalog.register_custom_model("conv_to_fc_net_no_lstm", ConvToFCNetNoLSTM)
-    ModelCatalog.register_custom_model("conv_to_fc_net_actions", ConvToFCNetActions)
-    # ModelCatalog.register_custom_model("conv_to_fc_net_actions_no_lstm", ConvToFCNetActionsNoLSTM)
 
     # Determine agent and checkpoint
     config_run = config['env_config']['run'] if 'run' in config['env_config'] \
@@ -152,6 +144,7 @@ def visualizer_rllib(args):
         done = False
         last_actions = [0] * len(obs.keys())  # Number of agents
         reward_total = 0.0
+
         while not done and steps < (config['horizon'] or steps + 1):
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}

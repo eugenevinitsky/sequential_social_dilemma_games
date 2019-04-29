@@ -16,8 +16,6 @@ from social_dilemmas.envs.cleanup import CleanupEnv
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.map_env import MapEnv
 
-import utility_funcs as util
-
 # map actions to appropriate numbers
 ACTION_MAP = {y: x for x, y in BASE_ACTIONS.items()}
 HARVEST_ACTION_MAP = {y: x for x, y in HARVEST_ACTIONS.items()}
@@ -1082,7 +1080,6 @@ class TestHarvestEnv(unittest.TestCase):
                                  ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
                                  ['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@']])
         np.testing.assert_array_equal(expected_map, self.env.test_map)
-
 
 
 class TestCleanupEnv(unittest.TestCase):

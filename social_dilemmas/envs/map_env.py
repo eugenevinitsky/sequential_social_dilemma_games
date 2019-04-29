@@ -14,7 +14,7 @@ ACTIONS = {'MOVE_LEFT': [0, -1],  # Move left
            'STAY': [0, 0],  # don't move
            'TURN_CLOCKWISE': [[0, 1], [-1, 0]],  # Clockwise rotation matrix
            'TURN_COUNTERCLOCKWISE': [[0, -1], [1, 0]]}  # Counter clockwise rotation matrix
-            # Positive Theta is in the counterclockwise direction
+# Positive Theta is in the counterclockwise direction
 
 ORIENTATIONS = {'LEFT': [0, -1],
                 'RIGHT': [0, 1],
@@ -613,6 +613,7 @@ class MapEnv(MultiAgentEnv):
         """
         agent_by_pos = {tuple(agent.get_pos()): agent_id for agent_id, agent in self.agents.items()}
         start_pos = np.asarray(firing_pos)
+        # FIXME(EV) SOMETHING IS WRONG WITH ORIENTATIONS
         firing_direction = ORIENTATIONS[firing_orientation]
         # compute the other two starting positions
         right_shift = self.rotate_right(firing_direction)
