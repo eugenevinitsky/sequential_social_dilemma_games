@@ -43,6 +43,22 @@ TEST_MAP_1 = np.array(
      ['@'] * 7]
 )
 
+FIRE_RANGE_MAP = np.array(
+    [['@'] * 13,
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] + [' '] * 11 + ['@'],
+     ['@'] * 13]
+)
+
 # basic empty map with no apples
 BASE_MAP_2 = [
     '@@@@@@',
@@ -324,41 +340,41 @@ class TestMapEnv(unittest.TestCase):
         # Test that all the moves and rotations work correctly
         # test when facing left
         self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 3])
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [3, 2])
         self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         self.env.step({agent_id: ACTION_MAP['MOVE_UP']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
         self.env.step({agent_id: ACTION_MAP['MOVE_DOWN']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         # test when facing up
         self.rotate_agent(agent_id, 'UP')
         self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
         self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         self.env.step({agent_id: ACTION_MAP['MOVE_UP']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
         self.env.step({agent_id: ACTION_MAP['MOVE_DOWN']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         # test when facing down
         self.rotate_agent(agent_id, 'DOWN')
         self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [3, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 3])
         self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         self.env.step({agent_id: ACTION_MAP['MOVE_UP']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 3])
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [3, 2])
         self.env.step({agent_id: ACTION_MAP['MOVE_DOWN']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         # test when facing right
         self.rotate_agent(agent_id, 'RIGHT')
         self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
         self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
         self.env.step({agent_id: ACTION_MAP['MOVE_UP']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [3, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 3])
         self.env.step({agent_id: ACTION_MAP['MOVE_DOWN']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
 
@@ -388,16 +404,16 @@ class TestMapEnv(unittest.TestCase):
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [5, 5])
         self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
         self.env.step({agent_id: ACTION_MAP['MOVE_DOWN']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [4, 5])
-        self.move_agent(agent_id, [5, 4])
-        self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [5, 4])
-        self.move_agent(agent_id, [1, 2])
-        self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
+        self.move_agent(agent_id, [4, 5])
+        self.env.step({agent_id: ACTION_MAP['MOVE_RIGHT']})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [4, 5])
         self.move_agent(agent_id, [2, 1])
-        self.env.step({agent_id: ACTION_MAP['MOVE_UP']})
+        self.env.step({agent_id: ACTION_MAP['MOVE_LEFT']})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
+        self.move_agent(agent_id, [1, 2])
+        self.env.step({agent_id: ACTION_MAP['MOVE_UP']})
+        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
 
         # rotations correctly update the agent state
         self.rotate_agent(agent_id, 'UP')
@@ -434,14 +450,14 @@ class TestMapEnv(unittest.TestCase):
         self.move_agent('agent-1', [3, 4])
         self.rotate_agent('agent-0', 'UP')
         self.rotate_agent('agent-1', 'UP')
-        self.env.step({'agent-0': ACTION_MAP['MOVE_DOWN']})
-        self.env.step({'agent-1': ACTION_MAP['MOVE_UP']})
+        self.env.step({'agent-0': ACTION_MAP['MOVE_RIGHT']})
+        self.env.step({'agent-1': ACTION_MAP['MOVE_LEFT']})
         np.testing.assert_array_equal(self.env.agents['agent-0'].get_pos(), [3, 3])
         np.testing.assert_array_equal(self.env.agents['agent-1'].get_pos(), [3, 4])
 
-        # test that agents can't walk through each other
-        self.env.step({'agent-0': ACTION_MAP['MOVE_DOWN'],
-                       'agent-1': ACTION_MAP['MOVE_UP']})
+        # test that agents can't walk through each other if they move simultaneously
+        self.env.step({'agent-0': ACTION_MAP['MOVE_RIGHT'],
+                       'agent-1': ACTION_MAP['MOVE_LEFT']})
         np.testing.assert_array_equal(self.env.agents['agent-0'].get_pos(), [3, 3])
         np.testing.assert_array_equal(self.env.agents['agent-1'].get_pos(), [3, 4])
         # also check that the map looks correct, no agent has disappeared
@@ -455,14 +471,10 @@ class TestMapEnv(unittest.TestCase):
 
         # test that agents can walk into other agents if moves are de-conflicting
         # conflict only occurs stochastically so try it 50 times
-        # TODO(ev) the percentages are consistent among agents
-        # TODO(ev) but which agent gets which percent is not deterministic..
         np.random.seed(1)
-        self.env.agents['agent-0'].update_agent_rot('UP')
-        self.env.step({'agent-0': ACTION_MAP['MOVE_DOWN']})
         for i in range(100):
-            self.env.step({'agent-0': ACTION_MAP['MOVE_DOWN'],
-                           'agent-1': ACTION_MAP['MOVE_LEFT']})
+            self.env.step({'agent-0': ACTION_MAP['MOVE_RIGHT'],
+                           'agent-1': ACTION_MAP['MOVE_UP']})
             expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                      ['@', ' ', ' ', ' ', ' ', '@'],
                                      ['@', ' ', ' ', ' ', 'P', '@'],
@@ -470,8 +482,8 @@ class TestMapEnv(unittest.TestCase):
                                      ['@', ' ', ' ', ' ', ' ', '@'],
                                      ['@', '@', '@', '@', '@', '@']])
             np.testing.assert_array_equal(expected_map, self.env.test_map)
-            self.env.step({'agent-0': ACTION_MAP['MOVE_UP'],
-                           'agent-1': ACTION_MAP['MOVE_RIGHT']})
+            self.env.step({'agent-0': ACTION_MAP['MOVE_LEFT'],
+                           'agent-1': ACTION_MAP['MOVE_DOWN']})
 
         # test that if two agents have a conflicting move then the tie is broken randomly
         num_agent_1 = 0.0
@@ -479,8 +491,8 @@ class TestMapEnv(unittest.TestCase):
         for i in range(100):
             self.move_agent('agent-0', [3, 2])
             self.move_agent('agent-1', [3, 4])
-            self.env.step({'agent-0': ACTION_MAP['MOVE_DOWN'],
-                           'agent-1': ACTION_MAP['MOVE_UP']})
+            self.env.step({'agent-0': ACTION_MAP['MOVE_RIGHT'],
+                           'agent-1': ACTION_MAP['MOVE_LEFT']})
             if self.env.agents['agent-0'].get_pos().tolist() == [3, 3]:
                 num_agent_1 += 1
             else:
@@ -513,9 +525,9 @@ class TestMapEnv(unittest.TestCase):
             self.move_agent('agent-0', [3, 2])
             self.move_agent('agent-1', [3, 4])
             self.move_agent('agent-2', [2, 3])
-            self.env.step({'agent-0': ACTION_MAP['MOVE_DOWN'],
-                           'agent-1': ACTION_MAP['MOVE_UP'],
-                           'agent-2': ACTION_MAP['MOVE_RIGHT']})
+            self.env.step({'agent-0': ACTION_MAP['MOVE_RIGHT'],
+                           'agent-1': ACTION_MAP['MOVE_LEFT'],
+                           'agent-2': ACTION_MAP['MOVE_DOWN']})
             if self.env.agents['agent-2'].get_pos().tolist() == [3, 3]:
                 num_agent_1 += 1
             else:
@@ -555,9 +567,9 @@ class TestMapEnv(unittest.TestCase):
             self.move_agent('agent-1', [3, 4])
             self.move_agent('agent-2', [2, 2])
             self.move_agent('agent-0', [3, 2])
-            self.env.step({'agent-0': ACTION_MAP['MOVE_DOWN'],
-                           'agent-1': ACTION_MAP['MOVE_UP'],
-                           'agent-2': ACTION_MAP['MOVE_RIGHT']})
+            self.env.step({'agent-0': ACTION_MAP['MOVE_RIGHT'],
+                           'agent-1': ACTION_MAP['MOVE_LEFT'],
+                           'agent-2': ACTION_MAP['MOVE_DOWN']})
             if self.env.agents['agent-2'].get_pos().tolist() == [2, 2]:
                 percent_failed += 1
                 expect_1 = np.array([['@', '@', '@', '@', '@', '@'],
@@ -591,10 +603,10 @@ class TestMapEnv(unittest.TestCase):
             self.move_agent('agent-2', [1, 2])
             self.move_agent('agent-0', [3, 2])
             self.move_agent('agent-3', [1, 4])
-            self.env.step({'agent-0': ACTION_MAP['MOVE_LEFT'],
-                           'agent-2': ACTION_MAP['MOVE_RIGHT'],
-                           'agent-1': ACTION_MAP['MOVE_LEFT'],
-                           'agent-3': ACTION_MAP['MOVE_RIGHT']})
+            self.env.step({'agent-0': ACTION_MAP['MOVE_UP'],
+                           'agent-2': ACTION_MAP['MOVE_DOWN'],
+                           'agent-1': ACTION_MAP['MOVE_UP'],
+                           'agent-3': ACTION_MAP['MOVE_DOWN']})
             if self.env.agents['agent-0'].get_pos().tolist() == [2, 2]:
                 agent_0_percent += 1
             if self.env.agents['agent-1'].get_pos().tolist() == [2, 4]:
@@ -613,10 +625,10 @@ class TestMapEnv(unittest.TestCase):
         self.move_agent('agent-2', [2, 2])
         self.move_agent('agent-1', [2, 3])
         self.move_agent('agent-3', [3, 3])
-        self.env.step({'agent-0': ACTION_MAP['MOVE_LEFT'],
-                       'agent-1': ACTION_MAP['MOVE_RIGHT'],
-                       'agent-2': ACTION_MAP['MOVE_RIGHT'],
-                       'agent-3': ACTION_MAP['MOVE_UP']})
+        self.env.step({'agent-0': ACTION_MAP['MOVE_UP'],
+                       'agent-1': ACTION_MAP['MOVE_DOWN'],
+                       'agent-2': ACTION_MAP['MOVE_DOWN'],
+                       'agent-3': ACTION_MAP['MOVE_LEFT']})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
                                  ['@', ' ', 'P', 'P', ' ', '@'],
@@ -626,7 +638,7 @@ class TestMapEnv(unittest.TestCase):
         np.testing.assert_array_equal(expected_map, self.env.test_map)
 
         # agent 3 wants to move into space [3,2] as does agent-2
-        # agent-1 will move out of the way so one of them should successfully
+        # agent-0 will move out of the way so one of them should successfully
         # get the cell
         self.move_agent('agent-0', [3, 2])
         self.move_agent('agent-2', [2, 2])
@@ -635,9 +647,9 @@ class TestMapEnv(unittest.TestCase):
         self.move_agent('agent-3', [3, 3])
         agent_2_success = 0
         for i in range(100):
-            self.env.step({'agent-0': ACTION_MAP['MOVE_RIGHT'],
-                           'agent-2': ACTION_MAP['MOVE_RIGHT'],
-                           'agent-3': ACTION_MAP['MOVE_UP']})
+            self.env.step({'agent-0': ACTION_MAP['MOVE_DOWN'],
+                           'agent-2': ACTION_MAP['MOVE_DOWN'],
+                           'agent-3': ACTION_MAP['MOVE_LEFT']})
             if self.env.agents['agent-2'].get_pos().tolist() == [3, 2]:
                 agent_2_success += 1
                 expected_map = np.array([['@', '@', '@', '@', '@', '@'],
@@ -671,10 +683,10 @@ class TestMapEnv(unittest.TestCase):
         # move this agent out of the way
         self.move_agent('agent-1', [2, 3])
         self.move_agent('agent-3', [3, 3])
-        self.env.step({'agent-0': ACTION_MAP['MOVE_LEFT'],
-                       'agent-1': ACTION_MAP['MOVE_RIGHT'],
-                       'agent-2': ACTION_MAP['MOVE_DOWN'],
-                       'agent-3': ACTION_MAP['MOVE_UP']})
+        self.env.step({'agent-0': ACTION_MAP['MOVE_UP'],
+                       'agent-1': ACTION_MAP['MOVE_DOWN'],
+                       'agent-2': ACTION_MAP['MOVE_RIGHT'],
+                       'agent-3': ACTION_MAP['MOVE_LEFT']})
         self.assertTrue(self.env.agents['agent-0'].get_pos().tolist() == [2, 2])
         self.assertTrue(self.env.agents['agent-1'].get_pos().tolist() == [3, 3])
         self.assertTrue(self.env.agents['agent-2'].get_pos().tolist() == [2, 3])
@@ -689,7 +701,7 @@ class TestMapEnv(unittest.TestCase):
         self.move_agent('agent-3', [3, 3])
         curr_map = self.env.test_map.copy()
         self.env.step({'agent-0': ACTION_MAP['MOVE_UP'],
-                       'agent-1': ACTION_MAP['MOVE_RIGHT']})
+                       'agent-1': ACTION_MAP['MOVE_LEFT']})
         np.testing.assert_array_equal(self.env.test_map, curr_map)
 
     def move_agent(self, agent_id, new_pos):
@@ -714,9 +726,8 @@ class TestMapEnv(unittest.TestCase):
 
     def add_agent(self, agent_id, start_pos, start_orientation, env, view_len):
         map_with_agents = env.get_map_with_agents()
-        grid = util.return_view(map_with_agents, start_pos, view_len, view_len)
         self.env.agents[agent_id] = DummyAgent(agent_id, start_pos, start_orientation,
-                                               grid, view_len, view_len)
+                                               map_with_agents, view_len, view_len)
         map_with_agents = env.get_map_with_agents()
 
         for agent in env.agents.values():
@@ -806,7 +817,6 @@ class TestHarvestEnv(unittest.TestCase):
         agent_id = 'agent-0'
         self.construct_map(TEST_MAP_1.copy(), agent_id, [2, 2], 'LEFT')
         # test firing
-        self.rotate_agent(agent_id, 'UP')
         self.move_agent(agent_id, [3, 2])
         self.env.step({agent_id: HARVEST_ACTION_MAP['FIRE']})
         agent_view = self.env.agents[agent_id].get_state()
@@ -821,7 +831,7 @@ class TestHarvestEnv(unittest.TestCase):
 
         # clean up the map and then check if firing looks right
         self.env.step({})
-        self.rotate_agent(agent_id, 'DOWN')
+        self.rotate_agent(agent_id, 'RIGHT')
         self.move_agent(agent_id, [3, 2])
         self.env.step({agent_id: HARVEST_ACTION_MAP['FIRE']})
         agent_view = self.env.agents[agent_id].get_state()
@@ -837,8 +847,8 @@ class TestHarvestEnv(unittest.TestCase):
         # Check that agents walking over apples makes them go away
         np.random.seed(10)
         self.construct_map(MINI_HARVEST_MAP.copy(), agent_id, [3, 2], 'RIGHT')
-        self.env.step({agent_id: HARVEST_ACTION_MAP['MOVE_RIGHT']})
-        self.env.step({agent_id: HARVEST_ACTION_MAP['MOVE_LEFT']})
+        self.env.step({agent_id: HARVEST_ACTION_MAP['MOVE_UP']})
+        self.env.step({agent_id: HARVEST_ACTION_MAP['MOVE_DOWN']})
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [['@', ' ', ' ', ' ', ' '],
@@ -857,12 +867,11 @@ class TestHarvestEnv(unittest.TestCase):
         self.rotate_agent('agent-0', 'UP')
         self.rotate_agent('agent-1', 'UP')
         # walk over an apple
-        _, rew, _, _ = self.env.step({'agent-0': HARVEST_ACTION_MAP['MOVE_DOWN'],
-                                      'agent-1': HARVEST_ACTION_MAP['MOVE_DOWN']})
+        _, rew, _, _ = self.env.step({'agent-0': HARVEST_ACTION_MAP['MOVE_RIGHT'],
+                                      'agent-1': HARVEST_ACTION_MAP['MOVE_RIGHT']})
         self.assertTrue(rew['agent-0'] == 1)
         self.assertTrue(rew['agent-1'] == 1)
         # fire a beam from agent 1 to 2
-        self.rotate_agent('agent-1', 'LEFT')
         _, rew, _, _ = self.env.step({'agent-1': HARVEST_ACTION_MAP['FIRE']})
         self.assertTrue(rew['agent-0'] == -50)
         self.assertTrue(rew['agent-1'] == -1)
@@ -879,10 +888,10 @@ class TestHarvestEnv(unittest.TestCase):
         self.move_agent('agent-0', [3, 3])
         self.move_agent('agent-1', [3, 4])
         self.rotate_agent('agent-0', 'UP')
-        self.rotate_agent('agent-1', 'UP')
+        self.rotate_agent('agent-1', 'LEFT')
 
         # test that if an agents firing beam hits another agent it gets covered
-        self.env.step({'agent-0': HARVEST_ACTION_MAP['MOVE_UP']})
+        self.env.step({'agent-0': HARVEST_ACTION_MAP['MOVE_LEFT']})
         self.env.step({'agent-1': HARVEST_ACTION_MAP['FIRE']})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
                                  ['@', ' ', ' ', ' ', ' ', '@'],
@@ -902,7 +911,7 @@ class TestHarvestEnv(unittest.TestCase):
         np.testing.assert_array_equal(expected_map, self.env.test_map)
 
         # test that if two agents fire on each other than they're still there after
-        self.env.agents['agent-0'].update_agent_rot('DOWN')
+        self.env.agents['agent-0'].update_agent_rot('RIGHT')
         self.env.step({'agent-0': HARVEST_ACTION_MAP['FIRE'],
                        'agent-1': HARVEST_ACTION_MAP['FIRE']})
         self.env.step({})
@@ -923,7 +932,7 @@ class TestHarvestEnv(unittest.TestCase):
         self.move_agent('agent-0', [4, 2])
         self.move_agent('agent-1', [4, 4])
         self.env.agents['agent-0'].update_agent_rot('UP')
-        self.env.agents['agent-1'].update_agent_rot('UP')
+        self.env.agents['agent-1'].update_agent_rot('LEFT')
         # test that if an agents firing beam hits another agent it gets covered
         self.env.step({'agent-1': HARVEST_ACTION_MAP['FIRE']})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
@@ -971,9 +980,8 @@ class TestHarvestEnv(unittest.TestCase):
 
     def add_agent(self, agent_id, start_pos, start_orientation, env, view_len):
         map_with_agents = env.get_map_with_agents()
-        grid = util.return_view(map_with_agents, start_pos, view_len, view_len)
         self.env.agents[agent_id] = HarvestAgent(agent_id, start_pos, start_orientation,
-                                                 grid, view_len)
+                                                 map_with_agents, view_len)
         map_with_agents = env.get_map_with_agents()
 
         for agent in env.agents.values():
@@ -1002,6 +1010,80 @@ class TestHarvestEnv(unittest.TestCase):
         # replace the agents with agents with smaller views
         self.add_agent(agent_id, start_pos, start_orientation, self.env, 2)
 
+    def test_firing_range(self):
+        # check that the firing beam extends as far as expected
+        self.env = HarvestEnv(ascii_map=FIRE_RANGE_MAP, num_agents=0)
+        self.env.reset()
+        self.add_agent('agent-0', [2, 2], 'UP', self.env, 5)
+        self.move_agent('agent-0', [6, 6])
+        # TODO(@evinitssky) should figure out a way to shrink this
+        self.rotate_agent('agent-0', 'UP')
+        self.env.step({'agent-0': HARVEST_ACTION_MAP['FIRE']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', 'F', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'P', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        self.rotate_agent('agent-0', 'DOWN')
+        self.env.step({'agent-0': HARVEST_ACTION_MAP['FIRE']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'P', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', 'F', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        self.rotate_agent('agent-0', 'RIGHT')
+        self.env.step({'agent-0': HARVEST_ACTION_MAP['FIRE']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', 'F', 'F', 'F', 'F', 'F', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', 'P', 'F', 'F', 'F', 'F', 'F', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', 'F', 'F', 'F', 'F', 'F', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.test_map)
+
+        self.rotate_agent('agent-0', 'LEFT')
+        self.env.step({'agent-0': HARVEST_ACTION_MAP['FIRE']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', 'F', 'F', 'F', 'F', 'F', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', 'F', 'F', 'F', 'F', 'F', 'P', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', 'F', 'F', 'F', 'F', 'F', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.test_map)
+
+
 
 class TestCleanupEnv(unittest.TestCase):
     def test_parameters(self):
@@ -1025,7 +1107,7 @@ class TestCleanupEnv(unittest.TestCase):
         self.env.reset()
         self.move_agent('agent-0', [3, 3])
         self.move_agent('agent-1', [4, 2])
-        self.rotate_agent('agent-0', 'UP')
+        self.rotate_agent('agent-0', 'LEFT')
         # check that cleanup beam does four things
         # 1. Cleans waste cells correctly
         # 2. Is blocked by the first waste cell it encounters
@@ -1054,7 +1136,7 @@ class TestCleanupEnv(unittest.TestCase):
         self.move_agent('agent-0', [3, 3])
         self.move_agent('agent-1', [4, 2])
         self.env.update_map([[3, 4, 'A']])
-        self.rotate_agent('agent-0', 'DOWN')
+        self.rotate_agent('agent-0', 'RIGHT')
         self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN']})
         self.env.step({})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
@@ -1068,7 +1150,7 @@ class TestCleanupEnv(unittest.TestCase):
         # check that you can clean up waste that an agent is standing on
         self.move_agent('agent-1', [2, 2])
         self.move_agent('agent-0', [1, 3])
-        self.rotate_agent('agent-0', 'RIGHT')
+        self.rotate_agent('agent-0', 'DOWN')
         random.seed(6)
         self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN']})
         self.assertTrue(self.env.world_map[2, 2] == 'R')
@@ -1082,8 +1164,8 @@ class TestCleanupEnv(unittest.TestCase):
         # put some waste back where it's needed
         self.env.update_map([[2, 2, 'H']])
         self.env.update_map([[3, 1, 'H']])
-        self.rotate_agent('agent-0', 'UP')
-        self.rotate_agent('agent-1', 'UP')
+        self.rotate_agent('agent-0', 'LEFT')
+        self.rotate_agent('agent-1', 'LEFT')
         self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN'],
                        'agent-1': CLEANUP_ACTION_MAP['CLEAN']})
         self.assertTrue(self.env.world_map[3, 1] == 'R')
@@ -1093,7 +1175,7 @@ class TestCleanupEnv(unittest.TestCase):
         self.env.reset()
         self.move_agent('agent-0', [3, 3])
         self.move_agent('agent-1', [4, 2])
-        self.rotate_agent('agent-0', 'UP')
+        self.rotate_agent('agent-0', 'LEFT')
 
         # check that firing beam does not clean anything and is not blocked
         # by anything
@@ -1121,7 +1203,7 @@ class TestCleanupEnv(unittest.TestCase):
         self.move_agent('agent-0', [3, 3])
         self.move_agent('agent-1', [4, 2])
         self.env.update_map([[3, 4, 'A']])
-        self.rotate_agent('agent-0', 'DOWN')
+        self.rotate_agent('agent-0', 'RIGHT')
         self.env.step({'agent-0': CLEANUP_ACTION_MAP['FIRE']})
         self.env.step({})
         expected_map = np.array([['@', '@', '@', '@', '@', '@'],
@@ -1166,8 +1248,8 @@ class TestCleanupEnv(unittest.TestCase):
 
         # Check that the waste spawn probability is computed correctly
         np.random.seed(1)
-        self.rotate_agent('agent-0', 'UP')
-        self.rotate_agent('agent-1', 'UP')
+        self.rotate_agent('agent-0', 'LEFT')
+        self.rotate_agent('agent-1', 'LEFT')
         self.env.step({'agent-0': CLEANUP_ACTION_MAP['CLEAN'],
                        'agent-1': CLEANUP_ACTION_MAP['CLEAN']})
         self.assertTrue(np.isclose(self.env.current_waste_spawn_prob, 0.5))
@@ -1182,19 +1264,22 @@ class TestCleanupEnv(unittest.TestCase):
         self.assertTrue(np.isclose(self.env.current_apple_spawn_prob, 0.025))
 
         # test that you can spawn waste under an agent
-        self.move_agent('agent-0', [3, 2])
+        self.move_agent('agent-0', [2, 1])
         random.seed(2)
         self.env.step({})
-        self.assertTrue(self.env.world_map[2, 2] == 'H')
+        self.assertTrue(self.env.world_map[2, 1] == 'H')
+
+    def test_past_bugs(self):
+        '''This function is used to check that previous bugs do not regress'''
+        pass
 
     def clear_agents(self):
         self.env.agents = {}
 
     def add_agent(self, agent_id, start_pos, start_orientation, env, view_len):
         map_with_agents = env.get_map_with_agents()
-        grid = util.return_view(map_with_agents, start_pos, view_len, view_len)
         self.env.agents[agent_id] = CleanupAgent(agent_id, start_pos, start_orientation,
-                                                 grid, view_len)
+                                                 map_with_agents, view_len)
         map_with_agents = env.get_map_with_agents()
 
         for agent in env.agents.values():

@@ -7,18 +7,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 from ray.rllib.env import MultiAgentEnv
 
-ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
-           'MOVE_RIGHT': [1, 0],  # Move right
-           'MOVE_UP': [0, -1],  # Move up
-           'MOVE_DOWN': [0, 1],  # Move down
+ACTIONS = {'MOVE_LEFT': [0, -1],  # Move left
+           'MOVE_RIGHT': [0, 1],  # Move right
+           'MOVE_UP': [-1, 0],  # Move up
+           'MOVE_DOWN': [1, 0],  # Move down
            'STAY': [0, 0],  # don't move
-           'TURN_CLOCKWISE': [[0, -1], [1, 0]],  # Rotate counter clockwise
-           'TURN_COUNTERCLOCKWISE': [[0, 1], [-1, 0]]}  # Move right
+           'TURN_CLOCKWISE': [[0, 1], [-1, 0]],  # Clockwise rotation matrix
+           'TURN_COUNTERCLOCKWISE': [[0, -1], [1, 0]]}  # Counter clockwise rotation matrix
+            # Positive Theta is in the counterclockwise direction
 
-ORIENTATIONS = {'LEFT': [-1, 0],
-                'RIGHT': [1, 0],
-                'UP': [0, -1],
-                'DOWN': [0, 1]}
+ORIENTATIONS = {'LEFT': [0, -1],
+                'RIGHT': [0, 1],
+                'UP': [-1, 0],
+                'DOWN': [1, 0]}
 
 DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    '0': [0, 0, 0],  # Black background beyond map walls
@@ -40,22 +41,19 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    '9': [238, 223, 16]}  # Yellow
 
 
-# the axes look like
-# graphic is here to help me get my head in order
-# WARNING: increasing array position in the direction of down
-# so for example if you move_left when facing left
-# your y position decreases.
+# the axes look like this when printed out
+# graphic is here just to resolve the difference between directions in row-column space
+# and in visual space
 #         ^
 #         |
 #         U
 #         P
-# <--LEFT*RIGHT---->
+# <--LEFT * RIGHT---->
 #         D
 #         O
 #         W
 #         N
 #         |
-
 
 class MapEnv(MultiAgentEnv):
 
@@ -282,6 +280,7 @@ class MapEnv(MultiAgentEnv):
 
             grid[agent.pos[0], agent.pos[1]] = char_id
 
+        # beams should overlay agents
         for beam_pos in self.beam_pos:
             grid[beam_pos[0], beam_pos[1]] = beam_pos[2]
 
