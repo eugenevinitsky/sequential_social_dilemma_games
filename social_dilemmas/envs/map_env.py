@@ -234,7 +234,12 @@ class MapEnv(MultiAgentEnv):
 
     @property
     def agent_pos(self):
-        return [agent.get_pos().tolist() for agent in self.agents.values()]
+        """Return a list of lists of where all the agents are. Used to check occupied positions
+
+        WARNING: The order of agents in this method may change as we are looking through a
+        dict.
+        """
+        return [agent.get_pos().tolist() for agent in self.agents.values()].copy()
 
     # This method is just used for testing
     # FIXME(ev) move into the testing class
@@ -412,29 +417,27 @@ class MapEnv(MultiAgentEnv):
 
         # lists of moves and their corresponding agents
         move_slots = []
-        agent_to_slot = []
 
         for slot in reserved_slots:
             row, col = slot[0], slot[1]
             if slot[2] == 'P':
                 agent_id = slot[3]
                 agent_moves[agent_id] = [row, col]
-                move_slots.append([row, col])
-                agent_to_slot.append(agent_id)
+                move_slots.append([row, col, agent_id])
 
+        move_slots = np.array(move_slots)
         # cut short the computation if there are no moves
-        if len(agent_to_slot) > 0:
+        if len(move_slots) > 0:
 
             # first we will resolve all slots over which multiple agents
             # want the slot
 
             # shuffle so that a random agent has slot priority
-            shuffle_list = list(zip(agent_to_slot, move_slots))
-            np.random.shuffle(shuffle_list)
-            agent_to_slot, move_slots = zip(*shuffle_list)
-            unique_move, indices, return_count = np.unique(move_slots, return_index=True,
+            np.random.shuffle(move_slots)
+            unique_move, indices, return_count = np.unique(move_slots[:, 0:2], return_index=True,
                                                            return_counts=True, axis=0)
-            search_list = np.array(move_slots)
+            unique_move = unique_move.astype(int)
+            search_list = np.array(move_slots[:, 0:2]).astype(int)
 
             # first go through and remove moves that can't possible happen. Three types
             # 1. Trying to move into an agent that has been issued a stay command
@@ -450,7 +453,7 @@ class MapEnv(MultiAgentEnv):
                         # If it does, all the agents commands should become STAY
                         # since no moving will be possible
                         conflict_indices = np.where((search_list == move).all(axis=1))[0]
-                        all_agents_id = [agent_to_slot[i] for i in conflict_indices]
+                        all_agents_id = [move_slots[i, -1] for i in conflict_indices]
                         # all other agents now stay in place so update their moves
                         # to reflect this
                         conflict_cell_free = True
@@ -489,13 +492,13 @@ class MapEnv(MultiAgentEnv):
                         # if the conflict cell is open, let one of the conflicting agents
                         # move into it
                         if conflict_cell_free:
-                            self.agents[agent_to_slot[index]].update_agent_pos(move)
+                            self.agents[move_slots[index, -1]].update_agent_pos(move)
                             agent_by_pos = {tuple(agent.get_pos()):
                                             agent.agent_id for agent in self.agents.values()}
                         # ------------------------------------
                         # remove all the other moves that would have conflicted
                         remove_indices = np.where((search_list == move).all(axis=1))[0]
-                        all_agents_id = [agent_to_slot[i] for i in remove_indices]
+                        all_agents_id = [move_slots[index, -1] for i in remove_indices]
                         # all other agents now stay in place so update their moves
                         # to stay in place
                         for agent_id in all_agents_id:
@@ -503,12 +506,13 @@ class MapEnv(MultiAgentEnv):
 
             # make the remaining un-conflicted moves
             while len(agent_moves.items()) > 0:
-                agent_by_pos = {tuple(agent.get_pos()):
-                                agent.agent_id for agent in self.agents.values()}
+
                 num_moves = len(agent_moves.items())
                 moves_copy = agent_moves.copy()
                 del_keys = []
                 for agent_id, move in moves_copy.items():
+                    agent_by_pos = {tuple(agent.get_pos()):
+                                        agent.agent_id for agent in self.agents.values()}
                     if agent_id in del_keys:
                         continue
                     if move in self.agent_pos:

@@ -102,10 +102,7 @@ def visualizer_rllib(args):
         sys.exit(1)
 
     # Run on only one cpu for rendering purposes if possible; A3C requires two
-    if config_run == 'A3C':
-        config['num_workers'] = 1
-    else:
-        config['num_workers'] = 0
+    config['num_workers'] = 1
 
     # create the agent that will be used to compute the actions
     agent = agent_cls(env=env_name, config=config)
@@ -152,6 +149,10 @@ def visualizer_rllib(args):
         done = False
         last_actions = [0] * len(obs.keys())  # Number of agents
         reward_total = 0.0
+
+        past_poses = [np.zeros(2) for i in range(5)]
+        past_dict = [{'blah': np.zeros(2)} for i in range(5)]
+        past_orient_dict = [{'blah': 0} for i in range(5)]
         while not done and steps < (config['horizon'] or steps + 1):
             multi_obs = obs if multiagent else {_DUMMY_AGENT_ID: obs}
             action_dict = {}
@@ -182,7 +183,37 @@ def visualizer_rllib(args):
             last_actions = [action_dict[a] for a in agent_ids]
             action = action_dict
 
+            agent_poses_dict = {agent_id: agent.get_pos() for agent_id, agent in env.agents.items()}
+            agent_poses = [agent.get_pos() for agent in env.agents.values()]
+            agent_orient_dict = [{agent_id: agent.get_orientation()} for agent_id, agent in env.agents.items()]
+            diff = [np.linalg.norm(past_pos - agent_pos) for past_pos, agent_pos in
+                    zip(past_poses, agent_poses)]
+            # print('current poses are ', agent_poses)
+            # print('past poses are ', past_poses)
+            # print('past orientations were are ', past_orient)
+            # print('actions were ', last_actions)
+            # print('norm of distances are ', diff)
+
+            diff2 = [past_pos - agent_pos for past_pos, agent_pos in zip(past_poses, agent_poses)]
+            # print('vector difference is ', diff2)
+            past_poses = agent_poses
+            for elem in diff:
+                if elem > 1:
+                    print('-------------------------------------------------------------')
+                    print('orientations', past_orient_dict)
+                    print('new positions ', agent_poses_dict)
+                    print('past positions ', past_dict)
+                    print('actions', action_dict)
+                    print('subsequent diff ', diff2)
+                    import ipdb; ipdb.set_trace()
+                    print('-------------------------------------------------------------')
+                    #break
+            past_orient_dict = agent_orient_dict
+            past_dict = agent_poses_dict
+
             action = action if multiagent else action[_DUMMY_AGENT_ID]
+            # print(agent_poses_dict)
+            # print(env.agent_pos)
             next_obs, reward, done, _ = env.step(action)
             if multiagent:
                 for agent_id, r in reward.items():
@@ -207,13 +238,13 @@ def visualizer_rllib(args):
         path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
         if not os.path.exists(path):
             os.makedirs(path)
-        images_path = path + '/images/'
-        if not os.path.exists(images_path):
-            os.makedirs(images_path)
+        # images_path = path + '/images/'
+        # if not os.path.exists(images_path):
+        #     os.makedirs(images_path)
         utility_funcs.make_video_from_rgb_imgs(full_obs, path)
 
         # Clean up images
-        shutil.rmtree(images_path)
+        # shutil.rmtree(images_path)
 
 
 def create_parser():
@@ -256,5 +287,5 @@ def create_parser():
 if __name__ == '__main__':
     parser = create_parser()
     args = parser.parse_args()
-    ray.init(num_cpus=2)
+    ray.init(num_cpus=1)
     visualizer_rllib(args)

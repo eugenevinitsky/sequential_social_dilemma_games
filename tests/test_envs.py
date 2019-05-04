@@ -10,6 +10,7 @@ from social_dilemmas.envs.agent import Agent
 from social_dilemmas.envs.agent import CleanupAgent
 from social_dilemmas.envs.agent import HarvestAgent
 from social_dilemmas.envs.agent import BASE_ACTIONS
+from social_dilemmas.envs.agent import CLEANUP_VIEW_SIZE
 from social_dilemmas.envs.agent import HARVEST_ACTIONS
 from social_dilemmas.envs.agent import CLEANUP_ACTIONS
 from social_dilemmas.envs.cleanup import CleanupEnv
@@ -1084,7 +1085,6 @@ class TestHarvestEnv(unittest.TestCase):
         np.testing.assert_array_equal(expected_map, self.env.test_map)
 
 
-
 class TestCleanupEnv(unittest.TestCase):
     def test_parameters(self):
         self.env = CleanupEnv(num_agents=0)
@@ -1269,9 +1269,95 @@ class TestCleanupEnv(unittest.TestCase):
         self.env.step({})
         self.assertTrue(self.env.world_map[2, 1] == 'H')
 
+    def test_firing_range(self):
+        # check that the firing beam extends as far as expected
+        self.env = CleanupEnv(ascii_map=FIRE_RANGE_MAP, num_agents=0)
+        self.env.reset()
+        self.add_agent('agent-0', [2, 2], 'UP', self.env, 5)
+        self.move_agent('agent-0', [6, 6])
+        # TODO(@evinitssky) should figure out a way to shrink this
+        self.rotate_agent('agent-0', 'UP')
+        self.env.step({'agent-0': CLEANUP_ACTION_MAP['FIRE']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', 'F', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'P', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        self.rotate_agent('agent-0', 'DOWN')
+        self.env.step({'agent-0': CLEANUP_ACTION_MAP['FIRE']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'P', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', 'F', 'F', 'F', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', 'F', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        self.rotate_agent('agent-0', 'RIGHT')
+        self.env.step({'agent-0': CLEANUP_ACTION_MAP['FIRE']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', 'F', 'F', 'F', 'F', 'F', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', 'P', 'F', 'F', 'F', 'F', 'F', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', 'F', 'F', 'F', 'F', 'F', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.test_map)
+
+        self.rotate_agent('agent-0', 'LEFT')
+        self.env.step({'agent-0': CLEANUP_ACTION_MAP['FIRE']})
+        expected_map = np.array([['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', 'F', 'F', 'F', 'F', 'F', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', 'F', 'F', 'F', 'F', 'F', 'P', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', 'F', 'F', 'F', 'F', 'F', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '@'],
+                                 ['@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@', '@']])
+        np.testing.assert_array_equal(expected_map, self.env.test_map)
+
     def test_past_bugs(self):
-        '''This function is used to check that previous bugs do not regress'''
-        pass
+        """This function is used to check that previous bugs do not regress"""
+        # Construct a scenario where agents weirdly took two steps
+        self.env = CleanupEnv(num_agents=0)
+        self.env.reset()
+        self.add_agent('agent-0', [19,  3], 'UP', self.env, CLEANUP_VIEW_SIZE)
+        self.add_agent('agent-1', [7, 6], 'DOWN', self.env, CLEANUP_VIEW_SIZE)
+        self.add_agent('agent-2', [15,  7], 'LEFT', self.env, CLEANUP_VIEW_SIZE)
+        self.add_agent('agent-3', [13,  8], 'RIGHT', self.env, CLEANUP_VIEW_SIZE)
+        self.add_agent('agent-4', [12, 11], 'LEFT', self.env, CLEANUP_VIEW_SIZE)
+        past_pos = self.env.agent_pos
+        self.env.step({'agent-0': 1, 'agent-1': 8, 'agent-2': 8, 'agent-3': 2, 'agent-4': 3})
+        curr_pos = self.env.agent_pos
+        for past, curr in zip(past_pos, curr_pos):
+            diff = np.linalg.norm(np.array(past) - np.array(curr))
+            self.assertTrue(diff <= 1.0)
 
     def clear_agents(self):
         self.env.agents = {}
