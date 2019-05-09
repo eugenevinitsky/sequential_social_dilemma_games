@@ -23,7 +23,7 @@ tf.app.flags.DEFINE_integer(
     'num_agents', 5,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
-    'num_cpus', 8,
+    'num_cpus', 17,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
     'num_gpus', 0,
@@ -38,7 +38,7 @@ tf.app.flags.DEFINE_float(
     'num_workers_per_device', 1,
     'Number of workers to place on a single device (CPU or GPU)')
 tf.app.flags.DEFINE_boolean(
-    'tune', False,
+    'tune', True,
     'Set to true to do hyperparameter tuning.')
 tf.app.flags.DEFINE_boolean(
     'debug', False,
@@ -178,7 +178,7 @@ def main(unused_argv):
     # else:
     #     ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(25e10),
     #              redis_max_memory=int(50e10))
-    ray.init()
+    ray.init(redis_address="localhost:6379")
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
@@ -204,6 +204,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 100,
             "config": config,
+            'upload_dir': 's3://njaques.experiments/fourth_reproduction/a3c_causal_moa_cleanup'
         }
     }, resume=FLAGS.resume)
 
