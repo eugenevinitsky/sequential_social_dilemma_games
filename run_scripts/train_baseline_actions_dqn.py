@@ -111,11 +111,7 @@ def main(unused_argv):
                                       FLAGS.use_gpu_for_driver,
                                       FLAGS.num_workers_per_device)
 
-    if FLAGS.exp_name is None:
-        exp_name = FLAGS.env + '_DQN_actions'
-    else:
-        exp_name = FLAGS.exp_name
-    print('Commencing experiment', exp_name)
+    print('Commencing experiment', FLAGS.exp_name)
 
     run_experiments({
         exp_name: {
