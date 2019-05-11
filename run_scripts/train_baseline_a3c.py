@@ -7,58 +7,18 @@ from ray.tune import run_experiments
 from ray.tune.registry import register_env
 import tensorflow as tf
 
+from config import config_parser
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
 from models.conv_to_fc_net import ConvToFCNet
 
-
+config_parser.set_tf_flags('baseline_a3c')
 FLAGS = tf.app.flags.FLAGS
-
-tf.app.flags.DEFINE_string(
-    'exp_name', 'train_baseline_a3c_cleanup',
-    'Name of the ray_results experiment directory where results are stored.')
-tf.app.flags.DEFINE_string(
-    'env', 'cleanup',
-    'Name of the environment to rollout. Can be cleanup or harvest.')
-tf.app.flags.DEFINE_integer(
-    'num_agents', 5,
-    'Number of agent policies')
-tf.app.flags.DEFINE_integer(
-    'num_cpus', 14,
-    'Number of available CPUs')
-tf.app.flags.DEFINE_integer(
-    'num_gpus', 0,
-    'Number of available GPUs')
-tf.app.flags.DEFINE_boolean(
-    'use_gpus_for_workers', False,
-    'Set to true to run workers on GPUs rather than CPUs')
-tf.app.flags.DEFINE_boolean(
-    'use_gpu_for_driver', False,
-    'Set to true to run driver on GPU rather than CPU.')
-tf.app.flags.DEFINE_float(
-    'num_workers_per_device', 1,
-    'Number of workers to place on a single device (CPU or GPU)')
-tf.app.flags.DEFINE_boolean(
-    'resume', False,
-    'Set to true to resume a previously stopped experiment.')
-tf.app.flags.DEFINE_boolean(
-    'tune', True,
-    'Set to true to tune hyperparameters.')
-
-harvest_default_params = {
-    'lr_init': 0.00136,
-    'lr_final': 0.000028,
-    'entropy_coeff': .000687}
-
-cleanup_default_params = {
-    'lr_init': 0.00126,
-    'lr_final': 0.000012,
-    'entropy_coeff': .00176}
+harvest_default_params, cleanup_default_params = config_parser.get_default_params()
 
 
 def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
           use_gpu_for_driver=False, num_workers_per_device=1, tune_hparams=False):
-
     if env == 'harvest':
         def env_creator(_):
             return HarvestEnv(num_agents=num_agents)
@@ -160,7 +120,7 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 def main(unused_argv):
     # ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(10e10),
     #          redis_max_memory=int(20e10))
-    ray.init(redis_address="localhost:6379")
+    ray.init(redis_address=config_parser.get_redis_address())
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
@@ -186,7 +146,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 500,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/sixth_reproduction/causal_influence_baseline_harvest'
+            'upload_dir': config_parser.get_upload_dir()
         }
     }, resume=FLAGS.resume)
 

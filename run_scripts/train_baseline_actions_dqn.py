@@ -1,69 +1,24 @@
 import ray
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
-from ray.rllib.agents.a3c.a3c_tf_policy_graph import A3CPolicyGraph
+from ray.rllib.agents.causal_dqn.dqn_policy_graph import DQNPolicyGraph
 from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
 import tensorflow as tf
 
+from config import config_parser
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
-from models.conv_to_fc_net import ConvToFCNet
+from models.conv_to_fc_net_actions_no_lstm import ConvToFCNetActions
 
+config_parser.set_tf_flags('baseline_actions_dqn')
 FLAGS = tf.app.flags.FLAGS
-
-tf.app.flags.DEFINE_string(
-    'exp_name', 'a3c_baseline',
-    'Name of the ray_results experiment directory where results are stored.')
-tf.app.flags.DEFINE_string(
-    'env', 'harvest',
-    'Name of the environment to rollout. Can be cleanup or harvest.')
-tf.app.flags.DEFINE_string(
-    'algorithm', 'A3C',
-    'Name of the rllib algorithm to use.')
-tf.app.flags.DEFINE_integer(
-    'num_agents', 5,
-    'Number of agent policies')
-tf.app.flags.DEFINE_integer(
-    'train_batch_size', 2000,
-    'Size of the total dataset over which one epoch is computed.')
-tf.app.flags.DEFINE_integer(
-    'checkpoint_frequency', 100,
-    'Number of steps before a checkpoint is saved.')
-tf.app.flags.DEFINE_integer(
-    'training_iterations', 10000,
-    'Total number of steps to train for')
-tf.app.flags.DEFINE_integer(
-    'num_cpus', 38,
-    'Number of available CPUs')
-tf.app.flags.DEFINE_integer(
-    'num_gpus', 0,
-    'Number of available GPUs')
-tf.app.flags.DEFINE_boolean(
-    'use_gpus_for_workers', False,
-    'Set to true to run workers on GPUs rather than CPUs')
-tf.app.flags.DEFINE_boolean(
-    'use_gpu_for_driver', False,
-    'Set to true to run driver on GPU rather than CPU.')
-tf.app.flags.DEFINE_float(
-    'num_workers_per_device', 1,
-    'Number of workers to place on a single device (CPU or GPU)')
-
-harvest_default_params = {
-    'lr_init': 0.00136,
-    'lr_final': 0.000028,
-    'entropy_coeff': .000687}
-
-cleanup_default_params = {
-    'lr_init': 0.00126,
-    'lr_final': 0.000012,
-    'entropy_coeff': .00176}
+harvest_default_params, cleanup_default_params = config_parser.get_default_params()
 
 
-def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
-          num_agents, use_gpus_for_workers=False, use_gpu_for_driver=False,
-          num_workers_per_device=1):
+def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
+          use_gpu_for_driver=False, num_workers_per_device=1):
     if env == 'harvest':
         def env_creator(_):
             return HarvestEnv(num_agents=num_agents)
@@ -82,21 +37,24 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
     act_space = single_env.action_space
 
     # Each policy can have a different configuration (including custom model)
-    def gen_policy():
-        return (A3CPolicyGraph, obs_space, act_space, {})
+    def gen_policy(agent_id):
+        return (DQNPolicyGraph, obs_space, act_space,
+                {'num_other_agents': num_agents - 1, 'agent_id': agent_id})
 
-    # Setup A3C with an ensemble of `num_policies` different policy graphs
+    # Setup PPO with an ensemble of `num_policies` different policy graphs
     policy_graphs = {}
     for i in range(num_agents):
-        policy_graphs['agent-' + str(i)] = gen_policy()
+        agent_id = 'agent-' + str(i)
+        policy_graphs[agent_id] = gen_policy(agent_id)
 
     def policy_mapping_fn(agent_id):
         return agent_id
 
     # register the custom model
-    model_name = "conv_to_fc_net"
-    ModelCatalog.register_custom_model(model_name, ConvToFCNet)
+    model_name = "conv_to_fc_net_actions"
+    ModelCatalog.register_custom_model(model_name, ConvToFCNetActions)
 
+    algorithm = 'DQN'
     agent_cls = get_agent_class(algorithm)
     config = agent_cls._default_config.copy()
 
@@ -121,45 +79,40 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
     # hyperparams
     config.update({
-        "train_batch_size": train_batch_size,
+        "train_batch_size": 128,
         "horizon": 1000,
-        # "lr_schedule":
-        # [[0, hparams['lr_init']],
-        #     [20000000, hparams['lr_final']]],
         "num_workers": num_workers,
         "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
         "num_cpus_for_driver": cpus_for_driver,
         "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
         "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-        "entropy_coeff": hparams['entropy_coeff'],
         "multiagent": {
             "policy_graphs": policy_graphs,
             "policy_mapping_fn": tune.function(policy_mapping_fn),
         },
-        "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
-                  "lstm_cell_size": 128}
+        "model": {"custom_model": "conv_to_fc_net_actions",
+                  "lstm_cell_size": 128, "use_lstm": False,
+                  "custom_options": {"num_other_agents": num_agents - 1}}
 
     })
     return algorithm, env_name, config
 
 
 def main(unused_argv):
-    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(1e10),
-             redis_max_memory=int(2e10))
+    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(2e10),
+             redis_max_memory=int(1e10))
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
         hparams = cleanup_default_params
-    alg_run, env_name, config = setup(FLAGS.env, hparams, FLAGS.algorithm,
-                                      FLAGS.train_batch_size,
-                                      FLAGS.num_cpus,
+    alg_run, env_name, config = setup(FLAGS.env, hparams, FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,
                                       FLAGS.use_gpu_for_driver,
                                       FLAGS.num_workers_per_device)
 
     if FLAGS.exp_name is None:
-        exp_name = FLAGS.env + '_' + FLAGS.algorithm
+        exp_name = FLAGS.env + '_DQN_actions'
     else:
         exp_name = FLAGS.exp_name
     print('Commencing experiment', exp_name)
@@ -169,14 +122,12 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": FLAGS.training_iterations
+                "training_iteration": 300000
             },
-            'checkpoint_freq': FLAGS.checkpoint_frequency,
+            'checkpoint_freq': 1000,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/first_reproduction/causal_basline'
-
         }
-    })
+    }, resume=FLAGS.resume)
 
 
 if __name__ == '__main__':

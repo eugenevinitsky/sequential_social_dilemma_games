@@ -1,61 +1,20 @@
 import ray
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
-from ray.rllib.agents.a3c.a3c_policy_graph_actions import A3CPolicyGraph
+from ray.rllib.agents.a3c.a3c_policy_graph_moa import A3CPolicyGraph
 from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
 import tensorflow as tf
 
+from config import config_parser
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
 from models.conv_to_fc_net_actions import ConvToFCNetActions
 
+config_parser.set_tf_flags('moa_a3c')
 FLAGS = tf.app.flags.FLAGS
-
-tf.app.flags.DEFINE_string(
-    'exp_name', 'causal_actions_visible_cleanup',
-    'Name of the ray_results experiment directory where results are stored.')
-tf.app.flags.DEFINE_string(
-    'env', 'cleanup',
-    'Name of the environment to rollout. Can be cleanup or harvest.')
-tf.app.flags.DEFINE_integer(
-    'num_agents', 5,
-    'Number of agent policies')
-tf.app.flags.DEFINE_integer(
-    'num_cpus', 14,
-    'Number of available CPUs')
-tf.app.flags.DEFINE_integer(
-    'num_gpus', 0,
-    'Number of available GPUs')
-tf.app.flags.DEFINE_boolean(
-    'use_gpus_for_workers', False,
-    'Set to true to run workers on GPUs rather than CPUs')
-tf.app.flags.DEFINE_boolean(
-    'use_gpu_for_driver', False,
-    'Set to true to run driver on GPU rather than CPU.')
-tf.app.flags.DEFINE_float(
-    'num_workers_per_device', 1,
-    'Number of workers to place on a single device (CPU or GPU)')
-tf.app.flags.DEFINE_boolean(
-    'tune', True,
-    'Set to true to do hyperparameter tuning.')
-tf.app.flags.DEFINE_boolean(
-    'debug', False,
-    'Set to true to run in a debugging / testing mode with less memory.')
-tf.app.flags.DEFINE_boolean(
-    'resume', False,
-    'Set to true to resume a previously stopped experiment.')
-
-harvest_default_params = {
-    'lr_init': 0.00136,
-    'lr_final': 0.000028,
-    'entropy_coeff': .000687}
-
-cleanup_default_params = {
-    'lr_init': 0.00126,
-    'lr_final': 0.000012,
-    'entropy_coeff': .00176}
+harvest_default_params, cleanup_default_params = config_parser.get_default_params()
 
 
 def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
@@ -139,42 +98,46 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
             },
             "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
                       "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
-                      "custom_options": {"num_other_agents": num_agents - 1}}
+                      "custom_options": {
+                          "num_other_agents": num_agents,
+                          "moa_weight": tune.grid_search([5.0, 10.0, 20.0]),
+                          "train_moa_only_when_visible": tune.grid_search([True, False])}}
 
         })
     else:
         config.update({
-            "train_batch_size": 128,
+            # "train_batch_size": 128,
             "horizon": 1000,
-            "lr_schedule": [[0, default_hparams['lr_init']],
-                            [20000000, default_hparams['lr_final']]],
+            # "lr_schedule": [[0, default_hparams['lr_init']],
+            #                 [20000000, default_hparams['lr_final']]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            "entropy_coeff": default_hparams['entropy_coeff'],
+            # "entropy_coeff": default_hparams['entropy_coeff'],
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
             },
             "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
                       "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
-                      "custom_options": {"num_other_agents": num_agents - 1}}
+                      "custom_options": {"num_other_agents": num_agents,
+                                         "moa_weight": 12.0,
+                                         "train_moa_only_when_visible": True}}
 
         })
     return algorithm, env_name, config
 
 
 def main(unused_argv):
-    if FLAGS.debug:
-        # ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(10e10),
-        #          redis_max_memory=int(50e10))
-        ray.init(redis_address="localhost:6379")
-    else:
-        # ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(25e10),
-        #          redis_max_memory=int(50e10))
-        ray.init(redis_address="localhost:6379")
+    # if FLAGS.debug:
+    #     ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(25e10),
+    #              redis_max_memory=int(50e10))
+    # else:
+    #     ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(25e10),
+    #              redis_max_memory=int(50e10))
+    ray.init(redis_address=config_parser.get_redis_address())
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
@@ -186,7 +149,7 @@ def main(unused_argv):
                                       FLAGS.num_workers_per_device, FLAGS.tune)
 
     if FLAGS.exp_name is None:
-        exp_name = FLAGS.env + '_A3C_actions'
+        exp_name = FLAGS.env + '_A3C_moa'
     else:
         exp_name = FLAGS.exp_name
     print('Commencing experiment', exp_name)
@@ -200,7 +163,7 @@ def main(unused_argv):
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': 's3://njaques.experiments/fourth_reproduction/causal_actions_cleanup'
+            'upload_dir': config_parser.get_upload_dir()
         }
     }, resume=FLAGS.resume)
 
