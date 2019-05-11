@@ -35,11 +35,14 @@ def set_tf_flags(experiment_name):
         'Name of the ray_results experiment directory where results are stored.')
 
 
-def get_default_params():
-    cleanup_default_params = dict(config.items('default_parameters_cleanup'))
-    harvest_default_params = dict(config.items('default_parameters_harvest'))
+def get_env_params():
+    env = tf.app.flags.FLAGS.env
+    params = dict(config.items('parameters_' + env))
 
-    return cleanup_default_params, harvest_default_params
+    tune = [value for key, value in params.items() if key.startswith('entropy_tune')]
+    params = {key: params[key] for key in params if not key.startswith('entropy_tune')}
+    params['entropy_tune'] = tune
+    return params
 
 
 def get_redis_address():

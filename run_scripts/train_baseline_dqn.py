@@ -14,25 +14,22 @@ from models.conv_to_fc_net_no_lstm import ConvToFCNet
 
 config_parser.set_tf_flags('baseline_dqn')
 FLAGS = tf.app.flags.FLAGS
-harvest_default_params, cleanup_default_params = config_parser.get_default_params()
+hparams = config_parser.get_env_params()
 
 
-def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
+def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
           use_gpu_for_driver=False, num_workers_per_device=1):
     if env == 'harvest':
         def env_creator(_):
             return HarvestEnv(num_agents=num_agents)
-
-        single_env = HarvestEnv()
     else:
         def env_creator(_):
             return CleanupEnv(num_agents=num_agents)
 
-        single_env = CleanupEnv()
-
     env_name = env + "_env"
     register_env(env_name, env_creator)
 
+    single_env = env_creator()
     obs_space = single_env.observation_space
     act_space = single_env.action_space
 
@@ -98,10 +95,6 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
 def main(unused_argv):
     ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(2e10),
              redis_max_memory=int(1e10))
-    if FLAGS.env == 'harvest':
-        hparams = harvest_default_params
-    else:
-        hparams = cleanup_default_params
     alg_run, env_name, config = setup(FLAGS.env, hparams, FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,
@@ -111,7 +104,7 @@ def main(unused_argv):
     print('Commencing experiment', FLAGS.exp_name)
 
     run_experiments({
-        exp_name: {
+        FLAGS.exp_name: {
             "run": alg_run,
             "env": env_name,
             "stop": {

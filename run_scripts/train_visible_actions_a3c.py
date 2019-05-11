@@ -14,27 +14,22 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 
 config_parser.set_tf_flags('visible_actions_a3c')
 FLAGS = tf.app.flags.FLAGS
-harvest_default_params, cleanup_default_params = config_parser.get_default_params()
+hparams = config_parser.get_env_params()
 
 
-def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
+def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
           use_gpu_for_driver=False, num_workers_per_device=1, tune_hparams=False):
     if env == 'harvest':
         def env_creator(_):
             return HarvestEnv(num_agents=num_agents)
-
-        single_env = HarvestEnv()
-        default_hparams = harvest_default_params
     else:
         def env_creator(_):
             return CleanupEnv(num_agents=num_agents)
 
-        single_env = CleanupEnv()
-        default_hparams = cleanup_default_params
-
     env_name = env + "_env"
     register_env(env_name, env_creator)
 
+    single_env = env_creator()
     obs_space = single_env.observation_space
     act_space = single_env.action_space
 
@@ -105,14 +100,14 @@ def setup(env, hparams, num_cpus, num_gpus, num_agents, use_gpus_for_workers=Fal
         config.update({
             "train_batch_size": 128,
             "horizon": 1000,
-            "lr_schedule": [[0, default_hparams['lr_init']],
-                            [20000000, default_hparams['lr_final']]],
+            "lr_schedule": [[0, hparams['lr_init']],
+                            [20000000, hparams['lr_final']]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            "entropy_coeff": default_hparams['entropy_coeff'],
+            "entropy_coeff": hparams['entropy_coeff'],
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -134,11 +129,7 @@ def main(unused_argv):
         # ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=int(25e10),
         #          redis_max_memory=int(50e10))
         ray.init(redis_address=config_parser.get_redis_address())
-    if FLAGS.env == 'harvest':
-        hparams = harvest_default_params
-    else:
-        hparams = cleanup_default_params
-    alg_run, env_name, config = setup(FLAGS.env, hparams, FLAGS.num_cpus,
+    alg_run, env_name, config = setup(FLAGS.env, FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,
                                       FLAGS.use_gpu_for_driver,
