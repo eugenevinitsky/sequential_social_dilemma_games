@@ -29,7 +29,7 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
     env_name = env + "_env"
     register_env(env_name, env_creator)
 
-    single_env = env_creator()
+    single_env = env_creator(1)
     obs_space = single_env.observation_space
     act_space = single_env.action_space
 
