@@ -86,7 +86,7 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            "entropy_coeff": tune.grid_search([0, 1e-1, 1e-2]),
+            "entropy_coeff": tune.grid_search(hparams['entropy_tune']),
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
