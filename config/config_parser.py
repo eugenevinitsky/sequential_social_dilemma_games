@@ -1,4 +1,4 @@
-from os.path import abspath, join, dirname
+from os.path import abspath, join, dirname, expanduser
 
 from localconfig import config
 import tensorflow as tf
@@ -55,3 +55,13 @@ def get_upload_dir():
     upload_dir = config.get('network', 'upload_dir')
     upload_dir = upload_dir if upload_dir != "" else None
     return upload_dir
+
+
+def get_ray_results_path():
+    ray_results_dir = expanduser(config.get('paths', 'ray_results_path'))
+    return ray_results_dir
+
+
+def get_plot_path():
+    plot_path = expanduser(config.get('paths', 'plot_path'))
+    return plot_path
