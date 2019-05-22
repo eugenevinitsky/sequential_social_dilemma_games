@@ -35,7 +35,8 @@ def plot_csv_results(path):
         plt.ylim(bottom=-10)
 
         # Strip path of all but last folder
-        filename = os.path.basename(os.path.dirname(path)) + '.png'
+        path_split = os.path.dirname(path).split('/')
+        filename = path_split[-2] + '-' + path_split[-1] + '.png'
         plt.savefig(plot_path + "/" + filename)
     except:
         print("Could not plot file " + path)
