@@ -24,7 +24,8 @@ def plot_csv_results(path):
         timesteps_total = df.timesteps_total
 
         # Convert to 1e8 representation
-        timesteps_total = [timestep / 1e8 for timestep in timesteps_total]
+        # Multiply by the number of agents (always 5) to get amount of agent steps
+        timesteps_total = [timestep / 1e8 * 5 for timestep in timesteps_total]
 
         plt.clf()
         plt.plot(timesteps_total, reward_min, color='r')
