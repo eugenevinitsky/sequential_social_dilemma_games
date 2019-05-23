@@ -111,7 +111,7 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "timesteps_total": 5e8
+                "timesteps_total": 1e8
             },
             'checkpoint_freq': 1000,
             "config": config,
