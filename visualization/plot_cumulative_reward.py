@@ -17,6 +17,7 @@ def plot_csv_results(path):
         fo.seek(0)
 
     try:
+        print("Plotting " + path)
         df = pd.read_csv(fo, sep=",")
         reward_min = df.episode_reward_min
         reward_max = df.episode_reward_max
@@ -33,7 +34,7 @@ def plot_csv_results(path):
         plt.plot(timesteps_total, reward_max, color='g')
         plt.xlabel('Agent steps (1e8)')
         plt.ylabel('cumulative reward')
-        plt.ylim(bottom=-10)
+        plt.ylim(top=reward_max.max(), bottom=-10)
 
         # Strip path of all but last folder
         path_split = os.path.dirname(path).split('/')
