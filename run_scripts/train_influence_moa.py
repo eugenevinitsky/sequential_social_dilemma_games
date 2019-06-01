@@ -14,7 +14,7 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 
 config_parser.set_tf_flags('influence_a3c')
 FLAGS = tf.app.flags.FLAGS
-hparams = config_parser.get_env_params()
+hparams = config_parser.get_env_params(experiment=3, model_type='influence_moa')
 
 
 def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
@@ -109,16 +109,15 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
         })
     else:
         config.update({
-            # "train_batch_size": 2000,
             "horizon": 1000,
-            # "lr_schedule": [[0, default_hparams['lr_init']],
-            #                 [20000000, default_hparams['lr_final']]],
+            "lr_schedule": [[0, hparams['lr_init']],
+                            [20000000, hparams['lr_final']]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            # "entropy_coeff": default_hparams['entropy_coeff'],
+            "entropy_coeff": hparams['entropy_coeff'],
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -126,14 +125,14 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
             "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
                       "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
                       "custom_options": {"num_other_agents": num_agents,
-                                         "train_moa_only_when_visible": True,
-                                         "moa_weight": 12.0,
+                                         "train_moa_only_when_visible": hparams["train_moa_only_when_visible"],
+                                         "moa_weight": hparams["moa_loss_weight"],
                                          "influence_reward_clip": 10,
-                                         "influence_divergence_measure": 'kl',
-                                         "influence_reward_weight": 2.5,
-                                         "influence_curriculum_steps": 10e6,
-                                         "influence_scaledown_start": 100e6,
-                                         "influence_scaledown_end": 300e6,
+                                         "influence_divergence_measure": hparams["policy_comparison"],
+                                         "influence_reward_weight": hparams["influence_weight_beta"],
+                                         "influence_curriculum_steps": 1e7,
+                                         "influence_scaledown_start": 1e8,
+                                         "influence_scaledown_end": 3e8,
                                          "influence_scaledown_final_val": 0.5,
                                          "influence_only_when_visible": True}}
 
@@ -148,7 +147,7 @@ def main(unused_argv):
     # else:
     #     ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=FLAGS.object_store_memory,
     #              redis_max_memory=FLAGS.redis_max_memory)
-    ray.init()  # redis_address=config_parser.get_redis_address()
+    ray.init()
     alg_run, env_name, config = setup(FLAGS.env, FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,

@@ -14,7 +14,7 @@ from models.conv_to_fc_net import ConvToFCNet
 
 config_parser.set_tf_flags('baseline_a3c')
 FLAGS = tf.app.flags.FLAGS
-hparams = config_parser.get_env_params()
+hparams = config_parser.get_env_params(experiment=3, model_type='a3c_baseline')
 
 
 def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
@@ -94,16 +94,15 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
         })
     else:
         config.update({
-            #"train_batch_size": 128,
             "horizon": 1000,
-            # "lr_schedule": [[0, hparams['lr_init']],
-            #                 [20000000, hparams['lr_final']]],
+            "lr_schedule": [[0, hparams['lr_init']],
+                            [20000000, hparams['lr_final']]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-            # "entropy_coeff": hparams['entropy_coeff'],
+            "entropy_coeff": hparams['entropy_coeff'],
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -115,8 +114,6 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
 
 
 def main(unused_argv):
-    # ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=FLAGS.object_store_memory,
-    #          redis_max_memory=FLAGS.redis_max_memory)
     ray.init(redis_address=config_parser.get_redis_address())
     alg_run, env_name, config = setup(FLAGS.env, FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,

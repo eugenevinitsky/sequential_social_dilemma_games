@@ -35,9 +35,21 @@ def set_tf_flags(experiment_name):
         'Name of the ray_results experiment directory where results are stored.')
 
 
-def get_env_params():
+# Valid experiment/model_type combinations:
+# experiment = 1, model_type = [a3c_baseline, visible_actions_baseline, influence]
+# experiment = 2, model_type = [a3c_baseline, comm_baseline, influence_comm]
+# experiment = 3, model_type = [a3c_baseline, moa_baseline, influence_moa]
+def get_env_params(experiment=None, model_type=None):
     env = tf.app.flags.FLAGS.env
-    params = dict(config.items('parameters_' + env))
+    # Default parameters for given environment
+    config_section = 'parameters_' + env
+
+    # Set experiment-specific parameters
+    if experiment is not None and model_type is not None:
+        config_section = config_section + "_" + "exp" + str(experiment)
+        config_section = config_section + "_" + model_type
+
+    params = dict(config.items(config_section))
 
     tune = [value for key, value in params.items() if key.startswith('entropy_tune')]
     params = {key: params[key] for key in params if not key.startswith('entropy_tune')}
