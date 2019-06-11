@@ -14,7 +14,7 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 
 config_parser.set_tf_flags('visible_actions_a3c')
 FLAGS = tf.app.flags.FLAGS
-hparams = config_parser.get_env_params()
+hparams = config_parser.get_env_params(experiment=1, model_type='visible_actions_baseline')
 
 
 def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
@@ -142,7 +142,7 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "timesteps_total": 1e8
+                "timesteps_total": 5e8
             },
             'checkpoint_freq': 100,
             "config": config,

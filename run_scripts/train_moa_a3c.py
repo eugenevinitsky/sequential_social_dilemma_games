@@ -12,9 +12,9 @@ from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
 from models.conv_to_fc_net_actions import ConvToFCNetActions
 
-config_parser.set_tf_flags('moa_a3c')
+config_parser.set_tf_flags('moa_baseline')
 FLAGS = tf.app.flags.FLAGS
-hparams = config_parser.get_env_params()
+hparams = config_parser.get_env_params(experiment=3, model_type='moa_baseline')
 
 
 def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
@@ -101,16 +101,15 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
         })
     else:
         config.update({
-            # "train_batch_size": 128,
             "horizon": 1000,
-            # "lr_schedule": [[0, default_hparams['lr_init']],
-            #                 [20000000, default_hparams['lr_final']]],
+            "lr_schedule": [[0, hparams['lr_init']],
+                            [20000000, hparams['lr_final']]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
             "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            # "entropy_coeff": default_hparams['entropy_coeff'],
+            "entropy_coeff": hparams['entropy_coeff'],
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
@@ -118,8 +117,8 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
             "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
                       "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
                       "custom_options": {"num_other_agents": num_agents,
-                                         "moa_weight": 12.0,
-                                         "train_moa_only_when_visible": True}}
+                                         "moa_weight": hparams["moa_loss_weight"],
+                                         "train_moa_only_when_visible": hparams["train_moa_only_when_visible"]}}
 
         })
     return algorithm, env_name, config
@@ -146,7 +145,7 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "timesteps_total": 1e8
+                "timesteps_total": 5e8
             },
             'checkpoint_freq': 100,
             "config": config,
