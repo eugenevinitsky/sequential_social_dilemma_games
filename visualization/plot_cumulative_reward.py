@@ -25,8 +25,7 @@ def plot_csv_results(path):
         timesteps_total = df.timesteps_total
 
         # Convert to 1e8 representation
-        # Multiply by the number of agents (always 5) to get amount of agent steps
-        timesteps_total = [timestep / 1e8 * 5 for timestep in timesteps_total]
+        timesteps_total = [timestep / 1e8 for timestep in timesteps_total]
 
         plt.clf()
         plt.plot(timesteps_total, reward_min, color='r')
@@ -34,12 +33,13 @@ def plot_csv_results(path):
         plt.plot(timesteps_total, reward_max, color='g')
         plt.xlabel('Agent steps (1e8)')
         plt.ylabel('cumulative reward')
-        plt.ylim(top=reward_max.max(), bottom=reward_min.min())
+        plt.ylim(top=reward_max.max(), bottom=-50)
 
         # Strip path of all but last folder
         path_split = os.path.dirname(path).split('/')
-        filename = path_split[-2] + '-' + path_split[-1] + '.png'
-        plt.savefig(plot_path + "/" + filename)
+        filename = path_split[-2]
+        plt.savefig(plot_path + "/png/" + filename + ".png")
+        plt.savefig(plot_path + "/eps/" + filename + ".eps")
     except:
         print("Could not plot file " + path)
 
@@ -57,6 +57,9 @@ plot_path = get_plot_path()
 
 if not os.path.exists(plot_path):
     os.mkdir(plot_path)
+    os.mkdir(plot_path + "/png")
+    os.mkdir(plot_path + "/eps")
+
 
 for folder in get_all_subdirs(ray_results_path):
     for subdir in get_all_subdirs(folder):
