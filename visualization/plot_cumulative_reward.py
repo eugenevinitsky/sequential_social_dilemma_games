@@ -37,7 +37,7 @@ def plot_csv_results(path):
 
         # Strip path of all but last folder
         path_split = os.path.dirname(path).split('/')
-        filename = path_split[-2]
+        filename = path_split[-2] + "-" + path_split[-1]
         plt.savefig(plot_path + "/png/" + filename + ".png")
         plt.savefig(plot_path + "/eps/" + filename + ".eps")
     except:
