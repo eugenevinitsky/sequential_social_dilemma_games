@@ -48,3 +48,14 @@ CLEANUP_MAP = [
     '@RRRRR       BBBB@',
     '@HHHH       BBBBB@',
     '@@@@@@@@@@@@@@@@@@']
+
+# 'S' means turned-on switch
+# 's' means turned-off switch
+# 'D' means closed door
+# 'd' means opened door
+SWITCH_MAP = [
+    '@@@D@@@',
+    '@s   s@',
+    '@s P s@',
+    '@s   s@',
+    '@@@@@@@']
