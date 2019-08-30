@@ -8,8 +8,7 @@ from ray.tune.registry import register_env
 import tensorflow as tf
 
 from config import config_parser
-from social_dilemmas.envs.harvest import HarvestEnv
-from social_dilemmas.envs.cleanup import CleanupEnv
+from social_dilemmas.envs.env_creator import get_env_creator
 from models.conv_to_fc_net import ConvToFCNet
 
 config_parser.set_tf_flags('baseline_a3c')
@@ -19,13 +18,7 @@ hparams = config_parser.get_env_params(experiment=3, model_type='a3c_baseline')
 
 def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
           use_gpu_for_driver=False, num_workers_per_device=1, tune_hparams=False):
-    if env == 'harvest':
-        def env_creator(_):
-            return HarvestEnv(num_agents=num_agents)
-    else:
-        def env_creator(_):
-            return CleanupEnv(num_agents=num_agents)
-
+    env_creator = get_env_creator(env, num_agents)
     env_name = env + "_env"
     register_env(env_name, env_creator)
 
@@ -114,7 +107,7 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
 
 
 def main(unused_argv):
-    ray.init(redis_address=config_parser.get_redis_address())
+    ray.init(local_mode=False, redis_address=config_parser.get_redis_address())
     alg_run, env_name, config = setup(FLAGS.env, FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,

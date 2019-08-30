@@ -2,7 +2,7 @@
 # '@' means "wall"
 # 'P' means "player" spawn point
 # 'A' means apply spawn point
-# '' is empty space
+# ' ' is empty space
 
 HARVEST_MAP = [
     '@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@',
