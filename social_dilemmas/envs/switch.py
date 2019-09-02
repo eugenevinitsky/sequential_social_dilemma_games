@@ -11,7 +11,7 @@ ACTIONS['TOGGLE_SWITCH'] = 1  # length of firing range
 # Custom colour dictionary
 SWITCH_COLORS = {'D': [183, 128, 0],  # Brown closed door
                  'd': [255, 239, 201],  # Light brown opened door
-                 'S': [255, 0, 200],  # Pink turned-on switch
+                 'S': [50, 255, 50],  # Green turned-on switch
                  's': [255, 0, 34]}  # Red turned-off switch
 
 
@@ -88,10 +88,12 @@ class SwitchEnv(MapEnv):
             agent.reward_this_turn += temp_reward
 
         # Open doors if all switches have been activated
-        door_char = 'd' if activated_switch_count == self.switch_count else 'D'
+        open_doors = activated_switch_count == self.switch_count
+        door_char = 'd' if open_doors else 'D'
         updates = []
         for row, col in self.door_locations:
             updates.append((row, col, door_char))
+        self.update_map(updates)
 
     def count_switches(self, window):
         # Compute how many switches are activated

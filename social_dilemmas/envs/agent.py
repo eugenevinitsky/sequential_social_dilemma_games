@@ -108,9 +108,9 @@ class Agent(object):
         """Checks that the next pos is legal, if not return current pos"""
         ego_new_pos = new_pos  # self.translate_pos_to_egocentric_coord(new_pos)
         new_row, new_col = ego_new_pos
-        # you can't walk through walls
+        # You can't walk through walls, closed doors or switches
         temp_pos = new_pos.copy()
-        if self.grid[new_row, new_col] == '@':
+        if self.grid[new_row, new_col] in ['@', 'D', 's', 'S']:
             temp_pos = self.get_pos()
         return temp_pos
 
