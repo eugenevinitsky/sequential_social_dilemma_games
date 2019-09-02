@@ -23,6 +23,7 @@ class SwitchEnv(MapEnv):
         self.switch_locations = []
         self.door_locations = []
         self.switch_count = 0
+        self.prev_activated_switch_count = 0
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
                 current_char = self.base_map[row, col]
@@ -79,6 +80,12 @@ class SwitchEnv(MapEnv):
         for row, col in self.switch_locations:
             if self.world_map[row, col] == 'S':
                 activated_switch_count += 1
+
+        temp_reward = activated_switch_count - self.prev_activated_switch_count
+        self.prev_activated_switch_count = activated_switch_count
+
+        for agent in list(self.agents.values()):
+            agent.reward_this_turn += temp_reward
 
         # Open doors if all switches have been activated
         door_char = 'd' if activated_switch_count == self.switch_count else 'D'
