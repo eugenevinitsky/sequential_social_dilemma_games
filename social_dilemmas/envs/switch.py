@@ -63,6 +63,7 @@ class SwitchEnv(MapEnv):
         """Initialize the switches/doors"""
         for coordinates, char in self.initial_map_state.items():
             self.world_map[coordinates[0], coordinates[1]] = char
+        self.prev_activated_switch_count = 0
 
     def custom_action(self, agent, action):
         agent.fire_beam('F')
