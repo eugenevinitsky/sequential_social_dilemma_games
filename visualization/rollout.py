@@ -10,6 +10,7 @@ import tensorflow as tf
 
 from social_dilemmas.envs.cleanup import CleanupEnv
 from social_dilemmas.envs.harvest import HarvestEnv
+from social_dilemmas.envs.switch import SwitchEnv
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -17,13 +18,16 @@ tf.app.flags.DEFINE_string(
     'vid_path', os.path.abspath(os.path.join(os.path.dirname(__file__), './videos')),
     'Path to directory where videos are saved.')
 tf.app.flags.DEFINE_string(
-    'env', 'cleanup',
+    'env', 'switch',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_string(
     'render_type', 'pretty',
     'Can be pretty or fast. Implications obvious.')
 tf.app.flags.DEFINE_integer(
-    'fps', 8,
+    'horizon', 600,
+    'Number of rendered frames.')
+tf.app.flags.DEFINE_integer(
+    'fps', 10,
     'Number of frames per second.')
 
 
@@ -37,6 +41,9 @@ class Controller(object):
         elif env_name == 'cleanup':
             print('Initializing Cleanup environment')
             self.env = CleanupEnv(num_agents=5, render=True)
+        elif env_name == 'switch':
+            print('Initializing Switch environment')
+            self.env = SwitchEnv(num_agents=1, render=True)
         else:
             print('Error! Not a valid environment type')
             return
@@ -62,22 +69,27 @@ class Controller(object):
         for i in range(horizon):
             agents = list(self.env.agents.values())
             action_dim = agents[0].action_space.n
-            rand_action = np.random.randint(action_dim, size=5)
-            obs, rew, dones, info, = self.env.step({'agent-0': rand_action[0],
-                                                    'agent-1': rand_action[1],
-                                                    'agent-2': rand_action[2],
-                                                    'agent-3': rand_action[3],
-                                                    'agent-4': rand_action[4]})
+            agent_action_dict = dict()
+            for agent in agents:
+                rand_action = np.random.randint(action_dim)
+                agent_action_dict[agent.agent_id] = rand_action
+            obs, rew, dones, info, = self.env.step(agent_action_dict)
 
             sys.stdout.flush()
 
             if save_path is not None:
                 self.env.render(filename=save_path + 'frame' + str(i).zfill(6) + '.png')
+                if i % 10 == 0:
+                    print('Saved frame ' + str(i) + '/' + str(horizon))
 
             rgb_arr = self.env.map_to_colors()
             full_obs[i] = rgb_arr.astype(np.uint8)
             observations.append(obs['agent-0'])
             rewards.append(rew['agent-0'])
+
+            if dones["__all__"]:
+                print('Environment ended early because all agents were done.')
+                break
 
         return rewards, observations, full_obs
 
@@ -118,7 +130,9 @@ class Controller(object):
 
 def main(unused_argv):
     c = Controller(env_name=FLAGS.env)
-    c.render_rollout(path=FLAGS.vid_path, render_type=FLAGS.render_type,
+    c.render_rollout(path=FLAGS.vid_path,
+                     horizon=FLAGS.horizon,
+                     render_type=FLAGS.render_type,
                      fps=FLAGS.fps)
 
 

@@ -108,9 +108,9 @@ class Agent(object):
         """Checks that the next pos is legal, if not return current pos"""
         ego_new_pos = new_pos  # self.translate_pos_to_egocentric_coord(new_pos)
         new_row, new_col = ego_new_pos
-        # you can't walk through walls
+        # You can't walk through walls, closed doors or switches
         temp_pos = new_pos.copy()
-        if self.grid[new_row, new_col] == '@':
+        if self.grid[new_row, new_col] in ['@', 'D', 's', 'S']:
             temp_pos = self.get_pos()
         return temp_pos
 
@@ -174,7 +174,7 @@ class HarvestAgent(Agent):
     @property
     def observation_space(self):
         return Box(low=0, high=1.0, shape=(2 * self.view_len + 1,
-                                             2 * self.view_len + 1, 3), dtype=np.float32)
+                                           2 * self.view_len + 1, 3), dtype=np.float32)
 
     def hit(self, char):
         if char == 'F':
@@ -241,6 +241,54 @@ class CleanupAgent(Agent):
         """Defines how an agent interacts with the char it is standing on"""
         if char == 'A':
             self.reward_this_turn += 1
+            return ' '
+        else:
+            return char
+
+
+SWITCH_ACTIONS = BASE_ACTIONS.copy()
+SWITCH_ACTIONS.update({7: 'TOGGLE_SWITCH'})  # Fire a switch beam
+
+SWITCH_VIEW_SIZE = 7
+
+class SwitchAgent(Agent):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=SWITCH_VIEW_SIZE):
+        self.view_len = view_len
+        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        # remember what you've stepped on
+        self.update_agent_pos(start_pos)
+        self.update_agent_rot(start_orientation)
+        self.is_done = False
+
+    @property
+    def action_space(self):
+        return Discrete(8)
+
+    @property
+    def observation_space(self):
+        return Box(low=0, high=1.0, shape=(2 * self.view_len + 1,
+                                           2 * self.view_len + 1, 3), dtype=np.float32)
+
+    # Ugh, this is gross, this leads to the actions basically being
+    # defined in two places
+    def action_map(self, action_number):
+        """Maps action_number to a desired action in the map"""
+        return SWITCH_ACTIONS[action_number]
+
+    def fire_beam(self, char):
+        # Cost of firing a switch beam
+        # Nothing for now.
+        if char == 'F':
+            self.reward_this_turn += 0
+
+    def get_done(self):
+        return self.is_done
+
+    def consume(self, char):
+        """Defines how an agent interacts with the char it is standing on"""
+        if char == 'd':
+            self.reward_this_turn += 100
+            self.is_done = True
             return ' '
         else:
             return char

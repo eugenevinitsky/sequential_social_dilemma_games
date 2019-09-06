@@ -359,6 +359,7 @@ class MapEnv(MultiAgentEnv):
         map_with_agents = self.get_map_with_agents()
 
         rgb_arr = self.map_to_colors(map_with_agents)
+        plt.cla()
         plt.imshow(rgb_arr, interpolation='nearest')
         if filename is None:
             plt.show()
@@ -575,7 +576,7 @@ class MapEnv(MultiAgentEnv):
         self.custom_reset()
 
     def update_map_fire(self, firing_pos, firing_orientation, fire_len, fire_char, cell_types=[],
-                        update_char=[], blocking_cells='P'):
+                        update_char=[], blocking_cells='P', beam_width = 3):
         """From a firing position, fire a beam that may clean or hit agents
 
         Notes:
@@ -616,8 +617,14 @@ class MapEnv(MultiAgentEnv):
         firing_direction = ORIENTATIONS[firing_orientation]
         # compute the other two starting positions
         right_shift = self.rotate_right(firing_direction)
-        firing_pos = [start_pos, start_pos + right_shift - firing_direction,
-                      start_pos - right_shift - firing_direction]
+        if beam_width == 1:
+            firing_pos = [start_pos]
+        elif beam_width == 3:
+            firing_pos = [start_pos,
+                          start_pos + right_shift - firing_direction,
+                          start_pos - right_shift - firing_direction]
+        else:
+            raise NotImplementedError()
         firing_points = []
         updates = []
         for pos in firing_pos:
