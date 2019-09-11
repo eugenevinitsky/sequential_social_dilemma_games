@@ -41,6 +41,7 @@ def get_rllib_pkl(path):
         pkldata = cloudpickle.load(file)
     return pkldata
 
+
 class DefaultMapping(collections.defaultdict):
     """default_factory now takes as an argument the missing key."""
 
@@ -51,7 +52,6 @@ class DefaultMapping(collections.defaultdict):
 
 def default_policy_agent_mapping(unused_agent_id):
     return DEFAULT_POLICY_ID
-
 
 
 def visualizer_rllib(args):
@@ -205,13 +205,17 @@ def visualizer_rllib(args):
         print("Episode reward", reward_total)
 
     if args.save_video:
-        path = os.path.abspath(os.path.dirname(__file__)) + '/videos'
+        path = os.path.abspath(args.video_path) if hasattr(args, 'video_path') and args.video_path is not None \
+            else os.path.abspath(os.path.dirname(__file__)) + '/videos'
+        video_name = args.video_filename if hasattr(args, 'video_filename') and args.video_filename is not None \
+            else 'trajectory'
+
         if not os.path.exists(path):
             os.makedirs(path)
         images_path = path + '/images/'
         if not os.path.exists(images_path):
             os.makedirs(images_path)
-        utility_funcs.make_video_from_rgb_imgs(full_obs, path)
+        utility_funcs.make_video_from_rgb_imgs(full_obs, path, video_name=video_name)
 
         # Clean up images
         shutil.rmtree(images_path)
@@ -246,16 +250,28 @@ def create_parser():
     parser.add_argument(
         '--save-video',
         action='store_true',
-        help='whether to save a movie or not')
+        help='whether to save a movie or not.')
+    parser.add_argument(
+        '--video-path',
+        action='store',
+        help='Path where the video should be stored.')
+    parser.add_argument(
+        '--video-filename',
+        action='store',
+        help='Name of the video. No file extension needed.')
     parser.add_argument(
         '--render',
         action='store_true',
-        help='whether to watch the rollout while it happens')
+        help='Whether to watch the rollout while it happens.')
     return parser
 
 
-if __name__ == '__main__':
+def visualize(args=None):
     parser = create_parser()
-    args = parser.parse_args()
-    ray.init(num_cpus=2)
+    args = parser.parse_args(args)
+    ray.init(num_cpus=6)
     visualizer_rllib(args)
+
+
+if __name__ == '__main__':
+    visualize()

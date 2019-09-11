@@ -77,3 +77,8 @@ def get_ray_results_path():
 def get_plot_path():
     plot_path = expanduser(config.get('paths', 'plot_path'))
     return plot_path
+
+
+def get_video_path():
+    video_path = expanduser(config.get('paths', 'video_path'))
+    return video_path
