@@ -111,3 +111,11 @@ def pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, const_val=1):
     pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
                      'constant', constant_values=(const_val, const_val))
     return pad_mat
+
+
+def get_all_subdirs(path):
+    return [path + '/' + d for d in os.listdir(path) if os.path.isdir(path + '/' + d)]
+
+
+def get_all_files(path):
+    return [path + '/' + d for d in os.listdir(path) if not os.path.isdir(path + '/' + d)]

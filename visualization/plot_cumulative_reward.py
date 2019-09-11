@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
+from utility_funcs import get_all_subdirs
 
 from config.config_parser import get_ray_results_path, get_plot_path
 
@@ -64,14 +65,6 @@ def plot_csv_results(path):
         plt.savefig(plot_path + "/eps/" + filename + ".eps")
     except:
         print("Could not plot file " + path)
-
-
-def get_all_subdirs(path):
-    return [path + '/' + d for d in os.listdir(path) if os.path.isdir(path + '/' + d)]
-
-
-def get_all_files(path):
-    return [path + '/' + d for d in os.listdir(path) if not os.path.isdir(path + '/' + d)]
 
 
 ray_results_path = get_ray_results_path()
