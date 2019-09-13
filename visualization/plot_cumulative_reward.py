@@ -1,3 +1,4 @@
+import ast
 import io
 import re
 import os.path
@@ -10,7 +11,7 @@ from utility_funcs import get_all_subdirs
 from config.config_parser import get_ray_results_path, get_plot_path
 
 
-def clean_score_list(score_list):
+def smooth_list(score_list):
     # Smooth using gaussian filter
     score_list = gaussian_filter1d(score_list, np.std(score_list), mode='nearest')
     return score_list
@@ -36,9 +37,28 @@ def plot_csv_results(path):
         reward_mean = df.episode_reward_mean
         timesteps_total = df.timesteps_total
 
-        reward_min = clean_score_list(reward_min)
-        reward_max = clean_score_list(reward_max)
-        reward_mean = clean_score_list(reward_mean)
+        episode_len_mean = df.episode_len_mean
+
+        info = list(df['info'])
+        learner_dicts = [ast.literal_eval(info_line)['learner'] for info_line in info]
+        policy_loss_list = []
+        entropy_list = []
+        for learner_dict in learner_dicts:
+            average_loss = 0
+            average_entropy = 0
+            for agent, agent_stats in learner_dict.items():
+                policy_loss = agent_stats['policy_loss']
+                entropy = agent_stats['policy_entropy']
+                average_loss += policy_loss
+                average_entropy += entropy
+            average_loss = average_loss / len(learner_dict)
+            average_entropy = average_entropy / len(learner_dict)
+            policy_loss_list.append(average_loss)
+            entropy_list.append(average_entropy)
+
+        reward_min = smooth_list(reward_min)
+        reward_max = smooth_list(reward_max)
+        reward_mean = smooth_list(reward_mean)
 
         # Convert agent steps to 1e8 representation
         timesteps_total = [timestep / 1e8 for timestep in timesteps_total]
@@ -48,6 +68,9 @@ def plot_csv_results(path):
 
         # Draw score
         plt.plot(timesteps_total, reward_mean, color='g', label='Mean reward')
+        plt.plot(timesteps_total, smooth_list(entropy_list), color='b', label='Policy entropy', alpha=.2)
+        plt.plot(timesteps_total, smooth_list(policy_loss_list), color='r', label='Policy loss', alpha=.2)
+        plt.plot(timesteps_total, smooth_list(episode_len_mean), color='pink', label='Policy loss', alpha=.2)
 
         # Fill area between score
         plt.fill_between(timesteps_total, reward_min, reward_mean, color='g', alpha=.2, label='Min/max reward')
