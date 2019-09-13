@@ -109,6 +109,8 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
         })
     else:
         config.update({
+            "sample_batch_size": 2000,
+            "train_batch_size": 32000,
             "horizon": 1000,
             "lr_schedule": [[0, hparams['lr_init']],
                             [20000000, hparams['lr_final']]],
