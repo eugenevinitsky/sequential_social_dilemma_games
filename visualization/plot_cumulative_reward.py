@@ -13,8 +13,12 @@ from config.config_parser import get_ray_results_path, get_plot_path
 
 def smooth_list(score_list):
     # Smooth using gaussian filter
-    score_list = gaussian_filter1d(score_list, np.std(score_list), mode='nearest')
-    return score_list
+    sigma = np.std(score_list)
+    if sigma == 0:
+        return score_list
+    else:
+        score_list = gaussian_filter1d(score_list, sigma, mode='nearest')
+        return score_list
 
 
 # Plot the results for a given generated progress.csv file, found in your ray_results folder.
@@ -68,13 +72,16 @@ def plot_csv_results(path):
 
         # Draw score
         plt.plot(timesteps_total, reward_mean, color='g', label='Mean reward')
-        plt.plot(timesteps_total, smooth_list(entropy_list), color='b', label='Policy entropy', alpha=.2)
-        plt.plot(timesteps_total, smooth_list(policy_loss_list), color='r', label='Policy loss', alpha=.2)
-        plt.plot(timesteps_total, smooth_list(episode_len_mean), color='pink', label='Policy loss', alpha=.2)
 
         # Fill area between score
         plt.fill_between(timesteps_total, reward_min, reward_mean, color='g', alpha=.2, label='Min/max reward')
         plt.fill_between(timesteps_total, reward_max, reward_mean, color='g', alpha=.2)
+
+        # Draw other values
+        plt.plot(timesteps_total, smooth_list(entropy_list), color='b', label='Policy entropy', alpha=.2)
+        plt.plot(timesteps_total, smooth_list(policy_loss_list), color='r', label='Policy loss', alpha=.2)
+        plt.plot(timesteps_total, episode_len_mean, color='pink', label='Policy loss', alpha=.2)
+
         plt.legend()
 
         plt.xlabel('Agent steps (1e8)')
