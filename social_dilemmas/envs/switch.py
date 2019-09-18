@@ -14,6 +14,7 @@ SWITCH_COLORS = {'D': [183, 128, 0],  # Brown closed door
                  'S': [50, 255, 50],  # Green turned-on switch
                  's': [255, 0, 34]}  # Red turned-off switch
 
+GIVE_EXTERNAL_SWITCH_REWARD = int(True)
 
 class SwitchEnv(MapEnv):
 
@@ -82,7 +83,7 @@ class SwitchEnv(MapEnv):
             if self.world_map[row, col] == 'S':
                 activated_switch_count += 1
 
-        temp_reward = activated_switch_count - self.prev_activated_switch_count
+        temp_reward = (activated_switch_count - self.prev_activated_switch_count) * GIVE_EXTERNAL_SWITCH_REWARD
         self.prev_activated_switch_count = activated_switch_count
 
         for agent in list(self.agents.values()):
