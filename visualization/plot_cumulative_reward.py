@@ -11,14 +11,16 @@ from utility_funcs import get_all_subdirs
 from config.config_parser import get_ray_results_path, get_plot_path
 
 
-def smooth_list(score_list):
-    # Smooth using gaussian filter
-    sigma = np.std(score_list)
-    if sigma == 0:
-        return score_list
-    else:
-        score_list = gaussian_filter1d(score_list, sigma, mode='nearest')
-        return score_list
+def plot_using_lambda(fn, path, file_name_addition):
+    # Clear plot to prevent slowdown when drawing multiple figures
+    plt.clf()
+    fn()
+    plt.legend()
+    # Strip path of all but last folder
+    path_split = os.path.dirname(path).split('/')
+    filename = path_split[-2] + "-" + path_split[-1]
+    plt.savefig(plot_path + "/png/" + filename + "-" + file_name_addition + ".png")
+    plt.savefig(plot_path + "/eps/" + filename + "-" + file_name_addition + ".eps")
 
 
 # Plot the results for a given generated progress.csv file, found in your ray_results folder.
@@ -60,39 +62,38 @@ def plot_csv_results(path):
             policy_loss_list.append(average_loss)
             entropy_list.append(average_entropy)
 
-        reward_min = smooth_list(reward_min)
-        reward_max = smooth_list(reward_max)
-        reward_mean = smooth_list(reward_mean)
+        reward_min = gaussian_filter1d(reward_min, 1, mode='nearest')
+        reward_max = gaussian_filter1d(reward_max, 1, mode='nearest')
+        reward_mean = gaussian_filter1d(reward_mean, 1, mode='nearest')
 
-        # Convert agent steps to 1e8 representation
+        # Convert environment steps to 1e8 representation
         timesteps_total = [timestep / 1e8 for timestep in timesteps_total]
 
-        # Clear plot to prevent slowdown when drawing multiple figures
-        plt.clf()
+        def plot_reward():
+            plt.plot(timesteps_total, reward_mean, color='g', label='Mean reward')
 
-        # Draw score
-        plt.plot(timesteps_total, reward_mean, color='g', label='Mean reward')
+            # Fill area between score
+            plt.fill_between(timesteps_total, reward_min, reward_mean, color='g', alpha=.2, label='Min/max reward')
+            plt.fill_between(timesteps_total, reward_max, reward_mean, color='g', alpha=.2)
 
-        # Fill area between score
-        plt.fill_between(timesteps_total, reward_min, reward_mean, color='g', alpha=.2, label='Min/max reward')
-        plt.fill_between(timesteps_total, reward_max, reward_mean, color='g', alpha=.2)
+            plt.xlabel('Environment steps (1e8)')
+            plt.ylabel('Mean reward')
+            plt.ylim(top=reward_max.max() + 5, bottom=reward_min.min())
 
-        # Draw other values
-        plt.plot(timesteps_total, smooth_list(entropy_list), color='b', label='Policy entropy', alpha=.2)
-        plt.plot(timesteps_total, smooth_list(policy_loss_list), color='r', label='Policy loss', alpha=.2)
-        plt.plot(timesteps_total, episode_len_mean, color='pink', label='Policy loss', alpha=.2)
+        def plot_single_list(single_list, color, x_label, y_label):
+            plt.plot(timesteps_total, single_list, color=color, label=x_label)
+            plt.xlabel(x_label)
+            plt.ylabel(y_label)
+            plt.ylim(top=np.max(single_list), bottom=np.min(single_list))
 
-        plt.legend()
+        plot_entropy = lambda: plot_single_list(entropy_list, 'b', 'Environment steps (1e8)', 'Entropy')
+        plot_policy_loss = lambda: plot_single_list(policy_loss_list, 'r', 'Environment steps (1e8)', 'Policy loss')
+        plot_mean_episode_length = lambda: plot_single_list(episode_len_mean, 'pink', 'Environment steps (1e8)', 'Mean episode length')
 
-        plt.xlabel('Agent steps (1e8)')
-        plt.ylabel('cumulative reward')
-        plt.ylim(top=reward_max.max() + 5, bottom=reward_min.min())
-
-        # Strip path of all but last folder
-        path_split = os.path.dirname(path).split('/')
-        filename = path_split[-2] + "-" + path_split[-1]
-        plt.savefig(plot_path + "/png/" + filename + ".png")
-        plt.savefig(plot_path + "/eps/" + filename + ".eps")
+        plot_using_lambda(plot_reward, path, 'reward')
+        plot_using_lambda(plot_entropy, path, 'entropy')
+        plot_using_lambda(plot_policy_loss, path, 'policy_loss')
+        plot_using_lambda(plot_mean_episode_length, path, 'episode_length')
     except:
         print("Could not plot file " + path)
 
