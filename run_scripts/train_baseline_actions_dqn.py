@@ -96,8 +96,9 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
 
 
 def main(unused_argv):
-    ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=FLAGS.object_store_memory,
-             redis_max_memory=FLAGS.redis_max_memory)
+    ray.init(object_store_memory=FLAGS.object_store_memory,
+             redis_max_memory=FLAGS.redis_max_memory,
+             redis_address=config_parser.get_redis_address())
     alg_run, env_name, config = setup(FLAGS.env, FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,

@@ -1,7 +1,7 @@
 import ray
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
-from ray.rllib.agents.a3c.a3c_tf_policy_graph import A3CPolicyGraph
+from ray.rllib.agents.a3c.a3c_policy_graph_curiosity import A3CPolicyGraph
 from ray.rllib.models import ModelCatalog
 from ray.tune import run_experiments
 from ray.tune.registry import register_env
@@ -11,9 +11,9 @@ from config import config_parser
 from social_dilemmas.envs.env_creator import get_env_creator
 from models.conv_to_fc_net import ConvToFCNet
 
-config_parser.set_tf_flags('baseline_a3c')
+config_parser.set_tf_flags()
 FLAGS = tf.app.flags.FLAGS
-hparams = config_parser.get_env_params(model_type='a3c_baseline')
+hparams = config_parser.get_env_params()
 
 
 def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
@@ -27,13 +27,15 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
     act_space = single_env.action_space
 
     # Each policy can have a different configuration (including custom model)
-    def gen_policy():
-        return (A3CPolicyGraph, obs_space, act_space, {})
+    def gen_policy(agent_id):
+        return (A3CPolicyGraph, obs_space, act_space,
+                {'num_other_agents': num_agents - 1, 'agent_id': agent_id})
 
-    # Setup PPO with an ensemble of `num_policies` different policy graphs
+    # Setup A3C with an ensemble of `num_policies` different policy graphs
     policy_graphs = {}
     for i in range(num_agents):
-        policy_graphs['agent-' + str(i)] = gen_policy()
+        agent_id = 'agent-' + str(i)
+        policy_graphs[agent_id] = gen_policy(agent_id)
 
     def policy_mapping_fn(agent_id):
         return agent_id
@@ -63,47 +65,61 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
         spare_cpus = (num_cpus - cpus_for_driver)
         num_workers = int(spare_cpus * num_workers_per_device)
         num_gpus_per_worker = 0
-        num_cpus_per_worker = int(spare_cpus / num_workers)
+        num_cpus_per_worker = spare_cpus / num_workers
 
     # hyperparams
     if tune_hparams:
         config.update({
-            "train_batch_size": 128,
+            "train_batch_size": 2000,
             "horizon": 1000,
-            "lr_schedule": [[0, tune.grid_search([5e-4, 5e-3])],
-                            [20000000, tune.grid_search([5e-4, 5e-5])]],
+            # "lr_schedule": [[0, tune.grid_search([5e-4, 5e-3])],
+            #                 [20000000, tune.grid_search([5e-4, 5e-5, 5e-6])]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
-            "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
-            "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
+            "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
+            "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
             "entropy_coeff": tune.grid_search(hparams['entropy_tune']),
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
             },
-            "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
-                      "lstm_cell_size": 128}
+            "model": {"custom_model": "conv_to_fc_net_actions", "use_lstm": True,
+                      "lstm_cell_size": 128, "lstm_use_prev_action_reward": True,
+                      "custom_options": {
+                          "num_other_agents": num_agents,
+                          "moa_weight": tune.grid_search([10.0]),
+                          "train_moa_only_when_visible": tune.grid_search([True, False]),
+                          "influence_reward_clip": 10,
+                          "influence_divergence_measure": 'kl',
+                          "influence_reward_weight": tune.grid_search([1.0]),
+                          "influence_curriculum_steps": tune.grid_search([10e6]),
+                          "influence_scaledown_start": tune.grid_search([100e6]),
+                          "influence_scaledown_end": tune.grid_search([300e6]),
+                          "influence_scaledown_final_val": tune.grid_search([.5]),
+                          "influence_only_when_visible": tune.grid_search([True, False])}}
+
         })
     else:
         config.update({
-            "sample_batch_size": 2000,
-            "train_batch_size": 32000,
+            "sample_batch_size": 100,
+            "train_batch_size": 200,
             "horizon": 1000,
             "lr_schedule": [[0, hparams['lr_init']],
                             [20000000, hparams['lr_final']]],
             "num_workers": num_workers,
             "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
             "num_cpus_for_driver": cpus_for_driver,
-            "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
-            "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
+            "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
+            "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
             "entropy_coeff": hparams['entropy_coeff'],
             "multiagent": {
                 "policy_graphs": policy_graphs,
                 "policy_mapping_fn": tune.function(policy_mapping_fn),
             },
             "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
-                      "lstm_cell_size": 128}
+                      "lstm_cell_size": 128, "lstm_use_prev_action_reward": True}
+
         })
     return algorithm, env_name, config
 
@@ -127,7 +143,7 @@ def main(unused_argv):
             "stop": {
                 "timesteps_total": 5e8
             },
-            'checkpoint_freq': 500,
+            'checkpoint_freq': 100,
             "config": config,
             'upload_dir': config_parser.get_upload_dir()
         }

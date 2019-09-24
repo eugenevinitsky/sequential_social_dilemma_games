@@ -14,7 +14,7 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 
 config_parser.set_tf_flags('influence_a3c')
 FLAGS = tf.app.flags.FLAGS
-hparams = config_parser.get_env_params(experiment=3, model_type='influence_moa')
+hparams = config_parser.get_env_params(model_type='influence_moa')
 
 
 def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
@@ -109,8 +109,8 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
         })
     else:
         config.update({
-            "sample_batch_size": 2000,
-            "train_batch_size": 32000,
+            "sample_batch_size": 100,
+            "train_batch_size": 200,
             "horizon": 1000,
             "lr_schedule": [[0, hparams['lr_init']],
                             [20000000, hparams['lr_final']]],
@@ -143,13 +143,9 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
 
 
 def main(unused_argv):
-    # if FLAGS.debug:
-    #     ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=FLAGS.object_store_memory,
-    #              redis_max_memory=FLAGS.redis_max_memory)
-    # else:
-    #     ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=FLAGS.object_store_memory,
-    #              redis_max_memory=FLAGS.redis_max_memory)
-    ray.init()
+    ray.init(object_store_memory=FLAGS.object_store_memory,
+             redis_max_memory=FLAGS.redis_max_memory,
+             redis_address=config_parser.get_redis_address())
     alg_run, env_name, config = setup(FLAGS.env, FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,

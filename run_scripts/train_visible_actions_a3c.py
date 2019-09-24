@@ -14,7 +14,7 @@ from models.conv_to_fc_net_actions import ConvToFCNetActions
 
 config_parser.set_tf_flags('visible_actions_a3c')
 FLAGS = tf.app.flags.FLAGS
-hparams = config_parser.get_env_params(experiment=1, model_type='visible_actions_baseline')
+hparams = config_parser.get_env_params(model_type='visible_actions_baseline')
 
 
 def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
@@ -121,14 +121,9 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
 
 
 def main(unused_argv):
-    if FLAGS.debug:
-        # ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=FLAGS.object_store_memory,
-        #          redis_max_memory=FLAGS.redis_max_memory)
-        ray.init(redis_address=config_parser.get_redis_address())
-    else:
-        # ray.init(num_cpus=FLAGS.num_cpus, object_store_memory=FLAGS.object_store_memory,
-        #          redis_max_memory=FLAGS.redis_max_memory)
-        ray.init(redis_address=config_parser.get_redis_address())
+    ray.init(object_store_memory=FLAGS.object_store_memory,
+             redis_max_memory=FLAGS.redis_max_memory,
+             redis_address=config_parser.get_redis_address())
     alg_run, env_name, config = setup(FLAGS.env, FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
                                       FLAGS.use_gpus_for_workers,

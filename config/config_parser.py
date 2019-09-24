@@ -6,7 +6,7 @@ import tensorflow as tf
 config.read(abspath(join(dirname(__file__) + '/config.ini')))
 
 
-def set_tf_flags(experiment_name):
+def set_tf_flags(experiment_name=None):
     '''Sets tensorflow flags
     :param str experiment_name: Name of the ray_results experiment directory where results are stored.
      The environment is automatically appended, e.g. for the cleanup game, 'dir_name' becomes 'dir_name_cleanup'.
@@ -29,24 +29,24 @@ def set_tf_flags(experiment_name):
         elif type(value) is bool:
             flags.DEFINE_boolean(flag, value, docstring)
 
+    if experiment_name is None:
+        experiment_name = config.get('flags', 'experiment')
+
     # Experiment name requires a combination of strings and is processed separately.
     flags.DEFINE_string(
         'exp_name', experiment_name + '_' + config.get('flags', 'env'),
         'Name of the ray_results experiment directory where results are stored.')
 
 
-# Valid experiment/model_type combinations:
-# experiment = 1, model_type = [a3c_baseline, visible_actions_baseline, influence]
-# experiment = 2, model_type = [a3c_baseline, comm_baseline, influence_comm]
-# experiment = 3, model_type = [a3c_baseline, moa_baseline, influence_moa]
-def get_env_params(experiment=None, model_type=None):
+def get_env_params(model_type=None):
+    if model_type is None:
+        model_type = tf.app.flags.FLAGS.experiment
     env = tf.app.flags.FLAGS.env
     # Default parameters for given environment
     config_section = 'parameters_' + env
 
     # Set experiment-specific parameters
-    if experiment is not None and model_type is not None:
-        config_section = config_section + "_" + "exp" + str(experiment)
+    if model_type is not None:
         config_section = config_section + "_" + model_type
 
     params = dict(config.items(config_section))
