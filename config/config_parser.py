@@ -57,16 +57,18 @@ def get_env_params(model_type=None):
     return params
 
 
+def sanitize_flag(flag_string):
+    return flag_string if flag_string != "" else None
+
+
 def get_redis_address():
     address = config.get('network', 'redis_address')
-    address = address if address != "" else None
-    return address
+    return sanitize_flag(address)
 
 
 def get_upload_dir():
     upload_dir = config.get('network', 'upload_dir')
-    upload_dir = upload_dir if upload_dir != "" else None
-    return upload_dir
+    return sanitize_flag(upload_dir)
 
 
 def get_ray_results_path():
