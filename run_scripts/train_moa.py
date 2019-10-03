@@ -6,6 +6,7 @@ from ray.tune import run_experiments
 from ray.tune.registry import register_env
 import tensorflow as tf
 
+from social_dilemmas.algorithms.ppo_causal
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
 from models.conv_to_fc_net import ConvToFCNet
@@ -173,7 +174,7 @@ def main(unused_argv):
 
     run_experiments({
         exp_name: {
-            "run": alg_run,
+            'run_or_experiment': CCTrainer,
             "env": env_name,
             "stop": {
                 "training_iteration": FLAGS.training_iterations

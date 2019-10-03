@@ -1,3 +1,4 @@
+from gym.spaces import Box, Dict, Discrete
 import numpy as np
 
 from social_dilemmas.envs.agent import HarvestAgent  # HARVEST_VIEW_SIZE
@@ -11,6 +12,8 @@ ACTIONS['FIRE'] = 5  # length of firing range
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
+HARVEST_VIEW_SIZE = 7
+
 
 class HarvestEnv(MapEnv):
 
@@ -22,15 +25,22 @@ class HarvestEnv(MapEnv):
                 if self.base_map[row, col] == 'A':
                     self.apple_points.append([row, col])
 
-    @property
-    def action_space(self):
-        agents = list(self.agents.values())
-        return agents[0].action_space
+        self.view_len = HARVEST_VIEW_SIZE
 
     @property
     def observation_space(self):
-        agents = list(self.agents.values())
-        return agents[0].observation_space
+        if self.return_agent_actions:
+            # We will append on some extra values to represent the actions of other agents
+            return Dict({"curr_obs": Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+                                                                   2 * self.view_len + 1, 3), dtype=np.float32),
+                         "prev_actions": Box(low=0, high=len(ACTIONS), shape=(self.num_agents,), dtype=np.int8)})
+        else:
+            return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+                                                 2 * self.view_len + 1, 3), dtype=np.float32)
+
+    @property
+    def action_space(self):
+        return Discrete(8)
 
     def setup_agents(self):
         map_with_agents = self.get_map_with_agents()
@@ -40,7 +50,7 @@ class HarvestEnv(MapEnv):
             spawn_point = self.spawn_point()
             rotation = self.spawn_rotation()
             grid = map_with_agents
-            agent = HarvestAgent(agent_id, spawn_point, rotation, grid)
+            agent = HarvestAgent(agent_id, spawn_point, rotation, grid, view_len=HARVEST_VIEW_SIZE)
             # grid = util.return_view(map_with_agents, spawn_point,
             #                         HARVEST_VIEW_SIZE, HARVEST_VIEW_SIZE)
             # agent = HarvestAgent(agent_id, spawn_point, rotation, grid)

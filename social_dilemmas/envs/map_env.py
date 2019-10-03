@@ -1,8 +1,11 @@
 """Base map class that defines the rendering process
 """
 
+from collections import defaultdict
 import random
 
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 from ray.rllib.env import MultiAgentEnv
@@ -58,7 +61,7 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
 
 class MapEnv(MultiAgentEnv):
 
-    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None):
+    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None, return_agent_actions=False):
         """
 
         Parameters
@@ -72,9 +75,14 @@ class MapEnv(MultiAgentEnv):
             Whether to render the environment
         color_map: dict
             Specifies how to convert between ascii chars and colors
+        return_agent_actions: bool
+            If true, we the action space will include the actions of other agents
         """
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
+        self.return_agent_actions = return_agent_actions
+        if self.return_agent_actions:
+            self.prev_actions = defaultdict(lambda: [0] * self.num_agents)
         # map without agents or beams
         self.world_map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.beam_pos = []
@@ -186,11 +194,16 @@ class MapEnv(MultiAgentEnv):
         rewards = {}
         dones = {}
         info = {}
+        self.prev_actions = [action[key] for key in sorted(actions.keys())]
         for agent in self.agents.values():
             agent.grid = map_with_agents
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
-            observations[agent.agent_id] = rgb_arr
+            # concatenate on the prev_actions to the observations
+            if self.return_agent_actions:
+                observations[agent.agent_id] = {"curr_obs": rgb_arr, "prev_actions": self.prev_actions}
+            else:
+                observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
         dones["__all__"] = np.any(list(dones.values()))

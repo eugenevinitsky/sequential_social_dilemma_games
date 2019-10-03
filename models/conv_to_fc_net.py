@@ -8,7 +8,7 @@
 
 import tensorflow as tf
 
-from ray.rllib.models.misc import normc_initializer, flatten
+from ray.rllib.models.tf.misc import normc_initializer, flatten
 from ray.rllib.models.model import Model
 import tensorflow.contrib.slim as slim
 
@@ -16,7 +16,11 @@ import tensorflow.contrib.slim as slim
 class ConvToFCNet(Model):
     def _build_layers_v2(self, input_dict, num_outputs, options):
 
-        inputs = input_dict["obs"]
+        # The last row is other agent actions
+        if options["custom_options"]["return_agent_actions"]:
+            inputs = input_dict["obs"][:-1, :]
+        else:
+            inputs = input_dict["obs"]
 
         hiddens = [32, 32]
         with tf.name_scope("custom_net"):
