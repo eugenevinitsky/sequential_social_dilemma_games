@@ -1,20 +1,22 @@
 """Base map class that defines the rendering process
 """
 
+from collections import defaultdict
 import random
 
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 from ray.rllib.env import MultiAgentEnv
 
-ACTIONS = {'MOVE_LEFT': [0, -1],  # Move left
-           'MOVE_RIGHT': [0, 1],  # Move right
-           'MOVE_UP': [-1, 0],  # Move up
-           'MOVE_DOWN': [1, 0],  # Move down
+ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
+           'MOVE_RIGHT': [1, 0],  # Move right
+           'MOVE_UP': [0, -1],  # Move up
+           'MOVE_DOWN': [0, 1],  # Move down
            'STAY': [0, 0],  # don't move
-           'TURN_CLOCKWISE': [[0, 1], [-1, 0]],  # Clockwise rotation matrix
-           'TURN_COUNTERCLOCKWISE': [[0, -1], [1, 0]]}  # Counter clockwise rotation matrix
-            # Positive Theta is in the counterclockwise direction
+           'TURN_CLOCKWISE': [[0, -1], [1, 0]],  # Rotate counter clockwise
+           'TURN_COUNTERCLOCKWISE': [[0, 1], [-1, 0]]}  # Move right
 
 ORIENTATIONS = {'LEFT': [0, -1],
                 'RIGHT': [0, 1],
@@ -40,10 +42,11 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    '8': [250, 204, 255],  # Pink
                    '9': [238, 223, 16]}  # Yellow
 
-
-# the axes look like this when printed out
-# graphic is here just to resolve the difference between directions in row-column space
-# and in visual space
+# the axes look like
+# graphic is here to help me get my head in order
+# WARNING: increasing array position in the direction of down
+# so for example if you move_left when facing left
+# your y position decreases.
 #         ^
 #         |
 #         U
@@ -55,9 +58,10 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
 #         N
 #         |
 
+
 class MapEnv(MultiAgentEnv):
 
-    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None):
+    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None, return_agent_actions=False):
         """
 
         Parameters
@@ -71,9 +75,14 @@ class MapEnv(MultiAgentEnv):
             Whether to render the environment
         color_map: dict
             Specifies how to convert between ascii chars and colors
+        return_agent_actions: bool
+            If true, the action space will include the actions of other agents
         """
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
+        self.return_agent_actions = return_agent_actions
+        if self.return_agent_actions:
+            self.prev_actions = defaultdict(lambda: [0] * self.num_agents)
         # map without agents or beams
         self.world_map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.beam_pos = []
@@ -185,21 +194,18 @@ class MapEnv(MultiAgentEnv):
         rewards = {}
         dones = {}
         info = {}
+        self.prev_actions = [action[key] for key in sorted(actions.keys())]
         for agent in self.agents.values():
             agent.grid = map_with_agents
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
-            rgb_arr = rgb_arr/255.0
-            observations[agent.agent_id] = rgb_arr
+            # concatenate on the prev_actions to the observations
+            if self.return_agent_actions:
+                observations[agent.agent_id] = {"curr_obs": rgb_arr, "prev_actions": self.prev_actions}
+            else:
+                observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
-
-            # Add other agent visibility
-            if agent.agent_id not in info:
-                info[agent.agent_id] = {}
-            info[agent.agent_id]['visible_agents'] = \
-                self.find_visible_agents(agent.agent_id)
-
         dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, info
 
@@ -280,7 +286,6 @@ class MapEnv(MultiAgentEnv):
 
             grid[agent.pos[0], agent.pos[1]] = char_id
 
-        # beams should overlay agents
         for beam_pos in self.beam_pos:
             grid[beam_pos[0], beam_pos[1]] = beam_pos[2]
 
@@ -686,13 +691,11 @@ class MapEnv(MultiAgentEnv):
 
     def rotate_view(self, orientation, view):
         """Takes a view of the map and rotates it the agent orientation
-
         Parameters
         ----------
         orientation: str
             str in {'UP', 'LEFT', 'DOWN', 'RIGHT'}
         view: np.ndarray (row, column, channel)
-
         Returns
         -------
         a rotated view

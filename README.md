@@ -62,3 +62,6 @@ Every environment that subclasses MapEnv probably needs to implement the followi
         raise NotImplementedError
 ```
         
+# Contributors
+
+This code base was developed by Eugene Vinitsky and Natasha Jaques; help with reproduction was provided by Joel Leibo, Antonio Castenada, and Edward Hughes. 
