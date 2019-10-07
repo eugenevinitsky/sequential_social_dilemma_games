@@ -6,11 +6,10 @@ from ray.tune import run_experiments
 from ray.tune.registry import register_env
 import tensorflow as tf
 
-from social_dilemmas.algorithms.ppo_causal
+from algorithms.ppo_causal import CausalMOATrainer
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
-from models.conv_to_fc_net import ConvToFCNet
-from models.conv_to_fcnet_v2 import ConvToFCNetv2
+from models.moa_model import MOA_LSTM
 
 FLAGS = tf.app.flags.FLAGS
 
@@ -21,7 +20,7 @@ tf.app.flags.DEFINE_string(
     'env', 'cleanup',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_string(
-    'algorithm', 'A3C',
+    'algorithm', 'PPO',
     'Name of the rllib algorithm to use.')
 tf.app.flags.DEFINE_integer(
     'num_agents', 5,
@@ -71,12 +70,12 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
     if env == 'harvest':
         def env_creator(_):
-            return HarvestEnv(num_agents=num_agents)
-        single_env = HarvestEnv()
+            return HarvestEnv(num_agents=num_agents, return_agent_actions=True)
+        single_env = HarvestEnv(num_agents=num_agents, return_agent_actions=True)
     else:
         def env_creator(_):
-            return CleanupEnv(num_agents=num_agents)
-        single_env = CleanupEnv()
+            return CleanupEnv(num_agents=num_agents, return_agent_actions=True)
+        single_env = CleanupEnv(num_agents=num_agents, return_agent_actions=True)
 
     env_name = env + "_env"
     register_env(env_name, env_creator)
@@ -84,9 +83,17 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
     obs_space = single_env.observation_space
     act_space = single_env.action_space
 
+    # register the custom model
+    # model_name = "conv_to_fc_net"
+    # ModelCatalog.register_custom_model(model_name, ConvToFCNet)
+
+    model_name = "moa_lstm"
+    ModelCatalog.register_custom_model(model_name, MOA_LSTM)
+
     # Each policy can have a different configuration (including custom model)
+    # TODO(@evinitsky) you probably need to map this correctly to the agents
     def gen_policy():
-        return (None, obs_space, act_space, {})
+        return (None, obs_space, act_space, {"custom_model": "moa_lstm"})
 
     # Setup PPO with an ensemble of `num_policies` different policy graphs
     policy_graphs = {}
@@ -95,13 +102,6 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
     def policy_mapping_fn(agent_id):
         return agent_id
-
-    # register the custom model
-    # model_name = "conv_to_fc_net"
-    # ModelCatalog.register_custom_model(model_name, ConvToFCNet)
-
-    model_name = "conv_to_fc_net"
-    ModelCatalog.register_custom_model(model_name, ConvToFCNetv2)
 
     agent_cls = get_agent_class(algorithm)
     config = agent_cls._default_config.copy()
@@ -143,9 +143,21 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                     "policies": policy_graphs,
                     "policy_mapping_fn": tune.function(policy_mapping_fn),
                 },
-                "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
-                        "custom_options": {"return_agent_actions": return_agent_actions, "cell_size": 128},
-                          "conv_filters": [[6, [3, 3], 1]]}
+                "model": {"custom_model": "moa_lstm", "use_lstm": False,
+                          "custom_options": {"return_agent_actions": return_agent_actions, "cell_size": 128,
+                                             "num_other_agents": num_agents - 1, "fcnet_hiddens": [32, 32]},
+                          "conv_filters": [[6, [3, 3], 1]]},
+                "num_other_agents": num_agents,
+                "moa_weight": tune.grid_search([10.0]),
+                "train_moa_only_when_visible": tune.grid_search([True]),
+                "influence_reward_clip": 10,
+                "influence_divergence_measure": 'kl',
+                "influence_reward_weight": tune.grid_search([1.0]),
+                "influence_curriculum_steps": tune.grid_search([10e6]),
+                "influence_scaledown_start": tune.grid_search([100e6]),
+                "influence_scaledown_end": tune.grid_search([300e6]),
+                "influence_scaledown_final_val": tune.grid_search([.5]),
+                "influence_only_when_visible": tune.grid_search([True])
 
     })
     return algorithm, env_name, config
@@ -172,18 +184,17 @@ def main(unused_argv):
         exp_name = FLAGS.exp_name
     print('Commencing experiment', exp_name)
 
-    run_experiments({
-        exp_name: {
-            'run_or_experiment': CCTrainer,
-            "env": env_name,
+    config['env'] = env_name
+    exp_dict = {
+            'name': exp_name,
+            'run_or_experiment': CausalMOATrainer,
             "stop": {
                 "training_iteration": FLAGS.training_iterations
             },
             'checkpoint_freq': FLAGS.checkpoint_frequency,
             "config": config,
         }
-    })
-
+    tune.run(**exp_dict, queue_trials=False)
 
 if __name__ == '__main__':
     tf.app.run(main)

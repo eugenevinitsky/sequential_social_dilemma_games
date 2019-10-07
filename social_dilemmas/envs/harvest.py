@@ -17,8 +17,8 @@ HARVEST_VIEW_SIZE = 7
 
 class HarvestEnv(MapEnv):
 
-    def __init__(self, ascii_map=HARVEST_MAP, num_agents=1, render=False):
-        super().__init__(ascii_map, num_agents, render)
+    def __init__(self, ascii_map=HARVEST_MAP, num_agents=1, render=False, return_agent_actions=False):
+        super().__init__(ascii_map, num_agents, render,  return_agent_actions=return_agent_actions)
         self.apple_points = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
@@ -33,7 +33,7 @@ class HarvestEnv(MapEnv):
             # We will append on some extra values to represent the actions of other agents
             return Dict({"curr_obs": Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
                                                                    2 * self.view_len + 1, 3), dtype=np.float32),
-                         "prev_actions": Box(low=0, high=len(ACTIONS), shape=(self.num_agents,), dtype=np.int8)})
+                         "prev_actions": Box(low=0, high=len(ACTIONS), shape=(self.num_agents - 1,), dtype=np.int8)})
         else:
             return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
                                                  2 * self.view_len + 1, 3), dtype=np.float32)
@@ -51,9 +51,6 @@ class HarvestEnv(MapEnv):
             rotation = self.spawn_rotation()
             grid = map_with_agents
             agent = HarvestAgent(agent_id, spawn_point, rotation, grid, view_len=HARVEST_VIEW_SIZE)
-            # grid = util.return_view(map_with_agents, spawn_point,
-            #                         HARVEST_VIEW_SIZE, HARVEST_VIEW_SIZE)
-            # agent = HarvestAgent(agent_id, spawn_point, rotation, grid)
             self.agents[agent_id] = agent
 
     def custom_reset(self):

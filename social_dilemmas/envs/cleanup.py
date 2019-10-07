@@ -29,8 +29,8 @@ appleRespawnProbability = 0.05
 
 class CleanupEnv(MapEnv):
 
-    def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False):
-        super().__init__(ascii_map, num_agents, render)
+    def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False, return_agent_actions=False):
+        super().__init__(ascii_map, num_agents, render, return_agent_actions=return_agent_actions)
 
         # compute potential waste area
         unique, counts = np.unique(self.base_map, return_counts=True)
@@ -75,7 +75,7 @@ class CleanupEnv(MapEnv):
             # We will append on some extra values to represent the actions of other agents
             return Dict({"curr_obs": Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
                                                  2 * self.view_len + 1, 3), dtype=np.float32),
-                         "prev_actions": Box(low=0, high=len(ACTIONS), shape=(self.num_agents, ), dtype=np.int8)})
+                         "prev_actions": Box(low=0, high=len(ACTIONS), shape=(self.num_agents - 1, ), dtype=np.int8)})
         else:
             return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
                                                  2 * self.view_len + 1, 3), dtype=np.float32)

@@ -9,8 +9,12 @@ import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy, PPOLoss, BEHAVIOUR_LOGITS, \
     KLCoeffMixin, ValueNetworkMixin, setup_mixins, setup_config, clip_gradients, \
     kl_and_loss_stats, vf_preds_and_logits_fetches
+# TODO(@evinitsky) move config vals into a default config
+from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG, choose_policy_optimizer, \
+    validate_config, update_kl, warn_about_bad_reward_scales
 from ray.rllib.evaluation.postprocessing import compute_advantages, \
     Postprocessing
+from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.fcnet_v2 import FullyConnectedNetwork
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.policy.sample_batch import SampleBatch
@@ -20,7 +24,18 @@ from ray.rllib.utils import try_import_tf
 from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.agents.trainer_template import build_trainer
 
-
+CONFIG = DEFAULT_CONFIG
+CONFIG.update({"num_other_agents": 1,
+               "moa_weight": 10.0,
+               "train_moa_only_when_visible": True,
+               "influence_reward_clip": 10,
+               "influence_divergence_measure": 'kl',
+               "influence_reward_weight": 1.0,
+               "influence_curriculum_steps": 10e6,
+               "influence_scaledown_start": 100e6,
+               "influence_scaledown_end": 300e6,
+               "influence_scaledown_final_val": .5,
+               "influence_only_when_visible": True})
 
 tf = try_import_tf()
 
@@ -30,6 +45,7 @@ OTHERS_ACTIONs = "others_actions"
 # Frozen logits of the policy that computed the action
 BEHAVIOUR_LOGITS = "behaviour_logits"
 COUNTERFACTUAL_ACTIONS = "counterfactual_actions"
+POLICY_SCOPE = "func"
 
 
 def kl_div(p, q):
@@ -86,7 +102,7 @@ class MOALoss(object):
         # Zero out the loss if the other agent isn't visible to this one.
         if others_visibility is not None:
             # Remove first entry in ground truth visibility and flatten
-            others_visibility = tf.reshape(others_visibility[1:,:], [-1])
+            others_visibility = tf.reshape(others_visibility[1:, :], [-1])
             self.ce_per_entry *= tf.cast(others_visibility, tf.float32)
 
         self.total_loss = tf.reduce_mean(self.ce_per_entry)
@@ -94,7 +110,6 @@ class MOALoss(object):
 
 
 def loss_with_moa(policy, model, dist_class, train_batch):
-
     # you need to override this bit to pull out the right bits from train_batch
     logits, state = model.from_batch(train_batch)
     action_dist = dist_class(logits, model)
@@ -105,8 +120,8 @@ def loss_with_moa(policy, model, dist_class, train_batch):
         train_batch[MOA_PREDS], [-1, policy.model.num_other_agents, logits.shape[-1]])
     cust_opts = policy.config['model']['custom_options']
     moa_loss = MOALoss(moa_preds, train_batch[OTHERS_ACTIONs],
-                            logits.shape[-1], loss_weight=cust_opts["moa_weght"],
-                            others_visibility=cust_opts["others_visibility"])
+                       logits.shape[-1], loss_weight=cust_opts["moa_weght"],
+                       others_visibility=cust_opts["others_visibility"])
 
     policy.loss_obj = PPOLoss(
         policy.action_space,
@@ -164,8 +179,8 @@ def postprocess_trajectory(policy,
         prev_reward = sample_batch['prev_rewards'][-1]
 
         last_r = policy._value(sample_batch["new_obs"][-1],
-                             all_actions[-1], prev_action, prev_reward,
-                             *next_state)
+                               all_actions[-1], prev_action, prev_reward,
+                               *next_state)
 
     sample_batch = compute_advantages(sample_batch, last_r, policy.config["gamma"],
                                       policy.config["lambda"])
@@ -261,7 +276,8 @@ def marginalize_predictions_over_own_actions(trajectory):
     # Multiply by probability of each action to renormalize probability
     traj_len = len(trajectory['obs'])
     tiled_probs = np.tile(action_probs, 4),
-    import ipdb; ipdb.set_trace()
+    import ipdb;
+    ipdb.set_trace()
     tiled_probs = np.reshape(
         tiled_probs, [traj_len, self.num_other_agents, self.num_actions])
     marginal_preds = np.multiply(marginal_preds, tiled_probs)
@@ -289,14 +305,16 @@ def extract_last_actions_from_episodes(episodes, batch_type=False,
     """
     if episodes is None:
         print("Why are there no episodes?")
-        import ipdb; ipdb.set_trace()
+        import ipdb;
+        ipdb.set_trace()
 
     # Need to sort agent IDs so same agent is consistently in
     # same part of input space.
     agent_ids = sorted(episodes.keys())
     prev_actions = []
 
-    import ipdb; ipdb.set_trace()
+    import ipdb;
+    ipdb.set_trace()
     for agent_id in agent_ids:
         if agent_id == self.agent_id:
             continue
@@ -352,24 +370,40 @@ class InfluenceScheduleMixIn(object):
             self.curr_influence_weight = percent * self.influence_reward_weight
         elif self.steps_processed > self.inf_scale_start:
             percent = (self.steps_processed - self.inf_scale_start) \
-                / float(self.inf_scale_end - self.inf_scale_start)
+                      / float(self.inf_scale_end - self.inf_scale_start)
             diff = self.influence_reward_weight - self.inf_scale_final_val
             scaled = self.influence_reward_weight - diff * percent
             self.curr_influence_weight = max(self.inf_scale_final_val, scaled)
         else:
-            self.curr_influence_weight =  self.influence_reward_weight
+            self.curr_influence_weight = self.influence_reward_weight
 
 
 def extra_stats(policy, train_batch):
     base_stats = kl_and_loss_stats(policy, train_batch)
-    import ipdb; ipdb.set_trace()
+    import ipdb;
+    ipdb.set_trace()
     base_stats["influence_reward"] = None
+
+
+def build_ppo_model(policy, obs_space, action_space, config):
+    _, logit_dim = ModelCatalog.get_action_dist(action_space, config["model"])
+
+    policy.model = ModelCatalog.get_model_v2(
+        obs_space,
+        action_space,
+        logit_dim,
+        config["model"],
+        name=POLICY_SCOPE,
+        framework="tf")
+
+    return policy.model
 
 
 CausalMOA_PPOPolicy = build_tf_policy(
     name="PPOTFPolicy",
     get_default_config=lambda: ray.rllib.agents.ppo.ppo.DEFAULT_CONFIG,
     loss_fn=loss_with_moa,
+    make_model=build_ppo_model,
     stats_fn=extra_stats,
     extra_action_fetches_fn=vf_preds_and_logits_fetches,
     postprocess_fn=postprocess_trajectory,
@@ -378,12 +412,8 @@ CausalMOA_PPOPolicy = build_tf_policy(
     before_loss_init=setup_mixins,
     mixins=[
         LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin,
-        ValueNetworkMixin # TODO(@evinitsky) add influence schedule to LearningRateSchedule
+        ValueNetworkMixin  # TODO(@evinitsky) add influence schedule to LearningRateSchedule
     ])
-
-# TODO(@evinitsky) move config vals into a default config
-from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG, choose_policy_optimizer, \
-    validate_config, update_kl, warn_about_bad_reward_scales
 
 CausalMOATrainer = build_trainer(
     name="CausalMOA",

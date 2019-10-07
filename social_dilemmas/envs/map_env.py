@@ -194,14 +194,15 @@ class MapEnv(MultiAgentEnv):
         rewards = {}
         dones = {}
         info = {}
-        self.prev_actions = [action[key] for key in sorted(actions.keys())]
         for agent in self.agents.values():
             agent.grid = map_with_agents
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
-                observations[agent.agent_id] = {"curr_obs": rgb_arr, "prev_actions": self.prev_actions}
+                prev_actions = [actions[key] for key in sorted(actions.keys()) if key != agent.agent_id]
+                import ipdb; ipdb.set_trace()
+                observations[agent.agent_id] = {"curr_obs": rgb_arr, "prev_actions": prev_actions}
             else:
                 observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
@@ -235,7 +236,13 @@ class MapEnv(MultiAgentEnv):
             # agent.grid = util.return_view(map_with_agents, agent.pos,
             #                               agent.row_size, agent.col_size)
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
-            observations[agent.agent_id] = rgb_arr
+            # concatenate on the prev_actions to the observations
+            if self.return_agent_actions:
+                # No previous actions so just pass in zeros
+                prev_actions = [0 for _ in range(self.num_agents - 1)]
+                observations[agent.agent_id] = {"curr_obs": rgb_arr, "prev_actions": prev_actions}
+            else:
+                observations[agent.agent_id] = rgb_arr
         return observations
 
     @property
