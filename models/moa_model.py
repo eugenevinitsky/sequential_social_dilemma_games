@@ -53,7 +53,7 @@ class KerasRNN(RecurrentTFModelV2):
         # TODO(@evinitsky) add in the info that the actions will be appended in if append_others_actions is true
         if self.append_others_actions:
             num_other_agents = model_config['custom_options']['num_other_agents']
-            actions_layer = tf.keras.layers.Input(shape=(None, num_other_agents), name="other_actions")
+            actions_layer = tf.keras.layers.Input(shape=(None, num_other_agents + 1), name="other_actions")
             last_layer = tf.keras.layers.concatenate([last_layer, actions_layer])
 
         state_in_h = tf.keras.layers.Input(shape=(cell_size,), name="h")
@@ -176,7 +176,7 @@ class MOA_LSTM(RecurrentTFModelV2):
                                       model_config, "actions", cell_size=cell_size, use_value_fn=True)
 
         # predicts the actions of all the agents besides itself
-        self.moa_model = KerasRNN(inner_obs_space, action_space, self.num_other_agents - 1,
+        self.moa_model = KerasRNN(inner_obs_space, action_space, self.num_other_agents,
                                   model_config, "moa_model", cell_size=cell_size, use_value_fn=False,
                                   append_others_actions=True)
         self.register_variables(self.actions_model.rnn_model.variables)
@@ -200,9 +200,6 @@ class MOA_LSTM(RecurrentTFModelV2):
         # we operate on our obs, others previous actions, our previous actions, our previous rewards
         # TODO(@evinitsky) are we passing seq_lens correctly? should we pass prev_actions, prev_rewards etc?
 
-        curr_obs = input_dict["obs"]["curr_obs"]
-        import ipdb; ipdb.set_trace()
-
         trunk = self.base_model(input_dict["obs"]["curr_obs"])
 
         pass_dict = {"curr_obs": trunk}
@@ -211,14 +208,20 @@ class MOA_LSTM(RecurrentTFModelV2):
         # TODO(@evinitsky) what's the right way to pass in the prev actions and such?
         model_out, self._value_out, h1, c1 = self.actions_model.forward_rnn(pass_dict, [h1, c1], seq_lens)
 
-        # TODO(@evinitsky) make sure the other_actions only contain the actions of other agents
+        # Loop through the model and compute all the counterfactual logits
+        counterfactual_preds = []
+        for i in range(self.num_outputs):
+            possible_actions = np.array([i])[np.newaxis, np.newaxis, :]
+            other_actions = input_dict["obs"]["prev_actions"]
+            stacked_actions = tf.concat([possible_actions, other_actions], axis=-1)
+            pass_dict = {"curr_obs": trunk, "prev_actions": stacked_actions}
+            counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
+            counterfactual_preds.append(tf.expand_dims(counterfactual_pred, axis=-2))
+        self._counterfactual_preds = tf.concat(counterfactual_preds, axis=-2)
 
-        possible_actions = np.arange(self.num_outputs)[np.newaxis, :]
-        other_actions = input_dict["obs"]["prev_actions"]
-        other_actions_tile = tf.tile(other_actions, self.num_outputs, axis=0)
-        stacked_actions = np.hstack(possible_actions, other_actions_tile)
-        pass_dict = {"curr_obs": trunk, "prev_actions": stacked_actions}
-        self._conterfactual_preds, h2, c2 = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
+        self._moa_preds, h2, c2 = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
+
+        # TODO(@evinitsky) reshape self._counterfactual_preds so it has the shape you need for later computation
 
         return model_out, [h1, c1, h2, c2]
 
@@ -226,7 +229,10 @@ class MOA_LSTM(RecurrentTFModelV2):
         return tf.reshape(self._value_out, [-1])
 
     def counterfactual_actions(self):
-        return self._conterfactual_preds
+        return self._counterfactual_preds
+
+    def moa_preds(self):
+        return self._moa_preds
 
     @override(ModelV2)
     def get_initial_state(self):

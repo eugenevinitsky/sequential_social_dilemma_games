@@ -7,7 +7,7 @@ import numpy as np
 
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy, PPOLoss, BEHAVIOUR_LOGITS, \
-    KLCoeffMixin, ValueNetworkMixin, setup_mixins, setup_config, clip_gradients, \
+    KLCoeffMixin, setup_mixins, setup_config, clip_gradients, \
     kl_and_loss_stats, vf_preds_and_logits_fetches
 # TODO(@evinitsky) move config vals into a default config
 from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG, choose_policy_optimizer, \
@@ -23,6 +23,7 @@ from ray.rllib.policy.tf_policy import LearningRateSchedule, \
 from ray.rllib.utils import try_import_tf
 from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.agents.trainer_template import build_trainer
+from ray.rllib.utils.tf_ops import make_tf_callable
 
 CONFIG = DEFAULT_CONFIG
 CONFIG.update({"num_other_agents": 1,
@@ -40,7 +41,8 @@ CONFIG.update({"num_other_agents": 1,
 tf = try_import_tf()
 
 MOA_PREDS = "moa_preds"
-OTHERS_ACTIONs = "others_actions"
+OTHERS_ACTIONS = "others_actions"
+VISIBILITY = "others_visibility"
 
 # Frozen logits of the policy that computed the action
 BEHAVIOUR_LOGITS = "behaviour_logits"
@@ -105,7 +107,7 @@ class MOALoss(object):
             others_visibility = tf.reshape(others_visibility[1:, :], [-1])
             self.ce_per_entry *= tf.cast(others_visibility, tf.float32)
 
-        self.total_loss = tf.reduce_mean(self.ce_per_entry)
+        self.total_loss = tf.reduce_mean(self.ce_per_entry) * loss_weight
         tf.Print(self.total_loss, [self.total_loss], message="MOA CE loss")
 
 
@@ -116,12 +118,35 @@ def loss_with_moa(policy, model, dist_class, train_batch):
 
     # you need to overwrite this function
     # TODO(@evinitsky) get the logit shape right, we are trying to put num_actions where logits.shape[-1] is
-    moa_preds = tf.reshape(  # Reshape to [B,N,A]
-        train_batch[MOA_PREDS], [-1, policy.model.num_other_agents, logits.shape[-1]])
-    cust_opts = policy.config['model']['custom_options']
-    moa_loss = MOALoss(moa_preds, train_batch[OTHERS_ACTIONs],
-                       logits.shape[-1], loss_weight=cust_opts["moa_weght"],
-                       others_visibility=cust_opts["others_visibility"])
+
+    # it won't be there till we actually roll out the policy
+    if MOA_PREDS in train_batch:
+        # TODO(@evinitsky) why don't we have a time dimension for this?
+        moa_preds = tf.reshape(  # Reshape to [B,N,A]
+            train_batch[MOA_PREDS], [-1, policy.model.num_other_agents, logits.shape[-1]])
+    else:
+        # TODO(@evinitsky) this has the wrong shape ATM
+        moa_preds = tf.placeholder(dtype=tf.int32, shape=[None, None, logits.shape[-1], policy.model.num_other_agents,])
+
+    if OTHERS_ACTIONS in train_batch:
+        others_actions = train_batch[OTHERS_ACTIONS]
+    else:
+        others_actions = tf.placeholder(dtype=tf.int32, shape=[None, None, policy.model.num_other_agents])
+
+    # 0/1 multiplier array representing whether each agent is visible to
+    # the current agent.
+    if policy.config["train_moa_only_when_visible"]:
+        if VISIBILITY in train_batch:
+            others_visibility = train_batch[VISIBILITY]
+        else:
+            others_visibility = tf.placeholder(tf.int32, shape=(None, policy.model.num_other_agents),
+                                               name="others_visibility")
+    else:
+        others_visibility = None
+
+    moa_loss = MOALoss(moa_preds, others_actions,
+                       logits.shape[-1], loss_weight=policy.config["moa_weight"],
+                       others_visibility=others_visibility)
 
     policy.loss_obj = PPOLoss(
         policy.action_space,
@@ -134,7 +159,7 @@ def loss_with_moa(policy, model, dist_class, train_batch):
         train_batch[ACTION_LOGP],
         train_batch[SampleBatch.VF_PREDS],
         action_dist,
-        policy.central_value_out,
+        model.value_function(),
         policy.kl_coeff,
         tf.ones_like(train_batch[Postprocessing.ADVANTAGES], dtype=tf.bool),
         entropy_coeff=policy.entropy_coeff,
@@ -152,38 +177,46 @@ def postprocess_trajectory(policy,
                            sample_batch,
                            other_agent_batches=None,
                            episode=None):
-    # Extract matrix of self and other agents' actions.
-    own_actions = np.atleast_2d(np.array(sample_batch['actions']))
-    own_actions = np.reshape(own_actions, [-1, 1])
-    all_actions = extract_last_actions_from_episodes(
-        other_agent_batches, own_actions=own_actions, batch_type=True)
-    sample_batch['others_actions'] = all_actions
+    if other_agent_batches:
+        import ipdb ;ipdb.set_trace()
+        # Extract matrix of self and other agents' actions.
+        own_actions = np.atleast_2d(np.array(sample_batch['actions']))
+        own_actions = np.reshape(own_actions, [-1, 1])
+        all_actions = extract_last_actions_from_episodes(
+            other_agent_batches, own_actions=own_actions, batch_type=True)
+        sample_batch['others_actions'] = all_actions
 
-    # TODO(@evinitsky) probably need to add in the MOA predictions
+        # TODO(@evinitsky) probably need to add in the MOA predictions
 
-    if policy.train_moa_only_when_visible:
-        sample_batch['others_visibility'] = \
-            get_agent_visibility_multiplier(sample_batch)
+        if policy.train_moa_only_when_visible:
+            sample_batch[VISIBILITY] = \
+                get_agent_visibility_multiplier(sample_batch, policy.num_other_agents)
 
-    # Compute causal social influence reward and add to batch.
-    sample_batch = compute_influence_reward(policy, sample_batch)
+        # Compute causal social influence reward and add to batch.
+        sample_batch = compute_influence_reward(policy, sample_batch)
+
+    else:
+        sample_batch['influence_per_agent'] = [0]
+        sample_batch['total_influence'] = [0]
 
     completed = sample_batch["dones"][-1]
     if completed:
         last_r = 0.0
     else:
         next_state = []
-        for i in range(len(policy.rl_model.state_in)):
+        for i in range(policy.num_state_tensors()):
             next_state.append([sample_batch["state_out_{}".format(i)][-1]])
-        prev_action = sample_batch['prev_actions'][-1]
-        prev_reward = sample_batch['prev_rewards'][-1]
-
-        last_r = policy._value(sample_batch["new_obs"][-1],
-                               all_actions[-1], prev_action, prev_reward,
+        last_r = policy._value(sample_batch[SampleBatch.NEXT_OBS][-1],
+                               sample_batch[SampleBatch.ACTIONS][-1],
+                               sample_batch[SampleBatch.REWARDS][-1],
                                *next_state)
+    sample_batch = compute_advantages(
+        sample_batch,
+        last_r,
+        policy.config["gamma"],
+        policy.config["lambda"],
+        use_gae=policy.config["use_gae"])
 
-    sample_batch = compute_advantages(sample_batch, last_r, policy.config["gamma"],
-                                      policy.config["lambda"])
     return sample_batch
 
 
@@ -215,8 +248,8 @@ def compute_influence_reward(policy, trajectory):
 
     # Zero out influence for steps where the other agent isn't visible.
     if policy.influence_only_when_visible:
-        if 'others_visibility' in trajectory.keys():
-            visibility = trajectory['others_visibility']
+        if VISIBILITY in trajectory.keys():
+            visibility = trajectory[VISIBILITY]
         else:
             visibility = get_agent_visibility_multiplier(trajectory, policy.num_other_agents)
         influence_per_agent_step *= visibility
@@ -337,9 +370,9 @@ def extra_fetches(policy):
     """Adds value function, logits, moa predictions of counterfactual actions to experience train_batches."""
     return {
         SampleBatch.VF_PREDS: policy.model.value_function(),
-        # TODO(@evinitsky) this will not reurn the right thing
         BEHAVIOUR_LOGITS: policy.model.last_output(),
-        COUNTERFACTUAL_ACTIONS: policy.model.counterfactual_actions()
+        COUNTERFACTUAL_ACTIONS: policy.model.counterfactual_actions(),
+        MOA_PREDS: policy.model.moa_preds()
     }
 
 
@@ -347,12 +380,8 @@ class InfluenceScheduleMixIn(object):
     def __init__(self, config):
         cust_opts = config['model']['custom_options']
         self.moa_weight = cust_opts['moa_weight']
-        self.train_moa_only_when_visible = cust_opts['train_moa_only_when_visible']
-        self.influence_reward_clip = cust_opts['influence_reward_clip']
-        self.influence_divergence_measure = cust_opts['influence_divergence_measure']
         self.influence_reward_weight = cust_opts['influence_reward_weight']
         self.influence_curriculum_steps = cust_opts['influence_curriculum_steps']
-        self.influence_only_when_visible = cust_opts['influence_only_when_visible']
         self.inf_scale_start = cust_opts['influence_scaledown_start']
         self.inf_scale_end = cust_opts['influence_scaledown_end']
         self.inf_scale_final_val = cust_opts['influence_scaledown_final_val']
@@ -380,9 +409,9 @@ class InfluenceScheduleMixIn(object):
 
 def extra_stats(policy, train_batch):
     base_stats = kl_and_loss_stats(policy, train_batch)
-    import ipdb;
-    ipdb.set_trace()
-    base_stats["influence_reward"] = None
+    base_stats["total_influence"] = train_batch["total_influence"]
+    return base_stats
+    import ipdb; ipdb.set_trace()
 
 
 def build_ppo_model(policy, obs_space, action_space, config):
@@ -399,13 +428,39 @@ def build_ppo_model(policy, obs_space, action_space, config):
     return policy.model
 
 
+class ValueNetworkMixin(object):
+    def __init__(self, obs_space, action_space, config):
+        if config["use_gae"]:
+
+            @make_tf_callable(self.get_session())
+            def value(ob, prev_action, prev_reward, *state):
+                import ipdb; ipdb.set_trace()
+                model_out, _ = self.model({
+                    SampleBatch.CUR_OBS: tf.convert_to_tensor([ob]),
+                    SampleBatch.PREV_ACTIONS: tf.convert_to_tensor(
+                        [prev_action]),
+                    SampleBatch.PREV_REWARDS: tf.convert_to_tensor(
+                        [prev_reward]),
+                    "is_training": tf.convert_to_tensor(False),
+                }, [tf.convert_to_tensor([s]) for s in state],
+                                          tf.convert_to_tensor([1]))
+                return self.model.value_function()[0]
+
+        else:
+            @make_tf_callable(self.get_session())
+            def value(ob, prev_action, prev_reward, *state):
+                return tf.constant(0.0)
+
+        self._value = value
+
+
 CausalMOA_PPOPolicy = build_tf_policy(
     name="PPOTFPolicy",
     get_default_config=lambda: ray.rllib.agents.ppo.ppo.DEFAULT_CONFIG,
     loss_fn=loss_with_moa,
     make_model=build_ppo_model,
     stats_fn=extra_stats,
-    extra_action_fetches_fn=vf_preds_and_logits_fetches,
+    extra_action_fetches_fn=extra_fetches,
     postprocess_fn=postprocess_trajectory,
     gradients_fn=clip_gradients,
     before_init=setup_config,

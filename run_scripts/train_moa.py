@@ -23,7 +23,7 @@ tf.app.flags.DEFINE_string(
     'algorithm', 'PPO',
     'Name of the rllib algorithm to use.')
 tf.app.flags.DEFINE_integer(
-    'num_agents', 5,
+    'num_agents', 2,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
     'train_batch_size', 30000,

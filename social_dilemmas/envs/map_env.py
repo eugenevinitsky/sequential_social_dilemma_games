@@ -198,6 +198,8 @@ class MapEnv(MultiAgentEnv):
             agent.grid = map_with_agents
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
+            rgb_arr = (rgb_arr - 128.00) / 255.0
+            import ipdb; ipdb.set_trace()
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 prev_actions = [actions[key] for key in sorted(actions.keys()) if key != agent.agent_id]
@@ -207,6 +209,13 @@ class MapEnv(MultiAgentEnv):
                 observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
+
+            # Add other agent visibility
+            if agent.agent_id not in info:
+                info[agent.agent_id] = {}
+            info[agent.agent_id]['visible_agents'] = \
+                self.find_visible_agents(agent.agent_id)
+
         dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, info
 
@@ -742,3 +751,26 @@ class MapEnv(MultiAgentEnv):
             return False
         else:
             return True
+
+    def find_visible_agents(self, agent_id):
+        """Returns all the agents that can be seen by agent with agent_id
+        Args
+        ----
+        agent_id: str
+            The id of the agent whose visible agents we are asking about
+        Returns
+        -------
+        visible_agents: list
+            which agents can be seen by the agent with id "agent_id"
+        """
+        agent_pos = self.agents[agent_id].get_pos()
+        upper_lim = int(agent_pos[0] + self.agents[agent_id].row_size)
+        lower_lim = int(agent_pos[0] - self.agents[agent_id].row_size)
+        left_lim = int(agent_pos[1] - self.agents[agent_id].col_size)
+        right_lim = int(agent_pos[1] + self.agents[agent_id].col_size)
+
+        other_agent_pos = [(agent.get_pos(), other_agent_id) for other_agent_id, agent in
+                           self.agents.items() if other_agent_id != agent_id]
+        return [agent_tup[1] for agent_tup in other_agent_pos if
+                (lower_lim <= agent_tup[0][0] <= upper_lim
+                 and left_lim <= agent_tup[0][1] <= right_lim)]
