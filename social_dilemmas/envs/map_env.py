@@ -199,11 +199,9 @@ class MapEnv(MultiAgentEnv):
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
             rgb_arr = (rgb_arr - 128.00) / 255.0
-            import ipdb; ipdb.set_trace()
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
-                prev_actions = [actions[key] for key in sorted(actions.keys()) if key != agent.agent_id]
-                import ipdb; ipdb.set_trace()
+                prev_actions = np.array([actions[key] for key in sorted(actions.keys()) if key != agent.agent_id])
                 observations[agent.agent_id] = {"curr_obs": rgb_arr, "prev_actions": prev_actions}
             else:
                 observations[agent.agent_id] = rgb_arr
@@ -245,10 +243,11 @@ class MapEnv(MultiAgentEnv):
             # agent.grid = util.return_view(map_with_agents, agent.pos,
             #                               agent.row_size, agent.col_size)
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
+            rgb_arr = (rgb_arr - 128.0) / 255.0
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 # No previous actions so just pass in zeros
-                prev_actions = [0 for _ in range(self.num_agents - 1)]
+                prev_actions = np.array([0 for _ in range(self.num_agents - 1)])
                 observations[agent.agent_id] = {"curr_obs": rgb_arr, "prev_actions": prev_actions}
             else:
                 observations[agent.agent_id] = rgb_arr

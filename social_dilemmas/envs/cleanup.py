@@ -73,7 +73,7 @@ class CleanupEnv(MapEnv):
     def observation_space(self):
         if self.return_agent_actions:
             # We will append on some extra values to represent the actions of other agents
-            return Dict({"curr_obs": Box(low=-1.0, high=1.0, shape=(2 * self.view_len + 1,
+            return Dict({"curr_obs": Box(low=-np.infty, high=np.infty, shape=(2 * self.view_len + 1,
                                                  2 * self.view_len + 1, 3), dtype=np.float32),
                          "prev_actions": Box(low=0, high=len(ACTIONS), shape=(self.num_agents - 1, ), dtype=np.int8)})
         else:

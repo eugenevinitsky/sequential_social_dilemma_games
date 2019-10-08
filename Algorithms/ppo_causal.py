@@ -346,11 +346,7 @@ def extract_last_actions_from_episodes(episodes, batch_type=False,
     agent_ids = sorted(episodes.keys())
     prev_actions = []
 
-    import ipdb;
-    ipdb.set_trace()
     for agent_id in agent_ids:
-        if agent_id == self.agent_id:
-            continue
         if batch_type:
             prev_actions.append(episodes[agent_id][1]['actions'])
         else:
