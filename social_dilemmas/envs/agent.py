@@ -249,7 +249,7 @@ class CleanupAgent(Agent):
 SWITCH_ACTIONS = BASE_ACTIONS.copy()
 SWITCH_ACTIONS.update({7: 'TOGGLE_SWITCH'})  # Fire a switch beam
 
-SWITCH_VIEW_SIZE = 7
+SWITCH_VIEW_SIZE = 5
 
 class SwitchAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=SWITCH_VIEW_SIZE):
