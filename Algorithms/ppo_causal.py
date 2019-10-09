@@ -2,21 +2,20 @@ import copy
 import sys
 
 import numpy as np
+import scipy
 
 # TODO(@evinitsky) put this in alphabetical order
 
 import ray
 from ray.rllib.agents.ppo.ppo_policy import PPOTFPolicy, PPOLoss, BEHAVIOUR_LOGITS, \
-    KLCoeffMixin, setup_mixins, setup_config, clip_gradients, \
-    kl_and_loss_stats, vf_preds_and_logits_fetches
+    KLCoeffMixin, setup_config, clip_gradients, \
+    kl_and_loss_stats
 # TODO(@evinitsky) move config vals into a default config
 from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG, choose_policy_optimizer, \
     validate_config, update_kl, warn_about_bad_reward_scales
 from ray.rllib.evaluation.postprocessing import compute_advantages, \
     Postprocessing
 from ray.rllib.models import ModelCatalog
-from ray.rllib.models.tf.fcnet_v2 import FullyConnectedNetwork
-from ray.rllib.models.tf.tf_modelv2 import TFModelV2
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.policy.tf_policy import LearningRateSchedule, \
     EntropyCoeffSchedule, ACTION_LOGP
@@ -30,13 +29,13 @@ CONFIG.update({"num_other_agents": 1,
                "moa_weight": 10.0,
                "train_moa_only_when_visible": True,
                "influence_reward_clip": 10,
-               "influence_divergence_measure": 'kl',
                "influence_reward_weight": 1.0,
                "influence_curriculum_steps": 10e6,
                "influence_scaledown_start": 100e6,
                "influence_scaledown_end": 300e6,
                "influence_scaledown_final_val": .5,
-               "influence_only_when_visible": True})
+               "influence_only_when_visible": True,
+               "influence_divergence_measure": "kl"})
 
 tf = try_import_tf()
 
@@ -71,13 +70,6 @@ def kl_div(p, q):
         return np.zeros(kl.shape)
 
 
-class MOALossMixIn(object):
-    def __init__(self, config):
-        cust_opts = config['model']['custom_options']
-        self.moa_weight = cust_opts['moa_weight']
-        self.train_moa_only_when_visible = cust_opts['train_moa_only_when_visible']
-
-
 class MOALoss(object):
     def __init__(self, pred_logits, true_actions, num_actions,
                  loss_weight=1.0, others_visibility=None):
@@ -91,9 +83,9 @@ class MOALoss(object):
         # this step.
         action_logits = pred_logits[:-1, :, :]  # [B, N, A]
 
-        # Remove first agent (self) and first action, because we want to predict
-        # the t+1 actions of other agents from all actions at t.
-        true_actions = true_actions[1:, 1:]  # [B, N]
+        # # Remove first agent (self) and first action, because we want to predict
+        # # the t+1 actions of other agents from all actions at t.
+        # true_actions = true_actions[1:, 1:]  # [B, N]
 
         # Compute softmax cross entropy
         flat_logits = tf.reshape(action_logits, [-1, num_actions])
@@ -117,35 +109,26 @@ def loss_with_moa(policy, model, dist_class, train_batch):
     action_dist = dist_class(logits, model)
 
     # you need to overwrite this function
-    # TODO(@evinitsky) get the logit shape right, we are trying to put num_actions where logits.shape[-1] is
 
-    # it won't be there till we actually roll out the policy
-    if MOA_PREDS in train_batch:
-        # TODO(@evinitsky) why don't we have a time dimension for this?
-        moa_preds = tf.reshape(  # Reshape to [B,N,A]
-            train_batch[MOA_PREDS], [-1, policy.model.num_other_agents, logits.shape[-1]])
-    else:
-        # TODO(@evinitsky) this has the wrong shape ATM
-        moa_preds = tf.placeholder(dtype=tf.int32, shape=[None, None, logits.shape[-1], policy.model.num_other_agents,])
+    moa_preds = tf.reshape(train_batch[MOA_PREDS], [-1, policy.model.num_other_agents, logits.shape[-1]])
 
     if OTHERS_ACTIONS in train_batch:
         others_actions = train_batch[OTHERS_ACTIONS]
     else:
-        others_actions = tf.placeholder(dtype=tf.int32, shape=[None, None, policy.model.num_other_agents])
+        others_actions = tf.placeholder(dtype=tf.int32, shape=[None, policy.model.num_other_agents + 1])
 
     # 0/1 multiplier array representing whether each agent is visible to
     # the current agent.
-    if policy.config["train_moa_only_when_visible"]:
+    if policy.train_moa_only_when_visible:
         if VISIBILITY in train_batch:
             others_visibility = train_batch[VISIBILITY]
         else:
-            others_visibility = tf.placeholder(tf.int32, shape=(None, policy.model.num_other_agents),
-                                               name="others_visibility")
+            others_visibility = tf.placeholder(dtype=tf.int32, shape=[None, policy.model.num_other_agents])
     else:
         others_visibility = None
 
     moa_loss = MOALoss(moa_preds, others_actions,
-                       logits.shape[-1], loss_weight=policy.config["moa_weight"],
+                       logits.shape[-1], loss_weight=policy.moa_weight,
                        others_visibility=others_visibility)
 
     policy.loss_obj = PPOLoss(
@@ -178,15 +161,12 @@ def postprocess_trajectory(policy,
                            other_agent_batches=None,
                            episode=None):
     if other_agent_batches:
-        import ipdb ;ipdb.set_trace()
         # Extract matrix of self and other agents' actions.
         own_actions = np.atleast_2d(np.array(sample_batch['actions']))
         own_actions = np.reshape(own_actions, [-1, 1])
         all_actions = extract_last_actions_from_episodes(
             other_agent_batches, own_actions=own_actions, batch_type=True)
-        sample_batch['others_actions'] = all_actions
-
-        # TODO(@evinitsky) probably need to add in the MOA predictions
+        sample_batch[OTHERS_ACTIONS] = all_actions
 
         if policy.train_moa_only_when_visible:
             sample_batch[VISIBILITY] = \
@@ -196,7 +176,9 @@ def postprocess_trajectory(policy,
         sample_batch = compute_influence_reward(policy, sample_batch)
 
     else:
-        sample_batch['influence_per_agent'] = [0]
+        # Add the appropriate placeholders
+        sample_batch[OTHERS_ACTIONS] = tf.placeholder(dtype=tf.int32, shape=[None, policy.model.num_other_agents + 1])
+        sample_batch['reward_without_influence'] = [0]
         sample_batch['total_influence'] = [0]
 
     completed = sample_batch["dones"][-1]
@@ -223,17 +205,19 @@ def postprocess_trajectory(policy,
 def compute_influence_reward(policy, trajectory):
     """Compute influence of this agent on other agents and add to rewards.
     """
-    # Predict the next action for all other agents. Shape is [B, N, A]
-    # TODO(@evinitsky) does this have the right indexing
-    true_preds = trajectory[COUNTERFACTUAL_ACTIONS]
-    # TODO(@evinitsky) extract the actual logits
-
+    # Probability of the next action for all other agents. Shape is [B, N, A]. This is the predicted probability
+    # given the actions that we DID take. 
+    # extract out the probability under the actions we actually did take
     true_probs = trajectory[COUNTERFACTUAL_ACTIONS]
+    traj_index = list(range(len(trajectory['obs'])))
+    true_probs = true_probs[traj_index, :, trajectory['actions'], :]
+    true_probs = np.reshape(true_probs, [true_probs.shape[0], policy.num_other_agents, -1])
+    true_probs = scipy.special.softmax(true_probs, axis=-1)
+    true_probs = true_probs / true_probs.sum(axis=-1, keepdims=1)  # reduce numerical inaccuracies
 
     # Get marginal predictions where effect of self is marginalized out
-    (marginal_logits,
-     marginal_probs) = marginalize_predictions_over_own_actions(
-        trajectory)  # [B, N, A]
+    marginal_probs = marginalize_predictions_over_own_actions(policy,
+        trajectory)  # [B, Num agents, Num actions]
 
     # Compute influence per agent/step ([B, N]) using different metrics
     if policy.influence_divergence_measure == 'kl':
@@ -244,7 +228,6 @@ def compute_influence_reward(policy, trajectory):
                                     0.5 * kl_div(marginal_probs, mean_probs))
     else:
         sys.exit("Please specify an influence divergence measure from [kl, jsd]")
-    # TODO(natashamjaques): more policy comparison functions here.
 
     # Zero out influence for steps where the other agent isn't visible.
     if policy.influence_only_when_visible:
@@ -256,12 +239,10 @@ def compute_influence_reward(policy, trajectory):
 
     # Logging influence metrics
     influence_per_agent = np.sum(influence_per_agent_step, axis=0)
-    total_influence = np.sum(influence_per_agent_step)
 
     # Summarize and clip influence reward
     influence = np.sum(influence_per_agent_step, axis=-1)
-    influence = np.clip(influence, -policy.influence_reward_clip,
-                        policy.influence_reward_clip)
+    influence = np.clip(influence, -policy.influence_reward_clip, policy.influence_reward_clip)
 
     # Get influence curriculum weight
     # TODO(@evinitsky) move this into a schedule mixin
@@ -269,12 +250,20 @@ def compute_influence_reward(policy, trajectory):
     inf_weight = policy.curr_influence_weight
 
     # Add to trajectory
-    trajectory['influence_per_agent'] = influence_per_agent
-    trajectory['total_influence'] = total_influence
+    trajectory['total_influence'] = influence
     trajectory['reward_without_influence'] = trajectory['rewards']
     trajectory['rewards'] = trajectory['rewards'] + (influence * inf_weight)
 
     return trajectory
+
+
+def agent_name_to_idx(name, self_id):
+    """split agent id around the index and return its appropriate position in terms of the other agents"""
+    agent_num = int(name.split('-')[1])
+    if agent_num > self_id:
+        return agent_num - 1
+    else:
+        return agent_num
 
 
 def get_agent_visibility_multiplier(trajectory, num_other_agents):
@@ -282,44 +271,32 @@ def get_agent_visibility_multiplier(trajectory, num_other_agents):
     visibility = np.zeros((traj_len, num_other_agents))
     vis_lists = [info['visible_agents'] for info in trajectory['infos']]
     for i, v in enumerate(vis_lists):
-        vis_agents = [agent_name_to_idx(a, self.agent_id) for a in v]
+        vis_agents = [agent_name_to_idx(a, trajectory['agent_index'][j]) for j, a in enumerate(v)]
         visibility[i, vis_agents] = 1
     return visibility
 
 
-def marginalize_predictions_over_own_actions(trajectory):
+def marginalize_predictions_over_own_actions(policy, trajectory):
     # Probability of each action in original trajectory
-    action_probs = trajectory[BEHAVIOUR_LOGITS]
+    action_probs = scipy.special.softmax(trajectory[BEHAVIOUR_LOGITS], axis=-1)
 
     # Normalize to reduce numerical inaccuracies
     action_probs = action_probs / action_probs.sum(axis=1, keepdims=1)
 
-    # Cycle through all possible actions and get predictions for what other
-    # agents would do if this action was taken at each trajectory step.
-
-    # TODO(@evinitsky) does this have the right indexing
-    counter_preds = trajectory[COUNTERFACTUAL_ACTIONS]
-    # TODO(@evinitsky) extract the actual logits
-
+    # Indexing of this is [B, Num agents, Agent actions, other agent logits] once we marginalize
     counter_probs = trajectory[COUNTERFACTUAL_ACTIONS]
-
-    marginal_preds = np.sum(counter_preds, axis=0)
-    marginal_probs = np.sum(counter_probs, axis=0)
+    counter_probs = np.reshape(counter_probs, [counter_probs.shape[0], policy.num_other_agents, -1, action_probs.shape[-1]])
+    counter_probs = scipy.special.softmax(counter_probs, axis=-1)
+    marginal_probs = np.sum(counter_probs, axis=-2)
 
     # Multiply by probability of each action to renormalize probability
-    traj_len = len(trajectory['obs'])
-    tiled_probs = np.tile(action_probs, 4),
-    import ipdb;
-    ipdb.set_trace()
-    tiled_probs = np.reshape(
-        tiled_probs, [traj_len, self.num_other_agents, self.num_actions])
-    marginal_preds = np.multiply(marginal_preds, tiled_probs)
+    tiled_probs = np.tile(action_probs[:, np.newaxis, :], [1, policy.num_other_agents, 1])
     marginal_probs = np.multiply(marginal_probs, tiled_probs)
 
     # Normalize to reduce numerical inaccuracies
     marginal_probs = marginal_probs / marginal_probs.sum(axis=2, keepdims=1)
 
-    return marginal_preds, marginal_probs
+    return marginal_probs
 
 
 def extract_last_actions_from_episodes(episodes, batch_type=False,
@@ -372,15 +349,24 @@ def extra_fetches(policy):
     }
 
 
+class ConfigInitializerMixIn(object):
+    def __init__(self, config):
+        self.train_moa_only_when_visible = config['train_moa_only_when_visible']
+        self.num_other_agents = config['num_other_agents']
+        self.moa_weight = config['moa_weight']
+        self.train_moa_only_when_visible = config['train_moa_only_when_visible']
+        self.influence_divergence_measure = config['influence_divergence_measure']
+        self.influence_only_when_visible = config['influence_only_when_visible']
+        self.influence_reward_clip = config['influence_reward_clip']
+
+
 class InfluenceScheduleMixIn(object):
     def __init__(self, config):
-        cust_opts = config['model']['custom_options']
-        self.moa_weight = cust_opts['moa_weight']
-        self.influence_reward_weight = cust_opts['influence_reward_weight']
-        self.influence_curriculum_steps = cust_opts['influence_curriculum_steps']
-        self.inf_scale_start = cust_opts['influence_scaledown_start']
-        self.inf_scale_end = cust_opts['influence_scaledown_end']
-        self.inf_scale_final_val = cust_opts['influence_scaledown_final_val']
+        self.influence_reward_weight = config['influence_reward_weight']
+        self.influence_curriculum_steps = config['influence_curriculum_steps']
+        self.inf_scale_start = config['influence_scaledown_start']
+        self.inf_scale_end = config['influence_scaledown_end']
+        self.inf_scale_final_val = config['influence_scaledown_final_val']
         self.steps_processed = 0
         self.curr_influence_weight = self.influence_reward_weight
 
@@ -406,8 +392,9 @@ class InfluenceScheduleMixIn(object):
 def extra_stats(policy, train_batch):
     base_stats = kl_and_loss_stats(policy, train_batch)
     base_stats["total_influence"] = train_batch["total_influence"]
+    base_stats['reward_without_influence'] = train_batch['reward_without_influence']
+
     return base_stats
-    import ipdb; ipdb.set_trace()
 
 
 def build_ppo_model(policy, obs_space, action_space, config):
@@ -430,7 +417,6 @@ class ValueNetworkMixin(object):
 
             @make_tf_callable(self.get_session())
             def value(ob, prev_action, prev_reward, *state):
-                import ipdb; ipdb.set_trace()
                 model_out, _ = self.model({
                     SampleBatch.CUR_OBS: tf.convert_to_tensor([ob]),
                     SampleBatch.PREV_ACTIONS: tf.convert_to_tensor(
@@ -450,6 +436,16 @@ class ValueNetworkMixin(object):
         self._value = value
 
 
+def setup_mixins(policy, obs_space, action_space, config):
+    ValueNetworkMixin.__init__(policy, obs_space, action_space, config)
+    KLCoeffMixin.__init__(policy, config)
+    EntropyCoeffSchedule.__init__(policy, config["entropy_coeff"],
+                                  config["entropy_coeff_schedule"])
+    LearningRateSchedule.__init__(policy, config["lr"], config["lr_schedule"])
+    InfluenceScheduleMixIn.__init__(policy, config)
+    ConfigInitializerMixIn.__init__(policy, config)
+
+
 CausalMOA_PPOPolicy = build_tf_policy(
     name="PPOTFPolicy",
     get_default_config=lambda: ray.rllib.agents.ppo.ppo.DEFAULT_CONFIG,
@@ -463,7 +459,7 @@ CausalMOA_PPOPolicy = build_tf_policy(
     before_loss_init=setup_mixins,
     mixins=[
         LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin,
-        ValueNetworkMixin  # TODO(@evinitsky) add influence schedule to LearningRateSchedule
+        ValueNetworkMixin, ConfigInitializerMixIn, InfluenceScheduleMixIn
     ])
 
 CausalMOATrainer = build_trainer(

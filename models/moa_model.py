@@ -176,7 +176,7 @@ class MOA_LSTM(RecurrentTFModelV2):
                                       model_config, "actions", cell_size=cell_size, use_value_fn=True)
 
         # predicts the actions of all the agents besides itself
-        self.moa_model = KerasRNN(inner_obs_space, action_space, self.num_other_agents,
+        self.moa_model = KerasRNN(inner_obs_space, action_space, self.num_other_agents * num_outputs,
                                   model_config, "moa_model", cell_size=cell_size, use_value_fn=False,
                                   append_others_actions=True)
         self.register_variables(self.actions_model.rnn_model.variables)
@@ -208,7 +208,8 @@ class MOA_LSTM(RecurrentTFModelV2):
         # TODO(@evinitsky) what's the right way to pass in the prev actions and such?
         model_out, self._value_out, h1, c1 = self.actions_model.forward_rnn(pass_dict, [h1, c1], seq_lens)
 
-        # Loop through the model and compute all the counterfactual logits
+        # Cycle through all possible actions and get predictions for what other
+        # agents would do if this action was taken at each trajectory step.
         counterfactual_preds = []
         for i in range(self.num_outputs):
             possible_actions = np.array([i])[np.newaxis, np.newaxis, :]
