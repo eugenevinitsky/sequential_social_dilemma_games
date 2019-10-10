@@ -85,18 +85,20 @@ class MOALoss(object):
 
         # # Remove first agent (self) and first action, because we want to predict
         # # the t+1 actions of other agents from all actions at t.
-        # true_actions = true_actions[1:, 1:]  # [B, N]
+        true_actions = true_actions[1:, 1:]  # [B, N]
 
         # Compute softmax cross entropy
-        flat_logits = tf.reshape(action_logits, [-1, num_actions])
-        flat_labels = tf.reshape(true_actions, [-1])
-        self.ce_per_entry = tf.nn.sparse_softmax_cross_entropy_with_logits(
-            labels=flat_labels, logits=flat_logits)
+        # flat_logits = tf.reshape(action_logits, [-1, num_actions])
+        # flat_labels = tf.reshape(true_actions, [-1])
+        # self.ce_per_entry = tf.nn.sparse_softmax_cross_entropy_with_logits(
+        #     labels=flat_labels, logits=flat_logits)
+        self.ce_per_entry = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_actions, logits=action_logits)
 
         # Zero out the loss if the other agent isn't visible to this one.
         if others_visibility is not None:
             # Remove first entry in ground truth visibility and flatten
-            others_visibility = tf.reshape(others_visibility[1:, :], [-1])
+            # others_visibility = tf.reshape(others_visibility[1:, :], [-1])
+            others_visibility = others_visibility[1:, :]
             self.ce_per_entry *= tf.cast(others_visibility, tf.float32)
 
         self.total_loss = tf.reduce_mean(self.ce_per_entry) * loss_weight
@@ -112,18 +114,17 @@ def loss_with_moa(policy, model, dist_class, train_batch):
 
     moa_preds = tf.reshape(train_batch[MOA_PREDS], [-1, policy.model.num_other_agents, logits.shape[-1]])
 
-    if OTHERS_ACTIONS in train_batch:
-        others_actions = train_batch[OTHERS_ACTIONS]
-    else:
-        others_actions = tf.placeholder(dtype=tf.int32, shape=[None, policy.model.num_other_agents + 1])
+    others_actions = train_batch[OTHERS_ACTIONS]
+    # else:
+    #     others_actions = tf.placeholder(dtype=tf.int32, shape=[None, policy.model.num_other_agents + 1])
 
     # 0/1 multiplier array representing whether each agent is visible to
     # the current agent.
     if policy.train_moa_only_when_visible:
-        if VISIBILITY in train_batch:
-            others_visibility = train_batch[VISIBILITY]
-        else:
-            others_visibility = tf.placeholder(dtype=tf.int32, shape=[None, policy.model.num_other_agents])
+        # if VISIBILITY in train_batch:
+        others_visibility = train_batch[VISIBILITY]
+        # else:
+        #     others_visibility = tf.placeholder(dtype=tf.int32, shape=[None, policy.model.num_other_agents])
     else:
         others_visibility = None
 
@@ -162,6 +163,7 @@ def postprocess_trajectory(policy,
                            episode=None):
     if other_agent_batches:
         # Extract matrix of self and other agents' actions.
+        # TODO(@evinitsky) this should be coming out as an int not as a float
         own_actions = np.atleast_2d(np.array(sample_batch['actions']))
         own_actions = np.reshape(own_actions, [-1, 1])
         all_actions = extract_last_actions_from_episodes(
@@ -177,7 +179,10 @@ def postprocess_trajectory(policy,
 
     else:
         # Add the appropriate placeholders
-        sample_batch[OTHERS_ACTIONS] = tf.placeholder(dtype=tf.int32, shape=[None, policy.model.num_other_agents + 1])
+        sample_batch[OTHERS_ACTIONS] = np.zeros((len(sample_batch['actions']), policy.model.num_other_agents + 1), dtype=np.int32)
+        if policy.train_moa_only_when_visible:
+            sample_batch[VISIBILITY] = np.zeros((len(sample_batch['actions']), policy.model.num_other_agents))
+
         sample_batch['reward_without_influence'] = [0]
         sample_batch['total_influence'] = [0]
 
