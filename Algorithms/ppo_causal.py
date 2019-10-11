@@ -41,7 +41,9 @@ tf = try_import_tf()
 
 MOA_PREDS = "moa_preds"
 OTHERS_ACTIONS = "others_actions"
+ALL_ACTIONS = "all_actions"
 VISIBILITY = "others_visibility"
+VISIBILITY_MATRIX = "visibility_matrix"
 
 # Frozen logits of the policy that computed the action
 BEHAVIOUR_LOGITS = "behaviour_logits"
@@ -85,13 +87,9 @@ class MOALoss(object):
 
         # # Remove first agent (self) and first action, because we want to predict
         # # the t+1 actions of other agents from all actions at t.
-        true_actions = true_actions[1:, 1:]  # [B, N]
+        true_actions = tf.cast(true_actions[1:, 1:], tf.int32)  # [B, N]
 
         # Compute softmax cross entropy
-        # flat_logits = tf.reshape(action_logits, [-1, num_actions])
-        # flat_labels = tf.reshape(true_actions, [-1])
-        # self.ce_per_entry = tf.nn.sparse_softmax_cross_entropy_with_logits(
-        #     labels=flat_labels, logits=flat_logits)
         self.ce_per_entry = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_actions, logits=action_logits)
 
         # Zero out the loss if the other agent isn't visible to this one.
@@ -114,23 +112,21 @@ def loss_with_moa(policy, model, dist_class, train_batch):
 
     moa_preds = tf.reshape(train_batch[MOA_PREDS], [-1, policy.model.num_other_agents, logits.shape[-1]])
 
-    others_actions = train_batch[OTHERS_ACTIONS]
-    # else:
-    #     others_actions = tf.placeholder(dtype=tf.int32, shape=[None, policy.model.num_other_agents + 1])
+    others_actions = train_batch[ALL_ACTIONS]
 
     # 0/1 multiplier array representing whether each agent is visible to
     # the current agent.
     if policy.train_moa_only_when_visible:
         # if VISIBILITY in train_batch:
         others_visibility = train_batch[VISIBILITY]
-        # else:
-        #     others_visibility = tf.placeholder(dtype=tf.int32, shape=[None, policy.model.num_other_agents])
     else:
         others_visibility = None
 
     moa_loss = MOALoss(moa_preds, others_actions,
                        logits.shape[-1], loss_weight=policy.moa_weight,
                        others_visibility=others_visibility)
+
+    policy.moa_loss = moa_loss.total_loss
 
     policy.loss_obj = PPOLoss(
         policy.action_space,
@@ -161,30 +157,26 @@ def postprocess_trajectory(policy,
                            sample_batch,
                            other_agent_batches=None,
                            episode=None):
-    if other_agent_batches:
-        # Extract matrix of self and other agents' actions.
-        # TODO(@evinitsky) this should be coming out as an int not as a float
-        own_actions = np.atleast_2d(np.array(sample_batch['actions']))
-        own_actions = np.reshape(own_actions, [-1, 1])
-        all_actions = extract_last_actions_from_episodes(
-            other_agent_batches, own_actions=own_actions, batch_type=True)
-        sample_batch[OTHERS_ACTIONS] = all_actions
+    # TODO(@evinitsky) this does not work because
+    # Extract matrix of self and other agents' actions.
+    own_actions = np.atleast_2d(np.array(sample_batch['actions']))
+    own_actions = np.reshape(own_actions, [-1, 1])
+    all_actions = np.hstack((own_actions, sample_batch[OTHERS_ACTIONS]))
+    # all_actions = extract_last_actions_from_episodes(
+    #     other_agent_batches, own_actions=own_actions, batch_type=True)
+    sample_batch[ALL_ACTIONS] = all_actions
 
-        if policy.train_moa_only_when_visible:
-            sample_batch[VISIBILITY] = \
-                get_agent_visibility_multiplier(sample_batch, policy.num_other_agents)
+    # if policy.train_moa_only_when_visible:
+    #     if other_agent_batches:
+    #         agent_ids = other_agent_batches['agent_index']
+    #     else:
+    #         agent_ids = len(sample_batch['actions']) * [0]
+        # sample_batch[VISIBILITY_MATRIX] = \
+        #     get_agent_visibility_multiplier(sample_batch, policy.num_other_agents, agent_ids)
 
-        # Compute causal social influence reward and add to batch.
-        sample_batch = compute_influence_reward(policy, sample_batch)
+    # Compute causal social influence reward and add to batch.
+    sample_batch = compute_influence_reward(policy, sample_batch)
 
-    else:
-        # Add the appropriate placeholders
-        sample_batch[OTHERS_ACTIONS] = np.zeros((len(sample_batch['actions']), policy.model.num_other_agents + 1), dtype=np.int32)
-        if policy.train_moa_only_when_visible:
-            sample_batch[VISIBILITY] = np.zeros((len(sample_batch['actions']), policy.model.num_other_agents))
-
-        sample_batch['reward_without_influence'] = [0]
-        sample_batch['total_influence'] = [0]
 
     completed = sample_batch["dones"][-1]
     if completed:
@@ -236,10 +228,10 @@ def compute_influence_reward(policy, trajectory):
 
     # Zero out influence for steps where the other agent isn't visible.
     if policy.influence_only_when_visible:
-        if VISIBILITY in trajectory.keys():
-            visibility = trajectory[VISIBILITY]
-        else:
-            visibility = get_agent_visibility_multiplier(trajectory, policy.num_other_agents)
+        # if VISIBILITY in trajectory.keys():
+        visibility = trajectory[VISIBILITY]
+        # else:
+        #     visibility = get_agent_visibility_multiplier(trajectory, policy.num_other_agents)
         influence_per_agent_step *= visibility
 
     # Logging influence metrics
@@ -262,21 +254,22 @@ def compute_influence_reward(policy, trajectory):
     return trajectory
 
 
-def agent_name_to_idx(name, self_id):
+def agent_name_to_idx(agent_num, self_id):
     """split agent id around the index and return its appropriate position in terms of the other agents"""
-    agent_num = int(name.split('-')[1])
+    #agent_num = int(name.split('-')[1])
+    agent_num = int(agent_num)
     if agent_num > self_id:
         return agent_num - 1
     else:
         return agent_num
 
 
-def get_agent_visibility_multiplier(trajectory, num_other_agents):
-    traj_len = len(trajectory['infos'])
+def get_agent_visibility_multiplier(trajectory, num_other_agents, agent_ids):
+    traj_len = len(trajectory['obs'])
     visibility = np.zeros((traj_len, num_other_agents))
-    vis_lists = [info['visible_agents'] for info in trajectory['infos']]
-    for i, v in enumerate(vis_lists):
-        vis_agents = [agent_name_to_idx(a, trajectory['agent_index'][j]) for j, a in enumerate(v)]
+    #vis_lists = [info['visible_agents'] for info in trajectory['infos']]
+    for i, v in enumerate(trajectory[VISIBILITY]):
+        vis_agents = [agent_name_to_idx(a, agent_ids[i]) for a in v]
         visibility[i, vis_agents] = 1
     return visibility
 
@@ -350,7 +343,11 @@ def extra_fetches(policy):
         SampleBatch.VF_PREDS: policy.model.value_function(),
         BEHAVIOUR_LOGITS: policy.model.last_output(),
         COUNTERFACTUAL_ACTIONS: policy.model.counterfactual_actions(),
-        MOA_PREDS: policy.model.moa_preds()
+        MOA_PREDS: policy.model.moa_preds(),
+
+        # TODO(@evinitsky) remove this once we figure out how to split the obs
+        OTHERS_ACTIONS: policy.model.other_agent_actions(),
+        VISIBILITY: policy.model.visibility()
     }
 
 
@@ -398,8 +395,12 @@ def extra_stats(policy, train_batch):
     base_stats = kl_and_loss_stats(policy, train_batch)
     base_stats["total_influence"] = train_batch["total_influence"]
     base_stats['reward_without_influence'] = train_batch['reward_without_influence']
-
     return base_stats
+
+
+# def extra_grad_fn(policy, train_batch, grads):
+#     import ipdb; ipdb.set_trace()
+#     return {}
 
 
 def build_ppo_model(policy, obs_space, action_space, config):
@@ -457,6 +458,7 @@ CausalMOA_PPOPolicy = build_tf_policy(
     loss_fn=loss_with_moa,
     make_model=build_ppo_model,
     stats_fn=extra_stats,
+    #grad_stats_fn=extra_grad_fn,
     extra_action_fetches_fn=extra_fetches,
     postprocess_fn=postprocess_trajectory,
     gradients_fn=clip_gradients,

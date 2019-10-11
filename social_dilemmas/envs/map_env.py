@@ -202,17 +202,12 @@ class MapEnv(MultiAgentEnv):
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 prev_actions = np.array([actions[key] for key in sorted(actions.keys()) if key != agent.agent_id])
-                observations[agent.agent_id] = {"curr_obs": rgb_arr, "prev_actions": prev_actions}
+                observations[agent.agent_id] = {"curr_obs": rgb_arr, "other_agent_actions": prev_actions,
+                                                "visible_agents": self.find_visible_agents(agent.agent_id)}
             else:
                 observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
-
-            # Add other agent visibility
-            if agent.agent_id not in info:
-                info[agent.agent_id] = {}
-            info[agent.agent_id]['visible_agents'] = \
-                self.find_visible_agents(agent.agent_id)
 
         dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, info
@@ -248,7 +243,8 @@ class MapEnv(MultiAgentEnv):
             if self.return_agent_actions:
                 # No previous actions so just pass in zeros
                 prev_actions = np.array([0 for _ in range(self.num_agents - 1)])
-                observations[agent.agent_id] = {"curr_obs": rgb_arr, "prev_actions": prev_actions}
+                observations[agent.agent_id] = {"curr_obs": rgb_arr, "other_agent_actions": prev_actions,
+                                                "visible_agents": self.find_visible_agents(agent.agent_id)}
             else:
                 observations[agent.agent_id] = rgb_arr
         return observations
@@ -768,8 +764,8 @@ class MapEnv(MultiAgentEnv):
         left_lim = int(agent_pos[1] - self.agents[agent_id].col_size)
         right_lim = int(agent_pos[1] + self.agents[agent_id].col_size)
 
-        other_agent_pos = [(agent.get_pos(), other_agent_id) for other_agent_id, agent in
-                           self.agents.items() if other_agent_id != agent_id]
-        return [agent_tup[1] for agent_tup in other_agent_pos if
-                (lower_lim <= agent_tup[0][0] <= upper_lim
-                 and left_lim <= agent_tup[0][1] <= right_lim)]
+        # keep this sorted so the visibility matrix is always in order
+        other_agent_pos = [self.agents[agent_id].get_pos()for other_agent_id in
+                           sorted(self.agents.keys()) if other_agent_id != agent_id]
+        return np.array([1 if (lower_lim <= agent_tup[0] <= upper_lim
+                 and left_lim <= agent_tup[1] <= right_lim) else 0 for agent_tup in other_agent_pos])

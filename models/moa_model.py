@@ -67,10 +67,14 @@ class KerasRNN(RecurrentTFModelV2):
             initial_state=[state_in_h, state_in_c])
 
         # Postprocess LSTM output with another hidden layer and compute values
+        if self.append_others_actions:
+            name = "pred_logits"
+        else:
+            name = "action_logits"
         logits = tf.keras.layers.Dense(
             self.num_outputs,
             activation=tf.keras.activations.linear,
-            name="logits")(lstm_out)
+            name=name)(lstm_out)
 
         inputs = [input_layer, seq_in, state_in_h, state_in_c]
         if self.append_others_actions:
@@ -130,7 +134,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         # Build the vision network here
         # TODO(@evinitsky) replace this with obs_space.original_space
         total_obs = obs_space.shape[0]
-        vision_obs = total_obs - self.num_other_agents
+        vision_obs = total_obs - 2 * self.num_other_agents
         vision_width = int(np.sqrt(vision_obs / 3))
         vision_box = Box(low=-1.0, high=1.0, shape=(vision_width, vision_width, 3), dtype=np.float32)
         # an extra none for the time dimension
@@ -213,7 +217,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         counterfactual_preds = []
         for i in range(self.num_outputs):
             possible_actions = np.array([i])[np.newaxis, np.newaxis, :]
-            other_actions = input_dict["obs"]["prev_actions"]
+            other_actions = input_dict["obs"]["other_agent_actions"]
             stacked_actions = tf.concat([possible_actions, other_actions], axis=-1)
             pass_dict = {"curr_obs": trunk, "prev_actions": stacked_actions}
             counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
@@ -222,7 +226,8 @@ class MOA_LSTM(RecurrentTFModelV2):
 
         self._moa_preds, h2, c2 = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
 
-        # TODO(@evinitsky) reshape self._counterfactual_preds so it has the shape you need for later computation
+        self._other_agent_actions = input_dict["obs"]["other_agent_actions"]
+        self._visibility = input_dict["obs"]["visible_agents"]
 
         return model_out, [h1, c1, h2, c2]
 
@@ -234,6 +239,13 @@ class MOA_LSTM(RecurrentTFModelV2):
 
     def moa_preds(self):
         return self._moa_preds
+
+    # TODO(@evinitsky) pull out the time slice
+    def visibility(self):
+        return tf.reshape(self._visibility, [-1, self.num_other_agents])
+
+    def other_agent_actions(self):
+        return tf.reshape(self._other_agent_actions, [-1, self.num_other_agents])
 
     @override(ModelV2)
     def get_initial_state(self):
