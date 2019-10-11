@@ -14,7 +14,7 @@ SWITCH_COLORS = {'D': [183, 128, 0],  # Brown closed door
                  'S': [50, 255, 50],  # Green turned-on switch
                  's': [255, 0, 34]}  # Red turned-off switch
 
-GIVE_EXTERNAL_SWITCH_REWARD = int(True)
+GIVE_EXTERNAL_SWITCH_REWARD = int(False)
 
 class SwitchEnv(MapEnv):
 
