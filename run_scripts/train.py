@@ -68,38 +68,45 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
         num_cpus_per_worker = spare_cpus / num_workers
 
     # hyperparams
-    config.update({
-            "sample_batch_size": 100,
-            "train_batch_size": 200,
-            "horizon": 1000,
-            "lr_schedule": [[0, hparams['lr_init']],
-                            [20000000, hparams['lr_final']]],
-            "num_workers": num_workers,
-            "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
-            "num_cpus_for_driver": cpus_for_driver,
-            "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
-            "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-            "entropy_coeff": hparams['entropy_coeff'],
-            "multiagent": {
-                "policy_graphs": policy_graphs,
-                "policy_mapping_fn": tune.function(policy_mapping_fn),
-            },
-            "model": {"custom_model": "conv_net",
-                      "use_lstm": True,
-                      "lstm_cell_size": 128,
-                      "conv_filters": 6,
-                      "fcnet_hiddens": [32, 32],
-                      "custom_options": {
-                          "num_other_agents": num_agents,
-                          "aux_loss_weight": hparams["aux_loss_weight"],
-                          "aux_reward_clip": 10,
-                          "aux_reward_weight": hparams["aux_reward_weight"],
-                          "aux_curriculum_steps": 1e7,
-                          "aux_scaledown_start": 1e8,
-                          "aux_scaledown_end": 3e8,
-                          "aux_scaledown_final_val": 0.5}
-                      }
-    })
+    config_dict = {
+        "sample_batch_size": 100,
+        "train_batch_size": 200,
+        "horizon": 1000,
+        "lr_schedule": [[0, hparams['lr_init']],
+                        [20000000, hparams['lr_final']]],
+        "num_workers": num_workers,
+        "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
+        "num_cpus_for_driver": cpus_for_driver,
+        "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
+        "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
+        "entropy_coeff": hparams['entropy_coeff'],
+        "multiagent": {
+            "policy_graphs": policy_graphs,
+            "policy_mapping_fn": tune.function(policy_mapping_fn),
+        },
+        "model": {"custom_model": "conv_net",
+                  "use_lstm": True,
+                  "lstm_cell_size": 128,
+                  "conv_filters": 6,
+                  "fcnet_hiddens": [32, 32],
+                  "custom_options": {
+                      "num_other_agents": num_agents,
+                      "aux_loss_weight": hparams["aux_loss_weight"],
+                      "aux_reward_clip": 10,
+                      "aux_reward_weight": hparams["aux_reward_weight"],
+                      "aux_curriculum_steps": 1e7,
+                      "aux_scaledown_start": 1e8,
+                      "aux_scaledown_end": 3e8,
+                      "aux_scaledown_final_val": 0.5}
+                  }
+    }
+
+    if tune_hparams:
+        config_dict["entropy_coeff"] = tune.grid_search(hparams['entropy_tune'])
+        config_dict["model"]["custom_options"]["aux_loss_weight"] = tune.grid_search(hparams['aux_loss_weight_tune'])
+        config_dict["model"]["custom_options"]["aux_reward_weight_tune"] = tune.grid_search(hparams['aux_reward_weight_tune'])
+
+    config.update(config_dict)
     return algorithm, env_name, config
 
 
@@ -121,7 +128,8 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "timesteps_total": 5e8
+                "timesteps_total": 5e7,
+                "episode_reward_min": 100
             },
             'checkpoint_freq': 100,
             "config": config,
