@@ -4,15 +4,14 @@ from social_dilemmas.envs.agent import SwitchAgent
 from social_dilemmas.constants import SWITCH_MAP
 from social_dilemmas.envs.map_env import MapEnv, ACTIONS
 
-
 # Add custom actions to the agent
 ACTIONS['TOGGLE_SWITCH'] = 1  # length of firing range
 
 # Custom colour dictionary
 SWITCH_COLORS = {'D': [180, 180, 180],  # Grey closed door - same color as walls
                  'd': [255, 255, 255],  # White opened door
-                 'S': [0,   255,   0],  # Green turned-on switch
-                 's': [255,   0,   0]}  # Red turned-off switch
+                 'S': [0, 255, 0],  # Green turned-on switch
+                 's': [255, 0, 0]}  # Red turned-off switch
 
 GIVE_EXTERNAL_SWITCH_REWARD = int(False)
 
@@ -26,6 +25,16 @@ class SwitchEnv(MapEnv):
         self.door_locations = []
         self.switch_count = 0
         self.prev_activated_switch_count = 0
+
+        # Extra logging metrics
+        self.timestep = 0
+        self.total_pulled_on = 0
+        self.total_pulled_off = 0
+        self.timestep_first_switch_pull = -1
+        self.timestep_last_switch_pull = -1
+        self.switches_on_at_termination = 0
+        self.total_successes = 0
+
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
                 current_char = self.base_map[row, col]
@@ -39,6 +48,23 @@ class SwitchEnv(MapEnv):
                     self.door_locations.append((row, col))
 
         self.color_map.update(SWITCH_COLORS)
+
+    def step(self, actions):
+        observations, rewards, dones, info = super().step(actions)
+        first_agent = next(iter(actions.keys()))
+        if rewards[first_agent] > 10:
+            self.total_successes += 1
+
+        extra_info = {first_agent:
+                      {"switches_on_at_termination": self.switches_on_at_termination,
+                       "total_pulled_on": self.total_pulled_on,
+                       "total_pulled_off": self.total_pulled_off,
+                       "timestep_first_switch_pull": self.timestep_first_switch_pull,
+                       "timestep_last_switch_pull": self.timestep_last_switch_pull,
+                       "total_successes": self.total_successes}
+                      }
+        self.timestep += 1
+        return observations, rewards, dones, {**info, **extra_info}
 
     @property
     def action_space(self):
@@ -67,6 +93,15 @@ class SwitchEnv(MapEnv):
             self.world_map[coordinates[0], coordinates[1]] = char
         self.prev_activated_switch_count = 0
 
+        # Extra logging metrics
+        self.timestep = 0
+        self.total_pulled_on = 0
+        self.total_pulled_off = 0
+        self.timestep_first_switch_pull = -1
+        self.timestep_last_switch_pull = -1
+        self.switches_on_at_termination = 0
+        # self.total_successes = 0  #TODO: Do or do not reset?
+
     def custom_action(self, agent, action):
         agent.fire_beam('F')
         updates = self.update_map_fire(agent.get_pos().tolist(),
@@ -84,11 +119,12 @@ class SwitchEnv(MapEnv):
             if self.world_map[row, col] == 'S':
                 activated_switch_count += 1
 
-        temp_reward = (activated_switch_count - self.prev_activated_switch_count) * GIVE_EXTERNAL_SWITCH_REWARD
+        switch_difference = activated_switch_count - self.prev_activated_switch_count
+        external_switch_reward = switch_difference * GIVE_EXTERNAL_SWITCH_REWARD
         self.prev_activated_switch_count = activated_switch_count
 
         for agent in list(self.agents.values()):
-            agent.reward_this_turn += temp_reward
+            agent.reward_this_turn += external_switch_reward
 
         # Open doors if all switches have been activated
         open_doors = activated_switch_count == self.switch_count
@@ -97,6 +133,14 @@ class SwitchEnv(MapEnv):
         for row, col in self.door_locations:
             updates.append((row, col, door_char))
         self.update_map(updates)
+
+        # Update metrics
+        if switch_difference != 0:
+            self.timestep_last_switch_pull = self.timestep
+            if self.timestep_first_switch_pull == -1:
+                self.timestep_first_switch_pull = self.timestep
+            self.total_pulled_on += max(0, switch_difference)
+            self.total_pulled_off += max(0, -switch_difference)
 
     @staticmethod
     def count_switches(window):
