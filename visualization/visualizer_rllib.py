@@ -22,6 +22,7 @@ from ray.tune.registry import register_env
 
 from models.conv_to_fc_net import ConvToFCNet
 from models.conv_to_fc_net_actions import ConvToFCNetActions
+from models.conv_net import ConvNet
 from models.conv_to_fc_net_actions_no_lstm import ConvToFCNetActions as ConvToFCNetActionsNoLSTM
 from models.conv_to_fc_net_no_lstm import ConvToFCNet as ConvToFCNetNoLSTM
 import utility_funcs
@@ -78,6 +79,7 @@ def visualizer_rllib(args):
     # ModelCatalog.register_custom_model("conv_to_fc_net_no_lstm", ConvToFCNetNoLSTM)
     ModelCatalog.register_custom_model("conv_to_fc_net_actions", ConvToFCNetActions)
     # ModelCatalog.register_custom_model("conv_to_fc_net_actions_no_lstm", ConvToFCNetActionsNoLSTM)
+    ModelCatalog.register_custom_model("conv_net", ConvNet)
 
     # Determine agent and checkpoint
     config_run = config['env_config']['run'] if 'run' in config['env_config'] \
