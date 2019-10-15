@@ -9,10 +9,10 @@ from social_dilemmas.envs.map_env import MapEnv, ACTIONS
 ACTIONS['TOGGLE_SWITCH'] = 1  # length of firing range
 
 # Custom colour dictionary
-SWITCH_COLORS = {'D': [183, 128, 0],  # Brown closed door
-                 'd': [255, 239, 201],  # Light brown opened door
-                 'S': [50, 255, 50],  # Green turned-on switch
-                 's': [255, 0, 34]}  # Red turned-off switch
+SWITCH_COLORS = {'D': [180, 180, 180],  # Grey closed door - same color as walls
+                 'd': [255, 255, 255],  # White opened door
+                 'S': [0,   255,   0],  # Green turned-on switch
+                 's': [255,   0,   0]}  # Red turned-off switch
 
 GIVE_EXTERNAL_SWITCH_REWARD = int(False)
 

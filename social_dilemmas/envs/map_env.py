@@ -30,8 +30,8 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    'P': [159, 67, 255],  # Purple player
 
                    # Colours for agents. R value is a unique identifier
-                   '1': [159, 67, 255],  # Purple
-                   '2': [2, 81, 154],  # Blue
+                   '1': [0, 0, 255],  # Pure blue
+                   '2': [2, 81, 154],  # Sky blue
                    '3': [204, 0, 204],  # Magenta
                    '4': [216, 30, 54],  # Red
                    '5': [254, 151, 0],  # Orange
