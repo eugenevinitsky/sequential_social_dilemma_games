@@ -16,6 +16,7 @@ SWITCH_COLORS = {'D': [180, 180, 180],  # Grey closed door - same color as walls
 
 GIVE_EXTERNAL_SWITCH_REWARD = int(False)
 
+
 class SwitchEnv(MapEnv):
 
     def __init__(self, ascii_map=SWITCH_MAP, num_agents=1, render=False):
@@ -97,7 +98,8 @@ class SwitchEnv(MapEnv):
             updates.append((row, col, door_char))
         self.update_map(updates)
 
-    def count_switches(self, window):
+    @staticmethod
+    def count_switches(window):
         # Compute how many switches are activated
         # Testing function
         unique, counts = np.unique(window, return_counts=True)
