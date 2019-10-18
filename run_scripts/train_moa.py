@@ -23,7 +23,7 @@ tf.app.flags.DEFINE_string(
     'algorithm', 'PPO',
     'Name of the rllib algorithm to use.')
 tf.app.flags.DEFINE_integer(
-    'num_agents', 2,
+    'num_agents', 3,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
     'train_batch_size', 30000,
@@ -145,7 +145,10 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                 },
                 "model": {"custom_model": "moa_lstm", "use_lstm": False,
                           "custom_options": {"return_agent_actions": return_agent_actions, "cell_size": 128,
-                                             "num_other_agents": num_agents - 1, "fcnet_hiddens": [32, 32]},
+                                             "num_other_agents": num_agents - 1, "fcnet_hiddens": [32, 32],
+                                             "train_moa_only_when_visible": tune.grid_search([True]),
+                                             "moa_weight": 10,
+                                             },
                           "conv_filters": [[6, [3, 3], 1]]},
                 "num_other_agents": num_agents - 1,
                 "moa_weight": tune.grid_search([10.0]),
@@ -164,7 +167,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
 
 def main(unused_argv):
-    ray.init()
+    ray.init(local_mode=True)
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
@@ -185,6 +188,7 @@ def main(unused_argv):
     print('Commencing experiment', exp_name)
 
     config['env'] = env_name
+    # config['eager'] = True
     exp_dict = {
             'name': exp_name,
             'run_or_experiment': CausalMOATrainer,

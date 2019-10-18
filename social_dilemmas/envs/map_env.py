@@ -201,7 +201,8 @@ class MapEnv(MultiAgentEnv):
             rgb_arr = (rgb_arr - 128.00) / 255.0
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
-                prev_actions = np.array([actions[key] for key in sorted(actions.keys()) if key != agent.agent_id])
+                prev_actions = np.array([actions[key] for key in sorted(actions.keys())
+                                         if key != agent.agent_id]).astype(np.int64)
                 observations[agent.agent_id] = {"curr_obs": rgb_arr, "other_agent_actions": prev_actions,
                                                 "visible_agents": self.find_visible_agents(agent.agent_id)}
             else:
@@ -242,7 +243,7 @@ class MapEnv(MultiAgentEnv):
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 # No previous actions so just pass in zeros
-                prev_actions = np.array([0 for _ in range(self.num_agents - 1)])
+                prev_actions = np.array([0 for _ in range(self.num_agents - 1)]).astype(np.int64)
                 observations[agent.agent_id] = {"curr_obs": rgb_arr, "other_agent_actions": prev_actions,
                                                 "visible_agents": self.find_visible_agents(agent.agent_id)}
             else:
