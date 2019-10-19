@@ -307,31 +307,3 @@ class MOA_LSTM(RecurrentTFModelV2):
     @override(ModelV2)
     def get_initial_state(self):
         return self.actions_model.get_initial_state() + self.moa_model.get_initial_state()
-
-    # def custom_loss(self, policy_loss, loss_inputs):
-    #     "Add a prediction loss onto the model"
-    #     import ipdb; ipdb.set_trace()
-    #     # define a secondary loss by building a graph copy with weight sharing
-    #     obs = tf.cast(input_ops["obs"], tf.float32)
-    #     logits, _ = self._build_layers_v2({
-    #         "obs": restore_original_dimensions(obs, self.obs_space)
-    #     }, self.num_outputs, self.options)
-    #
-    #     # You can also add self-supervised losses easily by referencing tensors
-    #     # created during _build_layers_v2(). For example, an autoencoder-style
-    #     # loss can be added as follows:
-    #     # ae_loss = squared_diff(
-    #     #     loss_inputs["obs"], Decoder(self.fcnet.last_layer))
-    #     print("FYI: You can also use these tensors: {}, ".format(loss_inputs))
-    #
-    #     # compute the IL loss
-    #     action_dist = Categorical(logits, self.options)
-    #     self.policy_loss = policy_loss
-    #     self.imitation_loss = tf.reduce_mean(
-    #         -action_dist.logp(input_ops["actions"]))
-    #     return policy_loss + 10 * self.imitation_loss
-    #
-    # def custom_stats(self):
-    #     return {
-    #         "imitation_loss": self.imitation_loss,
-    #     }

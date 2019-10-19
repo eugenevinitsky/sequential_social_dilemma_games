@@ -96,7 +96,6 @@ class MOALoss(object):
         # Zero out the loss if the other agent isn't visible to this one.
         if others_visibility is not None:
             # Remove first entry in ground truth visibility and flatten
-            # others_visibility = tf.reshape(others_visibility[1:, :], [-1])
             others_visibility = others_visibility[1:, :]
             self.ce_per_entry *= tf.cast(others_visibility, tf.float32)
 
@@ -245,7 +244,6 @@ def compute_influence_reward(policy, trajectory):
 
 def agent_name_to_idx(agent_num, self_id):
     """split agent id around the index and return its appropriate position in terms of the other agents"""
-    #agent_num = int(name.split('-')[1])
     agent_num = int(agent_num)
     if agent_num > self_id:
         return agent_num - 1
@@ -256,7 +254,6 @@ def agent_name_to_idx(agent_num, self_id):
 def get_agent_visibility_multiplier(trajectory, num_other_agents, agent_ids):
     traj_len = len(trajectory['obs'])
     visibility = np.zeros((traj_len, num_other_agents))
-    #vis_lists = [info['visible_agents'] for info in trajectory['infos']]
     for i, v in enumerate(trajectory[VISIBILITY]):
         vis_agents = [agent_name_to_idx(a, agent_ids[i]) for a in v]
         visibility[i, vis_agents] = 1
@@ -265,7 +262,6 @@ def get_agent_visibility_multiplier(trajectory, num_other_agents, agent_ids):
 
 def marginalize_predictions_over_own_actions(policy, trajectory):
     # Probability of each action in original trajectory
-    # TODO(@evinitsky) this is actually the previous actions
     action_probs = scipy.special.softmax(trajectory[ACTION_LOGITS], axis=-1)
 
     # Normalize to reduce numerical inaccuracies

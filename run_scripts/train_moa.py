@@ -160,14 +160,15 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                 "influence_scaledown_start": tune.grid_search([100e6]),
                 "influence_scaledown_end": tune.grid_search([300e6]),
                 "influence_scaledown_final_val": tune.grid_search([.5]),
-                "influence_only_when_visible": tune.grid_search([True])
+                "influence_only_when_visible": tune.grid_search([False]),
+                "vf_loss_coeff": 1e-4
 
     })
     return algorithm, env_name, config
 
 
 def main(unused_argv):
-    ray.init(local_mode=True)
+    ray.init()
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:
