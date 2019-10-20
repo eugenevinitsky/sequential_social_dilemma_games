@@ -168,7 +168,10 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
 
 def main(unused_argv):
-    ray.init()
+    if FLAGS.multi_node:
+        ray.init(redis_address='localhost:6379')
+    else:
+        ray.init()
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:

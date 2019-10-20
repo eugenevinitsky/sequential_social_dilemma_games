@@ -326,9 +326,11 @@ def extract_last_actions_from_episodes(episodes, batch_type=False,
 def extra_fetches(policy):
     """Adds value function, logits, moa predictions of counterfactual actions to experience train_batches."""
     return {
-        # TODO(@evinitsky) are there any other of these that shouldn't be frozen?
+        # Note that any value here is frozen and no gradients will be propagated through it
         SampleBatch.VF_PREDS: policy.model.value_function(),
         BEHAVIOUR_LOGITS: policy.model.last_output(),
+
+        # Be aware that this is frozen here so that we don't propagate agent actions through the reward
         ACTION_LOGITS: policy.model.action_logits(),
         COUNTERFACTUAL_ACTIONS: policy.model.counterfactual_actions(),
 
@@ -382,7 +384,7 @@ def extra_stats(policy, train_batch):
     base_stats = kl_and_loss_stats(policy, train_batch)
     base_stats["total_influence"] = train_batch["total_influence"]
     base_stats['reward_without_influence'] = train_batch['reward_without_influence']
-    base_stats['moa_loss'] = policy.moa_loss
+    base_stats['moa_loss'] = policy.moa_loss / policy.moa_weight
     return base_stats
 
 
