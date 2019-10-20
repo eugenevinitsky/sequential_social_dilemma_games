@@ -128,8 +128,8 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "timesteps_total": 5e7,
-                "episode_reward_min": 100
+                "timesteps_total": FLAGS.stop_at_timesteps_total,
+                "episode_reward_min": FLAGS.stop_at_episode_reward_min
             },
             'checkpoint_freq': 100,
             "config": config,
