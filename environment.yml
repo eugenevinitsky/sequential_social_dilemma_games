@@ -5,7 +5,7 @@ dependencies:
     - pip:
         - numpy==1.16.0
         - gym==0.10.9
-        - matplotlib==3.0.2
+        - matplotlib==3.1.1
         - opencv-python
         - ray==0.7.5
         - tensorflow==1.14.0
