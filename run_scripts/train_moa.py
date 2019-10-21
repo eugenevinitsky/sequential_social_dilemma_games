@@ -174,6 +174,14 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                 "vf_loss_coeff": 1e-4
 
     })
+
+    if FLAGS.grid_search:
+        config.update({'moa_weight': tune.grid_search([10, 100]),
+                       'lr_schedule': [[0, tune.grid_search([1e-2, 1e-3, 1e-4])],
+                                        [20000000, hparams['lr_final']]],
+                       'vf_loss_coeff': tune.grid_search([1e-3, 1e-4, 1e-5]),
+                       'entropy_coeff': tune.grid_search([0, 1e-3, 1e-4]),
+                       'influence_reward_weight': tune.grid_search([1.0, 10.0])})
     return algorithm, env_name, config
 
 

@@ -285,8 +285,10 @@ class MOA_LSTM(RecurrentTFModelV2):
         if SampleBatch.PREV_REWARDS in train_batch:
             input_dict["prev_rewards"] = train_batch[SampleBatch.PREV_REWARDS]
         states = []
+
         # TODO(@evinitsky) remove the magic number
         i = 2
+        # TODO(@evinitsky) why am I feeding in state_init here, doesn't this actually need to be calculated???
         while "state_in_{}".format(i) in train_batch:
             states.append(train_batch["state_in_{}".format(i)])
             i += 1
