@@ -1,7 +1,7 @@
 name: causal
 
 dependencies:
-    - python==3.6.7
+    - python==3.6.6
     - pip:
         - numpy==1.16.0
         - gym==0.10.9
