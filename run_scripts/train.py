@@ -83,7 +83,7 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
         "multiagent": {
             "policy_graphs": policy_graphs,
             "policy_mapping_fn": tune.function(policy_mapping_fn),
-        },
+                      },
         "model": {"custom_model": "conv_net",
                   "use_lstm": True,
                   "lstm_cell_size": 128,
@@ -98,7 +98,8 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
                       "aux_scaledown_start": 1e8,
                       "aux_scaledown_end": 3e8,
                       "aux_scaledown_final_val": 0.5}
-                  }
+                  },
+        "callbacks": single_env.get_environment_callbacks(),
     }
 
     if tune_hparams:

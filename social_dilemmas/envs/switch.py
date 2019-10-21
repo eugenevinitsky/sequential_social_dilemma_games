@@ -1,4 +1,5 @@
 import numpy as np
+from ray import tune
 
 from social_dilemmas.envs.agent import SwitchAgent
 from social_dilemmas.constants import SWITCH_MAP
@@ -30,8 +31,8 @@ class SwitchEnv(MapEnv):
         self.timestep = 0
         self.total_pulled_on = 0
         self.total_pulled_off = 0
-        self.timestep_first_switch_pull = -1
-        self.timestep_last_switch_pull = -1
+        self.timestep_first_switch_pull = np.nan
+        self.timestep_last_switch_pull = np.nan
         self.switches_on_at_termination = 0
         self.total_successes = 0
 
@@ -49,20 +50,21 @@ class SwitchEnv(MapEnv):
 
         self.color_map.update(SWITCH_COLORS)
 
+    def create_extra_info_dict(self):
+        return {"switches_on_at_termination": self.switches_on_at_termination,
+                "total_pulled_on": self.total_pulled_on,
+                "total_pulled_off": self.total_pulled_off,
+                "timestep_first_switch_pull": self.timestep_first_switch_pull,
+                "timestep_last_switch_pull": self.timestep_last_switch_pull,
+                "total_successes": self.total_successes}
+
     def step(self, actions):
         observations, rewards, dones, info = super().step(actions)
         first_agent = next(iter(actions.keys()))
         if rewards[first_agent] > 10:
             self.total_successes += 1
 
-        extra_info = {first_agent:
-                      {"switches_on_at_termination": self.switches_on_at_termination,
-                       "total_pulled_on": self.total_pulled_on,
-                       "total_pulled_off": self.total_pulled_off,
-                       "timestep_first_switch_pull": self.timestep_first_switch_pull,
-                       "timestep_last_switch_pull": self.timestep_last_switch_pull,
-                       "total_successes": self.total_successes}
-                      }
+        extra_info = {first_agent: self.create_extra_info_dict()}
         self.timestep += 1
         return observations, rewards, dones, {**info, **extra_info}
 
@@ -97,10 +99,10 @@ class SwitchEnv(MapEnv):
         self.timestep = 0
         self.total_pulled_on = 0
         self.total_pulled_off = 0
-        self.timestep_first_switch_pull = -1
-        self.timestep_last_switch_pull = -1
+        self.timestep_first_switch_pull = np.nan
+        self.timestep_last_switch_pull = np.nan
         self.switches_on_at_termination = 0
-        # self.total_successes = 0  #TODO: Do or do not reset?
+        self.total_successes = 0
 
     def custom_action(self, agent, action):
         agent.fire_beam('F')
@@ -137,7 +139,7 @@ class SwitchEnv(MapEnv):
         # Update metrics
         if switch_difference != 0:
             self.timestep_last_switch_pull = self.timestep
-            if self.timestep_first_switch_pull == -1:
+            if np.isnan(self.timestep_first_switch_pull):
                 self.timestep_first_switch_pull = self.timestep
             self.total_pulled_on += max(0, switch_difference)
             self.total_pulled_off += max(0, -switch_difference)
@@ -151,3 +153,21 @@ class SwitchEnv(MapEnv):
         counts_dict = dict(zip(unique, counts))
         num_switches = counts_dict.get('S', 0)
         return num_switches
+
+    @staticmethod
+    def on_episode_end(info):
+        episode = info["episode"]
+        last_info = episode.last_info_for('agent-0')
+        extra_info_keys = ["switches_on_at_termination",
+                           "total_pulled_on",
+                           "total_pulled_off",
+                           "timestep_first_switch_pull",
+                           "timestep_last_switch_pull",
+                           "total_successes"]
+        for key in extra_info_keys:
+            episode.custom_metrics[key] = last_info[key]
+
+    @staticmethod
+    def get_environment_callbacks():
+        callbacks = {"on_episode_end": tune.function(SwitchEnv.on_episode_end)}
+        return callbacks

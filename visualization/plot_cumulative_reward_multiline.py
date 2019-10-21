@@ -6,7 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.ndimage import gaussian_filter1d
-from utility_funcs import get_all_subdirs, get_all_files
+from utility_funcs import get_all_subdirs
 
 from config.config_parser import get_ray_results_path, get_plot_path
 
@@ -107,7 +107,7 @@ def plot_csvs_results(paths):
     timesteps_totals = [[timestep / 1e8 for timestep in timesteps_total] for timesteps_total in timesteps_totals]
 
     reward_means = [df.episode_reward_mean for df in dfs]
-    reward_means = [gaussian_filter1d(reward_mean, 1, mode='nearest') for reward_mean in reward_means]
+    #reward_means = [gaussian_filter1d(reward_mean, 1, mode='nearest') for reward_mean in reward_means]
     plots.append(PlotData(timesteps_totals, reward_means, 'reward', 'Mean episode reward', 'g'))
 
     episode_len_means = [df.episode_len_mean for df in dfs]
@@ -118,19 +118,31 @@ def plot_csvs_results(paths):
                             PlotDetails('vf_loss', 'Value function loss', 'r'),
                             PlotDetails('total_a3c_loss', 'Total A3C loss', 'r'),
                             PlotDetails('aux_loss', 'Auxiliary task loss', 'black'),
-                            PlotDetails('total_aux_reward', 'Policy loss', 'black'),
-                            PlotDetails('total_successes', 'Total successes', 'black'),
-                            PlotDetails('switches_on_at_termination', 'Switches on at termination', 'black'),
-                            PlotDetails('total_pulled_on', 'Total switched on by agent', 'black'),
-                            PlotDetails('total_pulled_off', 'Total switched off by agent', 'black'),
-                            PlotDetails('timestep_first_switch_pull', 'Time at first switch pull', 'black'),
-                            PlotDetails('timestep_last_switch_pull', 'Time at last switch pull', 'black')
-                            ]
+                            PlotDetails('total_aux_reward', 'Policy loss', 'black')]
+
+    episode_metric_details = [PlotDetails('total_successes_mean', 'Total successes', 'black'),
+                              PlotDetails('switches_on_at_termination_mean', 'Switches on at termination', 'black'),
+                              PlotDetails('total_pulled_on_mean', 'Total switched on by agent', 'black'),
+                              PlotDetails('total_pulled_off_mean', 'Total switched off by agent', 'black'),
+                              PlotDetails('timestep_first_switch_pull_mean', 'Time at first switch pull', 'black'),
+                              PlotDetails('timestep_last_switch_pull_mean', 'Time at last switch pull', 'black')]
+
 
     agent_stats = extract_mean_agent_stats(dfs, [detail.column_name for detail in agent_metric_details])
     for metric in agent_metric_details:
         plots.append(PlotData(timesteps_totals,
                               agent_stats[metric.column_name],
+                              metric.column_name,
+                              metric.legend_name,
+                              metric.color))
+
+    for metric in episode_metric_details:
+        metric_data = []
+        for df in dfs:
+            custom_metrics_column = df['custom_metrics']
+            metric_data.append([ast.literal_eval(row)[metric.column_name] for row in custom_metrics_column])
+        plots.append(PlotData(timesteps_totals,
+                              metric_data,
                               metric.column_name,
                               metric.legend_name,
                               metric.color))
