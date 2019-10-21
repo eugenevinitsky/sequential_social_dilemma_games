@@ -140,7 +140,7 @@ class SwitchEnv(MapEnv):
             if self.timestep_first_switch_pull == -1:
                 self.timestep_first_switch_pull = self.timestep
             self.total_pulled_on += max(0, switch_difference)
-            self.total_pulled_off += min(0, switch_difference)
+            self.total_pulled_off += max(0, -switch_difference)
             self.switches_on_at_termination = activated_switch_count
 
     @staticmethod
