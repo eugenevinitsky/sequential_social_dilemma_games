@@ -151,7 +151,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                 "entropy_coeff": hparams['entropy_coeff'],
                 "multiagent": {
                     "policies": policy_graphs,
-                    "policy_mapping_fn": tune.function(policy_mapping_fn),
+                    "policy_mapping_fn": policy_mapping_fn,
                 },
                 "model": {"custom_model": "moa_lstm", "use_lstm": False,
                           "custom_options": {"return_agent_actions": return_agent_actions, "cell_size": 128,
