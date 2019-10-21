@@ -50,7 +50,7 @@ def plot_with_mean(x_lists, y_lists, color, y_label):
         interpolated.append(interp_y)
         plt.plot(interp_x, interp_y, color=color, alpha=.2)
     means = np.nanmean(interpolated, axis=0)
-    plt.plot(interp_x, means, color=color, label=y_label, alpha=.2)
+    plt.plot(interp_x, means, color=color, label=y_label, alpha=1)
 
     plt.xlabel('Environment steps (1e8)')
     plt.ylabel(y_label)
