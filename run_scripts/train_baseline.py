@@ -126,6 +126,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
     # hyperparams
     config.update({
+        # TODO(@evinitsky) why is this 3000
                 "train_batch_size": train_batch_size,
                 "horizon": 1000,
                 "gamma": 0.99,

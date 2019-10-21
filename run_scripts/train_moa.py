@@ -1,3 +1,6 @@
+from datetime import datetime
+import pytz
+
 import ray
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
@@ -17,19 +20,19 @@ tf.app.flags.DEFINE_string(
     'exp_name', None,
     'Name of the ray_results experiment directory where results are stored.')
 tf.app.flags.DEFINE_string(
-    'env', 'cleanup',
+    'env', 'harvest',
     'Name of the environment to rollout. Can be cleanup or harvest.')
 tf.app.flags.DEFINE_string(
     'algorithm', 'PPO',
     'Name of the rllib algorithm to use.')
 tf.app.flags.DEFINE_integer(
-    'num_agents', 3,
+    'num_agents', 2,
     'Number of agent policies')
 tf.app.flags.DEFINE_integer(
     'train_batch_size', 30000,
     'Size of the total dataset over which one epoch is computed.')
 tf.app.flags.DEFINE_integer(
-    'checkpoint_frequency', 20,
+    'checkpoint_frequency', 50,
     'Number of steps before a checkpoint is saved.')
 tf.app.flags.DEFINE_integer(
     'training_iterations', 10000,
@@ -38,7 +41,7 @@ tf.app.flags.DEFINE_integer(
     'num_cpus', 2,
     'Number of available CPUs')
 tf.app.flags.DEFINE_integer(
-    'num_gpus', 1,
+    'num_gpus', 0,
     'Number of available GPUs')
 tf.app.flags.DEFINE_boolean(
     'use_gpus_for_workers', False,
@@ -52,16 +55,28 @@ tf.app.flags.DEFINE_float(
 tf.app.flags.DEFINE_boolean(
     'return_agent_actions', 0,
     'If true we return the previous actions of all the agents')
+tf.app.flags.DEFINE_boolean(
+    'multi_node', 0,
+    'If true the experiments are run in multi-cluster mode'
+)
+tf.app.flags.DEFINE_boolean(
+    'use_s3', False,
+    'If true upload to s3')
+tf.app.flags.DEFINE_boolean(
+    'grid_search', False,
+    'If true run a grid search over relevant hyperparams')
 
 harvest_default_params = {
     'lr_init': 0.00136,
     'lr_final': 0.000028,
-    'entropy_coeff': .000687}
+    'entropy_coeff': .000687,
+    'moa_weight': 10.911}
 
 cleanup_default_params = {
     'lr_init': 0.00126,
     'lr_final': 0.000012,
-    'entropy_coeff': .00176}
+    'entropy_coeff': .00176,
+    'moa_weight': 15.007}
 
 
 def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
@@ -83,17 +98,12 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
     obs_space = single_env.observation_space
     act_space = single_env.action_space
 
-    # register the custom model
-    # model_name = "conv_to_fc_net"
-    # ModelCatalog.register_custom_model(model_name, ConvToFCNet)
-
     model_name = "moa_lstm"
     ModelCatalog.register_custom_model(model_name, MOA_LSTM)
 
     # Each policy can have a different configuration (including custom model)
-    # TODO(@evinitsky) you probably need to map this correctly to the agents
     def gen_policy():
-        return (None, obs_space, act_space, {"custom_model": "moa_lstm"})
+        return None, obs_space, act_space, {"custom_model": "moa_lstm"}
 
     # Setup PPO with an ensemble of `num_policies` different policy graphs
     policy_graphs = {}
@@ -151,7 +161,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                                              },
                           "conv_filters": [[6, [3, 3], 1]]},
                 "num_other_agents": num_agents - 1,
-                "moa_weight": tune.grid_search([10.0]),
+                "moa_weight": hparams['moa_weight'],
                 "train_moa_only_when_visible": tune.grid_search([True]),
                 "influence_reward_clip": 10,
                 "influence_divergence_measure": 'kl',
@@ -160,7 +170,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                 "influence_scaledown_start": tune.grid_search([100e6]),
                 "influence_scaledown_end": tune.grid_search([300e6]),
                 "influence_scaledown_final_val": tune.grid_search([.5]),
-                "influence_only_when_visible": tune.grid_search([False]),
+                "influence_only_when_visible": tune.grid_search([True]),
                 "vf_loss_coeff": 1e-4
 
     })
@@ -192,7 +202,13 @@ def main(unused_argv):
     print('Commencing experiment', exp_name)
 
     config['env'] = env_name
-    # config['eager'] = True
+
+    eastern = pytz.timezone('US/Eastern')
+    date = datetime.now(tz=pytz.utc)
+    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
+    s3_string = "s3://ssd-reproduce/" \
+                + date + '/' + exp_name
+
     exp_dict = {
             'name': exp_name,
             'run_or_experiment': CausalMOATrainer,
@@ -202,6 +218,9 @@ def main(unused_argv):
             'checkpoint_freq': FLAGS.checkpoint_frequency,
             "config": config,
         }
+    if FLAGS.use_s3:
+        exp_dict['upload_dir'] = s3_string
+
     tune.run(**exp_dict, queue_trials=False)
 
 if __name__ == '__main__':

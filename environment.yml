@@ -13,4 +13,7 @@ dependencies:
         - setproctitle
         - psutil
         - lz4
+        - boto3==1.4.8
+        - redis==3.3.2
+        - pytz
 
