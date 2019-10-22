@@ -73,6 +73,7 @@ def extract_mean_agent_stats(dfs, keys):
         info = list(df['info'])
         learner_dicts = [ast.literal_eval(info_line)['learner'] for info_line in info]
         df_list = {}
+        keys = [key for key in keys if key in next(iter(learner_dicts[0].values()))]
         for key in keys:
             df_list[key] = []
         for learner_dict in learner_dicts:
@@ -81,11 +82,8 @@ def extract_mean_agent_stats(dfs, keys):
                 summed_values[key] = 0
             for agent, agent_stats in learner_dict.items():
                 for key in keys:
-                    try:
-                        value = agent_stats[key]
-                        summed_values[key] += value
-                    except:
-                        pass
+                    value = agent_stats[key]
+                    summed_values[key] += value
             for key, value in summed_values.items():
                 mean = value / len(learner_dict)
                 df_list[key].append(mean)
@@ -137,14 +135,14 @@ def plot_csvs_results(paths):
                               PlotDetails('timestep_first_switch_pull_mean', 'Time at first switch pull', 'black'),
                               PlotDetails('timestep_last_switch_pull_mean', 'Time at last switch pull', 'black')]
 
-
     agent_stats = extract_mean_agent_stats(dfs, [detail.column_name for detail in agent_metric_details])
     for metric in agent_metric_details:
-        plots.append(PlotData(timesteps_totals,
-                              agent_stats[metric.column_name],
-                              metric.column_name,
-                              metric.legend_name,
-                              metric.color))
+        if metric.column_name in agent_stats:
+            plots.append(PlotData(timesteps_totals,
+                                  agent_stats[metric.column_name],
+                                  metric.column_name,
+                                  metric.legend_name,
+                                  metric.color))
 
     for metric in episode_metric_details:
         metric_data = []
