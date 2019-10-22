@@ -65,46 +65,33 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
         num_gpus_per_worker = 0
         num_cpus_per_worker = int(spare_cpus / num_workers)
 
-    # hyperparams
+    config_dict = {
+        "sample_batch_size": 100,
+        "train_batch_size": 200,
+        "horizon": 1000,
+        "lr_schedule": [[0, hparams['lr_init']],
+                        [20000000, hparams['lr_final']]],
+        "num_workers": num_workers,
+        "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
+        "num_cpus_for_driver": cpus_for_driver,
+        "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
+        "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
+        "entropy_coeff": hparams['entropy_coeff'],
+        "multiagent": {
+            "policy_graphs": policy_graphs,
+            "policy_mapping_fn": tune.function(policy_mapping_fn),
+        },
+        "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
+                  "lstm_cell_size": 128},
+        "callbacks": single_env.get_environment_callbacks(),
+        }
+
     if tune_hparams:
-        config.update({
-            "train_batch_size": 128,
-            "horizon": 1000,
-            "lr_schedule": [[0, tune.grid_search([5e-4, 5e-3])],
-                            [20000000, tune.grid_search([5e-4, 5e-5])]],
-            "num_workers": num_workers,
-            "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
-            "num_cpus_for_driver": cpus_for_driver,
-            "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
-            "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-            "entropy_coeff": tune.grid_search(hparams['entropy_tune']),
-            "multiagent": {
-                "policy_graphs": policy_graphs,
-                "policy_mapping_fn": tune.function(policy_mapping_fn),
-            },
-            "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
-                      "lstm_cell_size": 128}
-        })
-    else:
-        config.update({
-            "sample_batch_size": 100,
-            "train_batch_size": 200,
-            "horizon": 1000,
-            "lr_schedule": [[0, hparams['lr_init']],
-                            [20000000, hparams['lr_final']]],
-            "num_workers": num_workers,
-            "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
-            "num_cpus_for_driver": cpus_for_driver,
-            "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
-            "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-            "entropy_coeff": hparams['entropy_coeff'],
-            "multiagent": {
-                "policy_graphs": policy_graphs,
-                "policy_mapping_fn": tune.function(policy_mapping_fn),
-            },
-            "model": {"custom_model": "conv_to_fc_net", "use_lstm": True,
-                      "lstm_cell_size": 128}
-        })
+        config_dict["entropy_coeff"] = tune.grid_search(hparams['entropy_tune'])
+        config_dict["model"]["custom_options"]["aux_loss_weight"] = tune.grid_search(hparams['aux_loss_weight_tune'])
+        config_dict["model"]["custom_options"]["aux_reward_weight_tune"] = tune.grid_search(hparams['aux_reward_weight_tune'])
+
+    config.update(config_dict)
     return algorithm, env_name, config
 
 
@@ -126,7 +113,8 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "timesteps_total": 5e8
+                "timesteps_total": FLAGS.stop_at_timesteps_total,
+                "episode_reward_min": FLAGS.stop_at_episode_reward_min
             },
             'checkpoint_freq': 500,
             "config": config,

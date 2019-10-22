@@ -90,7 +90,6 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
                   "conv_filters": 6,
                   "fcnet_hiddens": [32, 32],
                   "custom_options": {
-                      "num_other_agents": num_agents,
                       "aux_loss_weight": hparams["aux_loss_weight"],
                       "aux_reward_clip": 10,
                       "aux_reward_weight": hparams["aux_reward_weight"],
