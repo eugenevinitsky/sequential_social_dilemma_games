@@ -32,9 +32,16 @@ def plot_and_save(fn, path, file_name_addition):
     plt.legend()
     # Strip path of all but last folder
     path_split = os.path.dirname(path).split('/')
-    filename = path_split[-2] + "-" + path_split[-1]
-    plt.savefig(plot_path + "/png/" + filename + "-" + file_name_addition + ".png")
-    plt.savefig(plot_path + "/eps/" + filename + "-" + file_name_addition + ".eps")
+    pngpath = plot_path + "/png/" + path_split[-2] + "/"
+    epspath = plot_path + "/eps/" + path_split[-2] + "/"
+    pngfile = pngpath + file_name_addition + ".png"
+    epsfile = epspath + file_name_addition + ".eps"
+    if not os.path.exists(pngpath):
+        os.mkdir(pngpath)
+    if not os.path.exists(epspath):
+        os.mkdir(epspath)
+    plt.savefig(pngfile)
+    plt.savefig(epsfile)
 
 
 def plot_with_mean(x_lists, y_lists, color, y_label):
@@ -74,8 +81,11 @@ def extract_mean_agent_stats(dfs, keys):
                 summed_values[key] = 0
             for agent, agent_stats in learner_dict.items():
                 for key in keys:
-                    value = agent_stats[key]
-                    summed_values[key] += value
+                    try:
+                        value = agent_stats[key]
+                        summed_values[key] += value
+                    except:
+                        pass
             for key, value in summed_values.items():
                 mean = value / len(learner_dict)
                 df_list[key].append(mean)
@@ -159,16 +169,14 @@ def plot_csvs_results(paths):
         plot_fn = lambda: plot_with_mean(plot.x_data, plot.y_data,
                                          plot.plot_details.color,
                                          plot.plot_details.legend_name)
-        plot_and_save(plot_fn, path, plot.plot_details.column_name)
+        try:
+            plot_and_save(plot_fn, path, plot.plot_details.column_name)
+        except:
+            pass
 
 
 ray_results_path = get_ray_results_path()
 plot_path = get_plot_path()
-
-if not os.path.exists(plot_path):
-    os.mkdir(plot_path)
-    os.mkdir(plot_path + "/png")
-    os.mkdir(plot_path + "/eps")
 
 category_folders = get_all_subdirs(ray_results_path)
 experiment_folders = [get_all_subdirs(category_folder) for category_folder in category_folders]
