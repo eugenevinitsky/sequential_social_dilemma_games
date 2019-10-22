@@ -88,8 +88,6 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
 
     if tune_hparams:
         config_dict["entropy_coeff"] = tune.grid_search(hparams['entropy_tune'])
-        config_dict["model"]["custom_options"]["aux_loss_weight"] = tune.grid_search(hparams['aux_loss_weight_tune'])
-        config_dict["model"]["custom_options"]["aux_reward_weight_tune"] = tune.grid_search(hparams['aux_reward_weight_tune'])
 
     config.update(config_dict)
     return algorithm, env_name, config
