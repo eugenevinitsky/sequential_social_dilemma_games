@@ -80,6 +80,7 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
         "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
         "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
         "entropy_coeff": hparams['entropy_coeff'],
+        "grad_clip": 1,
         "multiagent": {
             "policy_graphs": policy_graphs,
             "policy_mapping_fn": tune.function(policy_mapping_fn),
