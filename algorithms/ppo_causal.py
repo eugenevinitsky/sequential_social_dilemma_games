@@ -388,11 +388,6 @@ def extra_stats(policy, train_batch):
     return base_stats
 
 
-def extra_grad_fn(policy, train_batch, grads):
-    import ipdb; ipdb.set_trace()
-    return {}
-
-
 def build_ppo_model(policy, obs_space, action_space, config):
     _, logit_dim = ModelCatalog.get_action_dist(action_space, config["model"])
 
@@ -448,7 +443,6 @@ CausalMOA_PPOPolicy = build_tf_policy(
     loss_fn=loss_with_moa,
     make_model=build_ppo_model,
     stats_fn=extra_stats,
-    #grad_stats_fn=extra_grad_fn,
     extra_action_fetches_fn=extra_fetches,
     postprocess_fn=postprocess_trajectory,
     gradients_fn=clip_gradients,

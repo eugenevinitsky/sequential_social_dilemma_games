@@ -52,6 +52,10 @@ tf.app.flags.DEFINE_boolean(
 tf.app.flags.DEFINE_float(
     'num_workers_per_device', 1,
     'Number of workers to place on a single device (CPU or GPU)')
+tf.app.flags.DEFINE_integer(
+    'num_envs_per_workers', 1,
+    'Number of envs to place on a single worker'
+)
 tf.app.flags.DEFINE_boolean(
     'return_agent_actions', 0,
     'If true we return the previous actions of all the agents')
@@ -80,7 +84,7 @@ cleanup_default_params = {
 
 
 def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
-          num_agents, use_gpus_for_workers=False, use_gpu_for_driver=False,
+          num_agents, num_envs_per_worker, use_gpus_for_workers=False, use_gpu_for_driver=False,
           num_workers_per_device=1, return_agent_actions=False):
 
     if env == 'harvest':
@@ -144,7 +148,8 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                 [[0, hparams['lr_init']],
                     [20000000, hparams['lr_final']]],
                 "num_workers": num_workers,
-                "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
+                "num_envs_per_worker": num_envs_per_worker,
+                "num_gpus": num_gpus,  # The number of GPUs for the driver
                 "num_cpus_for_driver": cpus_for_driver,
                 "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
                 "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
@@ -160,7 +165,9 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                                              "moa_weight": 10,
                                              },
                           "conv_filters": [[6, [3, 3], 1]]},
+                "num_sgd_iter": 10,
                 "num_other_agents": num_agents - 1,
+                "sgd_minibatch_size": 500,
                 "moa_weight": hparams['moa_weight'],
                 "train_moa_only_when_visible": tune.grid_search([True]),
                 "influence_reward_clip": 10,
@@ -174,6 +181,11 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                 "vf_loss_coeff": 1e-4
 
     })
+
+    if num_gpus > 0:
+        config["model"]["custom_model"]["custom_options"].update({"use_gpu": True})
+    else:
+        config["model"]["custom_model"]["custom_options"].update({"use_gpu": False})
 
     if FLAGS.grid_search:
         config.update({'moa_weight': tune.grid_search([10, 100]),
@@ -198,6 +210,7 @@ def main(unused_argv):
                                       FLAGS.train_batch_size,
                                       FLAGS.num_cpus,
                                       FLAGS.num_gpus, FLAGS.num_agents,
+                                      FLAGS.num_envs_per_worker,
                                       FLAGS.use_gpus_for_workers,
                                       FLAGS.use_gpu_for_driver,
                                       FLAGS.num_workers_per_device,

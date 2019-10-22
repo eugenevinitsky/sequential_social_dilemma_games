@@ -37,6 +37,11 @@ class KerasRNN(RecurrentTFModelV2):
         input_layer = tf.keras.layers.Input(shape=(None,) + obs_space.shape, name="inputs")
         flat_layer = tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten())(input_layer)
 
+        if self.append_others_actions:
+            name = "pred_logits"
+        else:
+            name = "action_logits"
+
         # Add the fully connected layers
         hiddens = model_config["custom_options"].get("fcnet_hiddens")
         last_layer = flat_layer
@@ -45,7 +50,7 @@ class KerasRNN(RecurrentTFModelV2):
         for size in hiddens:
             last_layer = tf.keras.layers.Dense(
                 size,
-                name="fc_{}".format(i),
+                name="fc_{}_{}".format(i, name),
                 activation=activation,
                 kernel_initializer=normc_initializer(1.0))(last_layer)
             i += 1
@@ -60,17 +65,20 @@ class KerasRNN(RecurrentTFModelV2):
         state_in_c = tf.keras.layers.Input(shape=(cell_size,), name="c")
         seq_in = tf.keras.layers.Input(shape=(), name="seq_in")
 
-        lstm_out, state_h, state_c = tf.keras.layers.LSTM(
-            cell_size, return_sequences=True, return_state=True, name="lstm")(
-            inputs=last_layer,
-            mask=tf.sequence_mask(seq_in),
-            initial_state=[state_in_h, state_in_c])
+        if model_config["use_gpu"]:
+            lstm_out, state_h, state_c = tf.keras.layers.CuDNNLSTM(
+                cell_size, return_sequences=True, return_state=True, name="lstm")(
+                inputs=last_layer,
+                mask=tf.sequence_mask(seq_in),
+                initial_state=[state_in_h, state_in_c])
+        else:
+            lstm_out, state_h, state_c = tf.keras.layers.LSTM(
+                cell_size, return_sequences=True, return_state=True, name="lstm")(
+                inputs=last_layer,
+                mask=tf.sequence_mask(seq_in),
+                initial_state=[state_in_h, state_in_c])
 
         # Postprocess LSTM output with another hidden layer and compute values
-        if self.append_others_actions:
-            name = "pred_logits"
-        else:
-            name = "action_logits"
         logits = tf.keras.layers.Dense(
             self.num_outputs,
             activation=tf.keras.activations.linear,
