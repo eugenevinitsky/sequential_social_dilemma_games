@@ -37,9 +37,9 @@ def plot_and_save(fn, path, file_name_addition):
     pngfile = pngpath + file_name_addition + ".png"
     epsfile = epspath + file_name_addition + ".eps"
     if not os.path.exists(pngpath):
-        os.mkdir(pngpath)
+        os.makedirs(pngpath)
     if not os.path.exists(epspath):
-        os.mkdir(epspath)
+        os.makedirs(epspath)
     plt.savefig(pngfile)
     plt.savefig(epsfile)
 
