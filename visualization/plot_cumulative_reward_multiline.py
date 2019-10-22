@@ -61,7 +61,7 @@ def plot_with_mean(x_lists, y_lists, color, y_label):
 
     plt.xlabel('Environment steps (1e8)')
     plt.ylabel(y_label)
-    plt.ylim(top=y_max + 5)
+    plt.ylim(top=y_max)
 
 
 def extract_mean_agent_stats(dfs, keys):
