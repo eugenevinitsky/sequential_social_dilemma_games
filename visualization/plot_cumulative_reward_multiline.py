@@ -39,10 +39,10 @@ def plot_and_save(fn, path, file_name_addition):
 
 def plot_with_mean(x_lists, y_lists, color, y_label):
     most_timesteps = np.max(list(map(len, x_lists)))
-    x_min = np.min(list(map(np.min, x_lists)))
-    x_max = np.max(list(map(np.max, x_lists)))
-    y_min = np.min(list(map(np.min, y_lists)))
-    y_max = np.max(list(map(np.max, y_lists)))
+    x_min = np.nanmin(list(map(np.nanmin, x_lists)))
+    x_max = np.nanmax(list(map(np.nanmax, x_lists)))
+    y_min = np.nanmin(list(map(np.nanmin, y_lists)))
+    y_max = np.nanmax(list(map(np.nanmax, y_lists)))
     interp_x = np.linspace(x_min, x_max, most_timesteps)
     interpolated = []
     for x, y in zip(x_lists, y_lists):
@@ -139,8 +139,14 @@ def plot_csvs_results(paths):
     for metric in episode_metric_details:
         metric_data = []
         for df in dfs:
+            # Parse the dictionaries in each row
             custom_metrics_column = df['custom_metrics']
-            metric_data.append([ast.literal_eval(row)[metric.column_name] for row in custom_metrics_column])
+            # Replace nan with a string, then back to np.nan.
+            # Directly evaluating this is not allowed by ast.literal_eval.
+            column = [ast.literal_eval(row.replace(' nan', '\'nan\''))[metric.column_name] for row in custom_metrics_column]
+            column = np.array(column, dtype=np.float)
+            metric_data.append(column)
+
         plots.append(PlotData(timesteps_totals,
                               metric_data,
                               metric.column_name,
