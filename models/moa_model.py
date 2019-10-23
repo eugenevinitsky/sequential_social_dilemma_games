@@ -65,18 +65,11 @@ class KerasRNN(RecurrentTFModelV2):
         state_in_c = tf.keras.layers.Input(shape=(cell_size,), name="c")
         seq_in = tf.keras.layers.Input(shape=(), name="seq_in")
 
-        if model_config["use_gpu"]:
-            lstm_out, state_h, state_c = tf.keras.layers.CuDNNLSTM(
-                cell_size, return_sequences=True, return_state=True, name="lstm")(
-                inputs=last_layer,
-                mask=tf.sequence_mask(seq_in),
-                initial_state=[state_in_h, state_in_c])
-        else:
-            lstm_out, state_h, state_c = tf.keras.layers.LSTM(
-                cell_size, return_sequences=True, return_state=True, name="lstm")(
-                inputs=last_layer,
-                mask=tf.sequence_mask(seq_in),
-                initial_state=[state_in_h, state_in_c])
+        lstm_out, state_h, state_c = tf.keras.layers.LSTM(
+            cell_size, return_sequences=True, return_state=True, name="lstm")(
+            inputs=last_layer,
+            mask=tf.sequence_mask(seq_in),
+            initial_state=[state_in_h, state_in_c])
 
         # Postprocess LSTM output with another hidden layer and compute values
         logits = tf.keras.layers.Dense(
@@ -296,7 +289,6 @@ class MOA_LSTM(RecurrentTFModelV2):
 
         # TODO(@evinitsky) remove the magic number
         i = 2
-        # TODO(@evinitsky) why am I feeding in state_init here, doesn't this actually need to be calculated???
         while "state_in_{}".format(i) in train_batch:
             states.append(train_batch["state_in_{}".format(i)])
             i += 1

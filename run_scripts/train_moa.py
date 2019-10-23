@@ -53,7 +53,7 @@ tf.app.flags.DEFINE_float(
     'num_workers_per_device', 1,
     'Number of workers to place on a single device (CPU or GPU)')
 tf.app.flags.DEFINE_integer(
-    'num_envs_per_workers', 1,
+    'num_envs_per_worker', 1,
     'Number of envs to place on a single worker'
 )
 tf.app.flags.DEFINE_boolean(
@@ -181,11 +181,6 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                 "vf_loss_coeff": 1e-4
 
     })
-
-    if num_gpus > 0:
-        config["model"]["custom_model"]["custom_options"].update({"use_gpu": True})
-    else:
-        config["model"]["custom_model"]["custom_options"].update({"use_gpu": False})
 
     if FLAGS.grid_search:
         config.update({'moa_weight': tune.grid_search([10, 100]),
