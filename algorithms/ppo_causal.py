@@ -461,3 +461,4 @@ CausalMOATrainer = build_trainer(
     validate_config=validate_config,
     after_optimizer_step=update_kl,
     after_train_result=warn_about_bad_reward_scales)
+

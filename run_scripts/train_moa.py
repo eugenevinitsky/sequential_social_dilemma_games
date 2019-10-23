@@ -1,14 +1,13 @@
 import argparse
 from datetime import datetime
-import pytz
+import sys
 
+import pytz
 import ray
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
-from ray.tune import run_experiments
 from ray.tune.registry import register_env
-import tensorflow as tf
 
 from algorithms.ppo_causal import CausalMOATrainer
 from social_dilemmas.envs.harvest import HarvestEnv
@@ -16,7 +15,7 @@ from social_dilemmas.envs.cleanup import CleanupEnv
 from models.moa_model import MOA_LSTM
 
 parser = argparse.ArgumentParser()
-parser.add_argument('exp_name', type=str, help='Name experiment will be stored under')
+parser.add_argument('--exp_name', type=str, default='causal_env', help='Name experiment will be stored under')
 parser.add_argument('--env', type=str, default='cleanup', help='Name of the environment to rollout. Can be '
                                                                'cleanup or harvest.')
 parser.add_argument('--algorithm', type=str, default='PPO', help='Name of the rllib algorithm to use.')
@@ -94,7 +93,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
     config = agent_cls._default_config.copy()
 
     # information for replay
-    config['env_config']['func_create'] = tune.function(env_creator)
+    config['env_config']['func_create'] = env_creator
     config['env_config']['env_name'] = env_name
     config['env_config']['run'] = algorithm
 
@@ -132,7 +131,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                     "policy_mapping_fn": policy_mapping_fn,
                 },
                 "model": {"custom_model": "moa_lstm", "use_lstm": False,
-                          "custom_options": {"return_agent_actions": return_agent_actions, "cell_size": 128,
+                          "custom_options": {"return_agent_actions": True, "cell_size": 128,
                                              "num_other_agents": num_agents - 1, "fcnet_hiddens": [32, 32],
                                              "train_moa_only_when_visible": tune.grid_search([True]),
                                              "moa_weight": 10,
@@ -167,8 +166,12 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
 if __name__=='__main__':
     args = parser.parse_args()
+    if args.multi_node and args.local_mode:
+        sys.exit("You cannot have both local mode and multi node on at the same time")
     if args.multi_node:
         ray.init(redis_address='localhost:6379')
+    elif args.local_mode:
+        ray.init(local_mode=True)
     else:
         ray.init()
     if args.env == 'harvest':
