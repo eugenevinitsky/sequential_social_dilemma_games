@@ -61,7 +61,7 @@ class SwitchEnv(MapEnv):
     def step(self, actions):
         observations, rewards, dones, info = super().step(actions)
         first_agent = next(iter(actions.keys()))
-        if rewards[first_agent] > 10:
+        if rewards[first_agent] > .1:
             self.total_successes += 1
 
         extra_info = {first_agent: self.create_extra_info_dict()}

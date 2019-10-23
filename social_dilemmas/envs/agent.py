@@ -287,7 +287,7 @@ class SwitchAgent(Agent):
     def consume(self, char):
         """Defines how an agent interacts with the char it is standing on"""
         if char == 'd':
-            self.reward_this_turn += 100
+            self.reward_this_turn += 1
             self.is_done = True
             return ' '
         else:
