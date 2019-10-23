@@ -121,17 +121,17 @@ def plot_csvs_results(paths):
     episode_len_means = [df.episode_len_mean for df in dfs]
     plots.append(PlotData(timesteps_totals, episode_len_means, 'episode_length', 'Mean episode length', 'pink'))
 
-    agent_metric_details = [PlotDetails('policy_entropy', 'Mean Entropy', 'b'),
+    agent_metric_details = [PlotDetails('policy_entropy', 'Policy Entropy', 'b'),
                             PlotDetails('policy_loss', 'Policy loss', 'r'),
                             PlotDetails('vf_loss', 'Value function loss', 'r'),
                             PlotDetails('total_a3c_loss', 'Total A3C loss', 'r'),
                             PlotDetails('aux_loss', 'Auxiliary task loss', 'black'),
-                            PlotDetails('total_aux_reward', 'Policy loss', 'black')]
+                            PlotDetails('total_aux_reward', 'Auxiliary task reward', 'black')]
 
     episode_metric_details = [PlotDetails('total_successes_mean', 'Total successes', 'black'),
                               PlotDetails('switches_on_at_termination_mean', 'Switches on at termination', 'black'),
-                              PlotDetails('total_pulled_on_mean', 'Total switched on by agent', 'black'),
-                              PlotDetails('total_pulled_off_mean', 'Total switched off by agent', 'black'),
+                              PlotDetails('total_pulled_on_mean', 'Total switched on', 'black'),
+                              PlotDetails('total_pulled_off_mean', 'Total switched off', 'black'),
                               PlotDetails('timestep_first_switch_pull_mean', 'Time at first switch pull', 'black'),
                               PlotDetails('timestep_last_switch_pull_mean', 'Time at last switch pull', 'black')]
 
