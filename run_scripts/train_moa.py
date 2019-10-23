@@ -37,6 +37,8 @@ parser.add_argument('--num_envs_per_worker', type=float, default=1,
                     help='Number of envs to place on a single worker')
 parser.add_argument('--multi_node', action='store_true', default=False,
                     help='If true the experiments are run in multi-cluster mode')
+parser.add_argument('--local_mode', action='store_true', default=False,
+                    help='Force all the computation onto the driver. Useful for debugging.')
 parser.add_argument('--use_s3', action='store_true', default=False,
                     help='If true upload to s3')
 parser.add_argument('--grid_search', action='store_true', default=False,

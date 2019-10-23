@@ -63,7 +63,7 @@ class KerasRNN(RecurrentTFModelV2):
 
         state_in_h = tf.keras.layers.Input(shape=(cell_size,), name="h")
         state_in_c = tf.keras.layers.Input(shape=(cell_size,), name="c")
-        seq_in = tf.keras.layers.Input(shape=(), name="seq_in")
+        seq_in = tf.keras.layers.Input(shape=(), name="seq_in", dtype=tf.int32)
 
         lstm_out, state_h, state_c = tf.keras.layers.LSTM(
             cell_size, return_sequences=True, return_state=True, name="lstm")(
