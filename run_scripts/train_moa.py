@@ -1,3 +1,4 @@
+import argparse
 from datetime import datetime
 import pytz
 
@@ -14,61 +15,33 @@ from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
 from models.moa_model import MOA_LSTM
 
-FLAGS = tf.app.flags.FLAGS
-
-tf.app.flags.DEFINE_string(
-    'exp_name', None,
-    'Name of the ray_results experiment directory where results are stored.')
-tf.app.flags.DEFINE_string(
-    'env', 'harvest',
-    'Name of the environment to rollout. Can be cleanup or harvest.')
-tf.app.flags.DEFINE_string(
-    'algorithm', 'PPO',
-    'Name of the rllib algorithm to use.')
-tf.app.flags.DEFINE_integer(
-    'num_agents', 2,
-    'Number of agent policies')
-tf.app.flags.DEFINE_integer(
-    'train_batch_size', 30000,
-    'Size of the total dataset over which one epoch is computed.')
-tf.app.flags.DEFINE_integer(
-    'checkpoint_frequency', 50,
-    'Number of steps before a checkpoint is saved.')
-tf.app.flags.DEFINE_integer(
-    'training_iterations', 10000,
-    'Total number of steps to train for')
-tf.app.flags.DEFINE_integer(
-    'num_cpus', 2,
-    'Number of available CPUs')
-tf.app.flags.DEFINE_integer(
-    'num_gpus', 0,
-    'Number of available GPUs')
-tf.app.flags.DEFINE_boolean(
-    'use_gpus_for_workers', False,
-    'Set to true to run workers on GPUs rather than CPUs')
-tf.app.flags.DEFINE_boolean(
-    'use_gpu_for_driver', False,
-    'Set to true to run driver on GPU rather than CPU.')
-tf.app.flags.DEFINE_float(
-    'num_workers_per_device', 1,
-    'Number of workers to place on a single device (CPU or GPU)')
-tf.app.flags.DEFINE_integer(
-    'num_envs_per_worker', 1,
-    'Number of envs to place on a single worker'
-)
-tf.app.flags.DEFINE_boolean(
-    'return_agent_actions', 0,
-    'If true we return the previous actions of all the agents')
-tf.app.flags.DEFINE_boolean(
-    'multi_node', 0,
-    'If true the experiments are run in multi-cluster mode'
-)
-tf.app.flags.DEFINE_boolean(
-    'use_s3', False,
-    'If true upload to s3')
-tf.app.flags.DEFINE_boolean(
-    'grid_search', False,
-    'If true run a grid search over relevant hyperparams')
+parser = argparse.ArgumentParser()
+parser.add_argument('exp_name', type=str, help='Name experiment will be stored under')
+parser.add_argument('--env', type=str, default='cleanup', help='Name of the environment to rollout. Can be '
+                                                               'cleanup or harvest.')
+parser.add_argument('--algorithm', type=str, default='PPO', help='Name of the rllib algorithm to use.')
+parser.add_argument('--num_agents', type=int, default=2, help='Number of agent policies')
+parser.add_argument('--train_batch_size', type=int, default=26000,
+                    help='Size of the total dataset over which one epoch is computed.')
+parser.add_argument('--checkpoint_frequency', type=int, default=50,
+                    help='Number of steps before a checkpoint is saved.')
+parser.add_argument('--training_iterations', type=int, default=50, help='Total number of steps to train for')
+parser.add_argument('--num_cpus', type=int, default=2, help='Number of available CPUs')
+parser.add_argument('--num_gpus', type=int, default=0, help='Number of available GPUs')
+parser.add_argument('--use_gpus_for_workers', action='store_true', default=False,
+                    help='Set to true to run workers on GPUs rather than CPUs')
+parser.add_argument('--use_gpu_for_driver', action='store_true', default=False,
+                    help='Set to true to run driver on GPU rather than CPU.')
+parser.add_argument('--num_workers_per_device', type=float, default=1,
+                    help='Number of workers to place on a single device (CPU or GPU)')
+parser.add_argument('--num_envs_per_worker', type=float, default=1,
+                    help='Number of envs to place on a single worker')
+parser.add_argument('--multi_node', action='store_true', default=False,
+                    help='If true the experiments are run in multi-cluster mode')
+parser.add_argument('--use_s3', action='store_true', default=False,
+                    help='If true upload to s3')
+parser.add_argument('--grid_search', action='store_true', default=False,
+                    help='If true run a grid search over relevant hyperparams')
 
 harvest_default_params = {
     'lr_init': 0.00136,
@@ -85,7 +58,7 @@ cleanup_default_params = {
 
 def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
           num_agents, num_envs_per_worker, use_gpus_for_workers=False, use_gpu_for_driver=False,
-          num_workers_per_device=1, return_agent_actions=False):
+          num_workers_per_device=1):
 
     if env == 'harvest':
         def env_creator(_):
@@ -182,7 +155,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
     })
 
-    if FLAGS.grid_search:
+    if args.grid_search:
         config.update({'moa_weight': tune.grid_search([10, 100]),
                        'lr_schedule': [[0, tune.grid_search([1e-2, 1e-3, 1e-4])],
                                         [20000000, hparams['lr_final']]],
@@ -192,29 +165,29 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
     return algorithm, env_name, config
 
 
-def main(unused_argv):
-    if FLAGS.multi_node:
+if __name__=='__main__':
+    args = parser.parse_args()
+    if args.multi_node:
         ray.init(redis_address='localhost:6379')
     else:
         ray.init()
-    if FLAGS.env == 'harvest':
+    if args.env == 'harvest':
         hparams = harvest_default_params
     else:
         hparams = cleanup_default_params
-    alg_run, env_name, config = setup(FLAGS.env, hparams, FLAGS.algorithm,
-                                      FLAGS.train_batch_size,
-                                      FLAGS.num_cpus,
-                                      FLAGS.num_gpus, FLAGS.num_agents,
-                                      FLAGS.num_envs_per_worker,
-                                      FLAGS.use_gpus_for_workers,
-                                      FLAGS.use_gpu_for_driver,
-                                      FLAGS.num_workers_per_device,
-                                      FLAGS.return_agent_actions)
+    alg_run, env_name, config = setup(args.env, hparams, args.algorithm,
+                                      args.train_batch_size,
+                                      args.num_cpus,
+                                      args.num_gpus, args.num_agents,
+                                      args.num_envs_per_worker,
+                                      args.use_gpus_for_workers,
+                                      args.use_gpu_for_driver,
+                                      args.num_workers_per_device)
 
-    if FLAGS.exp_name is None:
-        exp_name = FLAGS.env + '_' + FLAGS.algorithm
+    if args.exp_name is None:
+        exp_name = args.env + '_' + args.algorithm
     else:
-        exp_name = FLAGS.exp_name
+        exp_name = args.exp_name
     print('Commencing experiment', exp_name)
 
     config['env'] = env_name
@@ -229,15 +202,12 @@ def main(unused_argv):
             'name': exp_name,
             'run_or_experiment': CausalMOATrainer,
             "stop": {
-                "training_iteration": FLAGS.training_iterations
+                "training_iteration": args.training_iterations
             },
-            'checkpoint_freq': FLAGS.checkpoint_frequency,
+            'checkpoint_freq': args.checkpoint_frequency,
             "config": config,
         }
-    if FLAGS.use_s3:
+    if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
     tune.run(**exp_dict, queue_trials=False)
-
-if __name__ == '__main__':
-    tf.app.run(main)
