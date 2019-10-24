@@ -1,7 +1,7 @@
 import numpy as np
 import random
 
-from social_dilemmas.constants import CLEANUP_MAP
+from social_dilemmas.maps import CLEANUP_MAP
 from social_dilemmas.envs.map_env import MapEnv, ACTIONS
 from social_dilemmas.envs.agent import CleanupAgent  # CLEANUP_VIEW_SIZE
 

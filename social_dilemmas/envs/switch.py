@@ -2,7 +2,7 @@ import numpy as np
 from ray import tune
 
 from social_dilemmas.envs.agent import SwitchAgent
-from social_dilemmas.constants import SWITCH_MAP
+from social_dilemmas.maps import SWITCH_MAP
 from social_dilemmas.envs.map_env import MapEnv, ACTIONS
 
 # Add custom actions to the agent
