@@ -151,7 +151,14 @@ def plot_csvs_results(paths):
             custom_metrics_column = df['custom_metrics']
             # Replace nan with a string, then back to np.nan.
             # Directly evaluating this is not allowed by ast.literal_eval.
-            column = [ast.literal_eval(row.replace(' nan', '\'nan\''))[metric.column_name] for row in custom_metrics_column]
+            # Metric may not exist yet in a row at the start of an experiment, hence we check for this.
+            column = []
+            for row in custom_metrics_column:
+                row_eval = ast.literal_eval(row.replace(' nan', '\'nan\''))
+                if metric.column_name in row_eval:
+                    column.append(row_eval[metric.column_name])
+                else:
+                    column.append(np.nan)
             column = np.array(column, dtype=np.float)
             metric_data.append(column)
 
