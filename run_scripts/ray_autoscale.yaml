@@ -114,7 +114,7 @@ setup_commands:
     - rm /home/ubuntu/anaconda3/lib/python3.6/site-packages/ray/rllib/policy/rnn_sequencing.py
     - cp ~/sequential_social_dilemma_games/run_scripts/rnn_sequencing.py /home/ubuntu/anaconda3/lib/python3.6/site-packages/ray/rllib/policy/rnn_sequencing.py
 #    - cd ~/sequential_social_dilemma_games && python setup.py develop
-    - pip install tensorflow-gpu==2.0.0
+#    - pip install tensorflow-gpu==2.0.0
 #      # TBD why this is necessary
     - pip uninstall numpy -y
     - pip install numpy==1.16.0
