@@ -18,7 +18,6 @@ GIVE_EXTERNAL_SWITCH_REWARD = int(False)
 
 
 class SwitchEnv(MapEnv):
-
     def __init__(self, ascii_map=SWITCH_MAP, num_agents=1, render=False):
         super().__init__(ascii_map, num_agents, render)
         self.initial_map_state = dict()
