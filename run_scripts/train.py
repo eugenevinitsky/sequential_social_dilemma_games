@@ -71,8 +71,8 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
 
     # hyperparams
     config_dict = {
-        "sample_batch_size": 100,
-        "train_batch_size": 200,
+        "sample_batch_size": FLAGS.sample_batch_size,
+        "train_batch_size": FLAGS.train_batch_size,
         "horizon": 1000,
         "lr_schedule": [[0, hparams['lr_init']],
                         [20000000, hparams['lr_final']]],
@@ -136,7 +136,8 @@ def main(unused_argv):
             },
             'checkpoint_freq': 100,
             "config": config,
-            'upload_dir': config_parser.get_upload_dir()
+            'upload_dir': config_parser.get_upload_dir(),
+            'num_samples': int(FLAGS.num_samples)
         }
     }, resume=FLAGS.resume)
 
