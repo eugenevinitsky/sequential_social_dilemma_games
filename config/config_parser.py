@@ -1,3 +1,4 @@
+import ast
 from os.path import abspath, join, dirname, expanduser
 
 from localconfig import config
@@ -51,18 +52,11 @@ def get_env_params(model_type=None):
 
     params = dict(config.items(config_section))
 
-    tune_keys = []
-    tune_dict = {}
     for key, value in params.items():
         key_split = key.split('_')
-        if len(key_split) > 1 and key_split[-2] == 'tune':
-            tune_key = key[:-(len(key_split[-1]) + 1)]
-            tune = [value for key, value in params.items() if key.startswith(tune_key)]
-            tune_dict[tune_key] = tune
-            tune_keys.append(tune_key)
+        if key_split[-1] == 'tune':
+            params[key] = ast.literal_eval(value)
 
-    params = {key: params[key] for key in params if key not in tune_keys}
-    params = {**params, **tune_dict}
     return params
 
 
