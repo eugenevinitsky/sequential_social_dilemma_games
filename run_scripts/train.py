@@ -18,7 +18,7 @@ hparams = config_parser.get_env_params()
 
 def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
           use_gpu_for_driver=False, num_workers_per_device=1, tune_hparams=False):
-    env_creator = get_env_creator(env, num_agents)
+    env_creator = get_env_creator(env, num_agents, hparams=hparams)
     env_name = env + "_env"
     register_env(env_name, env_creator)
 
@@ -52,6 +52,8 @@ def setup(env, num_cpus, num_gpus, num_agents, use_gpus_for_workers=False,
     config['env_config']['func_create'] = tune.function(env_creator)
     config['env_config']['env_name'] = env_name
     config['env_config']['run'] = algorithm
+    if env_name == 'switch_env':
+        config['env_config']['num_switches'] = hparams['num_switches']
 
     # Calculate device configurations
     gpus_for_driver = int(use_gpu_for_driver)

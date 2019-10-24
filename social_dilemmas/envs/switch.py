@@ -18,8 +18,8 @@ GIVE_EXTERNAL_SWITCH_REWARD = int(False)
 
 
 class SwitchEnv(MapEnv):
-    def __init__(self, ascii_map=SWITCH_MAP, num_agents=1, render=False):
-        super().__init__(ascii_map, num_agents, render)
+    def __init__(self, hparams, num_agents=1, render=False):
+        super().__init__(SWITCH_MAP, num_agents, render)
         self.initial_map_state = dict()
         self.switch_locations = []
         self.door_locations = []
@@ -46,6 +46,15 @@ class SwitchEnv(MapEnv):
                     self.switch_count += 1
                 if current_char in ['d', 'D']:
                     self.door_locations.append((row, col))
+
+        remove_switches = 6 - hparams['num_switches']
+        if remove_switches < 0 or remove_switches > 6:
+            raise NotImplementedError
+        for i in range(remove_switches):
+            row, col = self.switch_locations[-1]
+            self.base_map[row, col] = ' '
+            del(self.switch_locations[-1])
+            self.switch_count -= 1
 
         self.color_map.update(SWITCH_COLORS)
 
