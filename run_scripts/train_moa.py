@@ -101,7 +101,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
     # information for replay
     config['env_config']['func_create'] = env_creator
     config['env_config']['env_name'] = env_name
-    config['env_config']['run'] = algorithm
+    # config['env_config']['run'] = algorithm
 
     # Calculate device configurations
     gpus_for_driver = int(use_gpu_for_driver)

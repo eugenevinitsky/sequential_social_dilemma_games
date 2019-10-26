@@ -11,7 +11,7 @@ import logging
 import gym
 
 from ray.rllib.agents.impala import DEFAULT_CONFIG
-from ray.rllib.agents.impala.impala import choose_policy, defer_make_workers, make_aggregators_and_optimizer, \
+from ray.rllib.agents.impala.impala import defer_make_workers, make_aggregators_and_optimizer, \
     OverrideDefaultResourceRequest, validate_config
 from ray.rllib.agents.impala.vtrace_policy import validate_config as validate_config_policy
 from ray.rllib.agents.impala.vtrace_policy import VTraceLoss, choose_optimizer, clip_gradients
@@ -26,7 +26,7 @@ from ray.rllib.agents.trainer_template import build_trainer
 
 
 from algorithms.common_funcs import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
-    CAUSAL_CONFIG, compute_influence_reward
+    CAUSAL_CONFIG, causal_postprocess_trajectory
 
 CAUSAL_CONFIG.update(DEFAULT_CONFIG)
 
@@ -169,7 +169,6 @@ def causal_stats(policy, train_batch):
             tf.reshape(policy.loss.value_targets, [-1]),
             tf.reshape(values_batched, [-1])),
     }
-    import ipdb; ipdb.set_trace()
     base_stats["total_influence"] = train_batch["total_influence"]
     base_stats['reward_without_influence'] = train_batch['reward_without_influence']
     base_stats['moa_loss'] = policy.moa_loss / policy.moa_weight
@@ -186,7 +185,7 @@ def postprocess_trajectory(policy,
                            sample_batch,
                            other_agent_batches=None,
                            episode=None):
-    sample_batch = compute_influence_reward(policy, sample_batch)
+    sample_batch = causal_postprocess_trajectory(policy, sample_batch)
     del sample_batch.data[SampleBatch.NEXT_OBS]
     return sample_batch
 
@@ -220,8 +219,16 @@ CausalVTracePolicy = build_tf_policy(
     get_batch_divisibility_req=lambda p: p.config["sample_batch_size"])
 
 
+def choose_policy(config):
+    if config["vtrace"]:
+        return CausalVTracePolicy
+    else:
+        import sys
+        sys.exit("Hey, set vtrace to true")
+
+
 CausalImpalaTrainer = build_trainer(
-    name="IMPALA",
+    name="CausalIMPALA",
     default_config=CAUSAL_CONFIG,
     default_policy=CausalVTracePolicy,
     validate_config=validate_config,
