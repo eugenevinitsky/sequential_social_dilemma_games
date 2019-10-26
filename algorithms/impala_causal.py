@@ -10,7 +10,6 @@ import numpy as np
 import logging
 import gym
 
-import ray
 from ray.rllib.agents.impala import DEFAULT_CONFIG
 from ray.rllib.agents.impala.impala import choose_policy, defer_make_workers, make_aggregators_and_optimizer, \
     OverrideDefaultResourceRequest, validate_config
@@ -170,10 +169,10 @@ def causal_stats(policy, train_batch):
             tf.reshape(policy.loss.value_targets, [-1]),
             tf.reshape(values_batched, [-1])),
     }
+    import ipdb; ipdb.set_trace()
     base_stats["total_influence"] = train_batch["total_influence"]
     base_stats['reward_without_influence'] = train_batch['reward_without_influence']
     base_stats['moa_loss'] = policy.moa_loss / policy.moa_weight
-    import ipdb; ipdb.set_trace()
     return base_stats
 
 
@@ -187,8 +186,8 @@ def postprocess_trajectory(policy,
                            sample_batch,
                            other_agent_batches=None,
                            episode=None):
-    # not used, so save some bandwidth
     sample_batch = compute_influence_reward(policy, sample_batch)
+    del sample_batch.data[SampleBatch.NEXT_OBS]
     return sample_batch
 
 
@@ -205,9 +204,8 @@ def setup_mixins(policy, obs_space, action_space, config):
     setup_causal_mixins(policy, obs_space, action_space, config)
 
 
-
-VTraceTFPolicy = build_tf_policy(
-    name="VTraceTFPolicy",
+CausalVTracePolicy = build_tf_policy(
+    name="CausalVTracePolicy",
     get_default_config=lambda: CAUSAL_CONFIG,
     loss_fn=build_vtrace_loss,
     stats_fn=causal_stats,
@@ -225,7 +223,7 @@ VTraceTFPolicy = build_tf_policy(
 CausalImpalaTrainer = build_trainer(
     name="IMPALA",
     default_config=CAUSAL_CONFIG,
-    default_policy=VTraceTFPolicy,
+    default_policy=CausalVTracePolicy,
     validate_config=validate_config,
     get_policy_class=choose_policy,
     make_workers=defer_make_workers,

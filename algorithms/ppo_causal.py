@@ -8,7 +8,7 @@ import scipy
 
 from ray.rllib.agents.ppo.ppo_policy import PPOLoss, BEHAVIOUR_LOGITS, \
     KLCoeffMixin, setup_config, clip_gradients, \
-    kl_and_loss_stats, ValueNetworkMixin, vf_preds_and_logits_fetches
+    kl_and_loss_stats, ValueNetworkMixin, vf_preds_and_logits_fetches, postprocess_ppo_gae
 from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG, choose_policy_optimizer, \
     validate_config, update_kl, warn_about_bad_reward_scales
 from ray.rllib.evaluation.postprocessing import Postprocessing
@@ -86,6 +86,17 @@ def extra_stats(policy, train_batch):
     return base_stats
 
 
+def postprocess_ppo_causal(policy,
+                        sample_batch,
+                        other_agent_batches=None,
+                        episode=None):
+    """Adds the policy logits, VF preds, and advantages to the trajectory."""
+
+    batch = causal_postprocess_trajectory(policy, sample_batch)
+    batch = postprocess_ppo_gae(policy, batch)
+    return batch
+
+
 def build_model(policy, obs_space, action_space, config):
     _, logit_dim = ModelCatalog.get_action_dist(action_space, config["model"])
 
@@ -116,7 +127,7 @@ CausalMOA_PPOPolicy = build_tf_policy(
     make_model=build_model,
     stats_fn=extra_stats,
     extra_action_fetches_fn=extra_fetches,
-    postprocess_fn=causal_postprocess_trajectory,
+    postprocess_fn=postprocess_ppo_causal,
     gradients_fn=clip_gradients,
     before_init=setup_config,
     before_loss_init=setup_mixins,

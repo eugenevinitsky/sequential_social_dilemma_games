@@ -124,24 +124,6 @@ def causal_postprocess_trajectory(policy,
     # Compute causal social influence reward and add to batch.
     sample_batch = compute_influence_reward(policy, sample_batch)
 
-    completed = sample_batch["dones"][-1]
-    if completed:
-        last_r = 0.0
-    else:
-        next_state = []
-        for i in range(policy.num_state_tensors()):
-            next_state.append([sample_batch["state_out_{}".format(i)][-1]])
-        last_r = policy._value(sample_batch[SampleBatch.NEXT_OBS][-1],
-                               sample_batch[SampleBatch.ACTIONS][-1],
-                               sample_batch[SampleBatch.REWARDS][-1],
-                               *next_state)
-    sample_batch = compute_advantages(
-        sample_batch,
-        last_r,
-        policy.config["gamma"],
-        policy.config["lambda"],
-        use_gae=policy.config["use_gae"])
-
     return sample_batch
 
 
@@ -350,31 +332,6 @@ def build_model(policy, obs_space, action_space, config):
         framework="tf")
 
     return policy.model
-
-
-class ValueNetworkMixin(object):
-    def __init__(self, obs_space, action_space, config):
-        if config["use_gae"]:
-
-            @make_tf_callable(self.get_session())
-            def value(ob, prev_action, prev_reward, *state):
-                model_out, _ = self.model({
-                    SampleBatch.CUR_OBS: tf.convert_to_tensor([ob]),
-                    SampleBatch.PREV_ACTIONS: tf.convert_to_tensor(
-                        [prev_action]),
-                    SampleBatch.PREV_REWARDS: tf.convert_to_tensor(
-                        [prev_reward]),
-                    "is_training": tf.convert_to_tensor(False),
-                }, [tf.convert_to_tensor([s]) for s in state],
-                                          tf.convert_to_tensor([1]))
-                return self.model.value_function()[0]
-
-        else:
-            @make_tf_callable(self.get_session())
-            def value(ob, prev_action, prev_reward, *state):
-                return tf.constant(0.0)
-
-        self._value = value
 
 
 def setup_causal_mixins(policy, obs_space, action_space, config):

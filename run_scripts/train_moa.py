@@ -41,6 +41,8 @@ parser.add_argument('--multi_node', action='store_true', default=False,
                     help='If true the experiments are run in multi-cluster mode')
 parser.add_argument('--local_mode', action='store_true', default=False,
                     help='Force all the computation onto the driver. Useful for debugging.')
+parser.add_argument('--eager_mode', action='store_true', default=False,
+                    help='Perform eager execution. Useful for debugging.')
 parser.add_argument('--use_s3', action='store_true', default=False,
                     help='If true upload to s3')
 parser.add_argument('--grid_search', action='store_true', default=False,
@@ -224,6 +226,9 @@ if __name__=='__main__':
     if alg_run == "IMPALA":
         trainer = CausalImpalaTrainer
 
+    if args.eager_mode:
+        config['eager'] = True
+
     exp_dict = {
             'name': exp_name,
             'run_or_experiment': trainer,
@@ -233,6 +238,8 @@ if __name__=='__main__':
             'checkpoint_freq': args.checkpoint_frequency,
             "config": config,
         }
+
+
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
