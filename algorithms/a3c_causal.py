@@ -15,7 +15,6 @@ from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.agents.a3c.a3c import DEFAULT_CONFIG, \
     validate_config
 
-
 from algorithms.common_funcs import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
     causal_postprocess_trajectory, CAUSAL_CONFIG
 
@@ -61,6 +60,7 @@ def actor_critic_loss(policy, model, dist_class, train_batch):
 
     # store this for future statistics
     policy.moa_loss = moa_loss.total_loss
+
     return policy.loss.total_loss
 
 

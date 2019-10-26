@@ -11,6 +11,7 @@ from ray.tune.registry import register_env
 
 from algorithms.a3c_causal import CausalA3CMOATrainer
 from algorithms.ppo_causal import CausalPPOMOATrainer
+from algorithms.impala_causal import CausalImpalaTrainer
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
 from models.moa_model import MOA_LSTM
@@ -160,6 +161,10 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                        })
     elif args.algorithm == "A3C":
         config.update({"sample_batch_size": 50})
+    elif args.algorithm == "IMPALA":
+        config.update({"train_batch_size": train_batch_size,
+                       "sample_batch_size": 50,
+                       })
     else:
         sys.exit("The only available algorithms are A3C and PPO")
 
@@ -216,6 +221,8 @@ if __name__=='__main__':
         trainer = CausalA3CMOATrainer
     if alg_run == "PPO":
         trainer = CausalPPOMOATrainer
+    if alg_run == "IMPALA":
+        trainer = CausalImpalaTrainer
 
     exp_dict = {
             'name': exp_name,
