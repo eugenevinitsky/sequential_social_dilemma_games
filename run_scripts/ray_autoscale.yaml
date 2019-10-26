@@ -64,7 +64,7 @@ auth:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
-    InstanceType: c4.8xlarge
+    InstanceType: m5.8xlarge
     ImageId: ami-004f26d60bce3a636 # Deep Learning AMI (Ubuntu) Version 24.3
     InstanceMarketOptions:
         MarketType: spot
@@ -72,7 +72,7 @@ head_node:
     BlockDeviceMappings:
         - DeviceName: /dev/sda1
           Ebs:
-              VolumeSize: 125
+              VolumeSize: 100
 
     # Additional options in the boto docs.
 
@@ -81,7 +81,7 @@ head_node:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 worker_nodes:
-    InstanceType: c4.8xlarge
+    InstanceType: m5.8xlarge
     ImageId: ami-004f26d60bce3a636 # Deep Learning AMI (Ubuntu) Version 24.3
 
     # Run workers on spot by default. Comment this out to use on-demand.
