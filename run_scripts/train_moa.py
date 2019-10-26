@@ -9,7 +9,8 @@ from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 
-from algorithms.ppo_causal import CausalMOATrainer
+from algorithms.a3c_causal import CausalA3CMOATrainer
+from algorithms.ppo_causal import CausalPPOMOATrainer
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
 from models.moa_model import MOA_LSTM
@@ -115,7 +116,6 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
     # hyperparams
     config.update({
-                "train_batch_size": train_batch_size,
                 "horizon": 1000,
                 "gamma": 0.99,
                 "lr_schedule":
@@ -139,9 +139,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                                              "moa_weight": 10,
                                              },
                           "conv_filters": [[6, [3, 3], 1]]},
-                "num_sgd_iter": 10,
                 "num_other_agents": num_agents - 1,
-                "sgd_minibatch_size": 500,
                 "moa_weight": hparams['moa_weight'],
                 "train_moa_only_when_visible": tune.grid_search([True]),
                 "influence_reward_clip": 10,
@@ -155,6 +153,15 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                 "vf_loss_coeff": 1e-4
 
     })
+    if args.algorithm == "PPO":
+        config.update({"num_sgd_iter": 10,
+                       "train_batch_size": train_batch_size,
+                       "sgd_minibatch_size": 500,
+                       })
+    elif args.algorithm == "A3C":
+        config.update({"sample_batch_size": 50})
+    else:
+        sys.exit("The only available algorithms are A3C and PPO")
 
     if args.grid_search:
         config.update({'moa_weight': tune.grid_search([10, 100]),
@@ -163,6 +170,8 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                        'vf_loss_coeff': tune.grid_search([1e-3, 1e-4, 1e-5]),
                        'entropy_coeff': tune.grid_search([0, 1e-3, 1e-4]),
                        'influence_reward_weight': tune.grid_search([1.0, 10.0])})
+        if args.algorithm == "A3C":
+            config.update({"sample_batch_size": tune.grid_search([50, 500])})
     return algorithm, env_name, config
 
 
@@ -203,9 +212,14 @@ if __name__=='__main__':
     s3_string = "s3://ssd-reproduce/" \
                 + date + '/' + exp_name
 
+    if alg_run == "A3C":
+        trainer = CausalA3CMOATrainer
+    if alg_run == "PPO":
+        trainer = CausalPPOMOATrainer
+
     exp_dict = {
             'name': exp_name,
-            'run_or_experiment': CausalMOATrainer,
+            'run_or_experiment': trainer,
             "stop": {
                 "training_iteration": args.training_iterations
             },

@@ -17,16 +17,16 @@ from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.tf_ops import make_tf_callable
 
 CAUSAL_CONFIG = {"num_other_agents": 1,
-               "moa_weight": 10.0,
-               "train_moa_only_when_visible": True,
-               "influence_reward_clip": 10,
-               "influence_reward_weight": 1.0,
-               "influence_curriculum_steps": 10e6,
-               "influence_scaledown_start": 100e6,
-               "influence_scaledown_end": 300e6,
-               "influence_scaledown_final_val": .5,
-               "influence_only_when_visible": True,
-               "influence_divergence_measure": "kl"}
+                 "moa_weight": 10.0,
+                 "train_moa_only_when_visible": True,
+                 "influence_reward_clip": 10,
+                 "influence_reward_weight": 1.0,
+                 "influence_curriculum_steps": 10e6,
+                 "influence_scaledown_start": 100e6,
+                 "influence_scaledown_end": 300e6,
+                 "influence_scaledown_final_val": .5,
+                 "influence_only_when_visible": True,
+                 "influence_divergence_measure": "kl"}
 
 tf = try_import_tf()
 
@@ -91,6 +91,7 @@ class MOALoss(object):
 
         self.total_loss = tf.reduce_mean(self.ce_per_entry) * loss_weight
         tf.Print(self.total_loss, [self.total_loss], message="MOA CE loss")
+
 
 def setup_moa_loss(logits, model, policy, train_batch):
     # Instantiate the prediction loss

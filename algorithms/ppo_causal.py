@@ -6,7 +6,6 @@ import scipy
 
 # TODO(@evinitsky) put this in alphabetical order
 
-from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG
 from ray.rllib.agents.ppo.ppo_policy import PPOLoss, BEHAVIOUR_LOGITS, \
     KLCoeffMixin, setup_config, clip_gradients, \
     kl_and_loss_stats, ValueNetworkMixin, vf_preds_and_logits_fetches
@@ -126,11 +125,11 @@ CausalMOA_PPOPolicy = build_tf_policy(
         ValueNetworkMixin
     ] + get_causal_mixins())
 
-CausalMOATrainer = build_trainer(
-    name="CausalMOA",
-    default_config=DEFAULT_CONFIG,
+CausalPPOMOATrainer = build_trainer(
+    name="CausalMOAPPO",
     default_policy=CausalMOA_PPOPolicy,
     make_policy_optimizer=choose_policy_optimizer,
+    default_config=CAUSAL_CONFIG,
     validate_config=validate_config,
     after_optimizer_step=update_kl,
     after_train_result=warn_about_bad_reward_scales)

@@ -4,7 +4,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-from ray.rllib.agents.a3c.a3c import DEFAULT_CONFIG
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.utils.explained_variance import explained_variance
 from ray.rllib.evaluation.postprocessing import Postprocessing
@@ -12,6 +11,10 @@ from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.policy.tf_policy import LearningRateSchedule
 from ray.rllib.utils.tf_ops import make_tf_callable
 from ray.rllib.utils import try_import_tf
+from ray.rllib.agents.trainer_template import build_trainer
+from ray.rllib.agents.a3c.a3c import DEFAULT_CONFIG, \
+    validate_config
+
 
 from algorithms.common_funcs import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
     causal_postprocess_trajectory, CAUSAL_CONFIG
@@ -55,6 +58,9 @@ def actor_critic_loss(policy, model, dist_class, train_batch):
 
     moa_loss = setup_moa_loss(logits, model, policy, train_batch)
     policy.loss.total_loss += moa_loss.total_loss
+
+    # store this for future statistics
+    policy.moa_loss = moa_loss.total_loss
     return policy.loss.total_loss
 
 
@@ -92,6 +98,7 @@ def stats(policy, train_batch):
     base_stats["total_influence"] = train_batch["total_influence"]
     base_stats['reward_without_influence'] = train_batch['reward_without_influence']
     base_stats['moa_loss'] = policy.moa_loss / policy.moa_weight
+    return base_stats
 
 
 def grad_stats(policy, train_batch, grads):
@@ -117,7 +124,6 @@ def setup_mixins(policy, obs_space, action_space, config):
     LearningRateSchedule.__init__(policy, config["lr"], config["lr_schedule"])
     setup_causal_mixins(policy, obs_space, action_space, config)
 
-
 A3CTFPolicy = build_tf_policy(
     name="A3CTFPolicy",
     get_default_config=lambda: CAUSAL_CONFIG,
@@ -129,3 +135,9 @@ A3CTFPolicy = build_tf_policy(
     extra_action_fetches_fn=add_value_function_fetch,
     before_loss_init=setup_mixins,
     mixins=[ValueNetworkMixin, LearningRateSchedule] + get_causal_mixins())
+
+CausalA3CMOATrainer = build_trainer(
+    name="CausalMOAA3C",
+    default_policy=A3CTFPolicy,
+    default_config=CAUSAL_CONFIG,
+    validate_config=validate_config)
