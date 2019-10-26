@@ -6,7 +6,7 @@ import scipy
 
 # TODO(@evinitsky) put this in alphabetical order
 
-import ray
+from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG
 from ray.rllib.agents.ppo.ppo_policy import PPOLoss, BEHAVIOUR_LOGITS, \
     KLCoeffMixin, setup_config, clip_gradients, \
     kl_and_loss_stats, ValueNetworkMixin, vf_preds_and_logits_fetches
@@ -22,11 +22,13 @@ from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.agents.trainer_template import build_trainer
 
 from algorithms.common_funcs import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
-    causal_postprocess_trajectory, CONFIG
+    causal_postprocess_trajectory, CAUSAL_CONFIG
 
 tf = try_import_tf()
 
 POLICY_SCOPE = "func"
+
+CAUSAL_CONFIG.update(DEFAULT_CONFIG)
 
 
 def loss_with_moa(policy, model, dist_class, train_batch):
@@ -110,7 +112,7 @@ def setup_mixins(policy, obs_space, action_space, config):
 
 CausalMOA_PPOPolicy = build_tf_policy(
     name="CausalTFPolicy",
-    get_default_config=lambda: CONFIG,
+    get_default_config=lambda: CAUSAL_CONFIG,
     loss_fn=loss_with_moa,
     make_model=build_model,
     stats_fn=extra_stats,

@@ -9,7 +9,6 @@ import scipy
 import ray
 from ray.rllib.agents.ppo.ppo_policy import kl_and_loss_stats
 # TODO(@evinitsky) move config vals into a default config
-from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG
 from ray.rllib.evaluation.postprocessing import compute_advantages
 from ray.rllib.models import ModelCatalog
 from ray.rllib.policy.sample_batch import SampleBatch
@@ -17,8 +16,7 @@ from ray.rllib.utils import try_import_tf
 
 from ray.rllib.utils.tf_ops import make_tf_callable
 
-CONFIG = DEFAULT_CONFIG
-CONFIG.update({"num_other_agents": 1,
+CAUSAL_CONFIG = {"num_other_agents": 1,
                "moa_weight": 10.0,
                "train_moa_only_when_visible": True,
                "influence_reward_clip": 10,
@@ -28,7 +26,7 @@ CONFIG.update({"num_other_agents": 1,
                "influence_scaledown_end": 300e6,
                "influence_scaledown_final_val": .5,
                "influence_only_when_visible": True,
-               "influence_divergence_measure": "kl"})
+               "influence_divergence_measure": "kl"}
 
 tf = try_import_tf()
 
