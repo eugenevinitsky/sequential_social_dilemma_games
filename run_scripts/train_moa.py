@@ -168,6 +168,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
     elif args.algorithm == "IMPALA":
         config.update({"train_batch_size": train_batch_size,
                        "sample_batch_size": 50,
+                       "vf_loss_coeff": 0.5
                        })
     else:
         sys.exit("The only available algorithms are A3C and PPO")
@@ -176,7 +177,7 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
         config.update({'moa_weight': tune.grid_search([10, 100]),
                        'lr_schedule': [[0, tune.grid_search([1e-2, 1e-3, 1e-4])],
                                         [20000000, hparams['lr_final']]],
-                       'vf_loss_coeff': tune.grid_search([1e-3, 1e-4, 1e-5]),
+                       'vf_loss_coeff': tune.grid_search([0.5, 1e-4, 1e-5]),
                        'entropy_coeff': tune.grid_search([0, 1e-3, 1e-4]),
                        'influence_reward_weight': tune.grid_search([1.0, 10.0])})
         if args.algorithm == "A3C":

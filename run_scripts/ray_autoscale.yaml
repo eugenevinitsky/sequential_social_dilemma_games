@@ -109,21 +109,19 @@ initialization_commands: []
 
 # List of shell commands to run to set up nodes.
 setup_commands:
-#    - pip install ray==0.7.5
     - git clone https://github.com/eugenevinitsky/sequential_social_dilemma_games.git
-    - cd sequential_social_dilemma_games && git checkout ppo_causal_fixes && pip install -r requirements.txt --ignore-installed && python setup.py develop
-      # we can remove this once it is merged in
-    - rm /home/ubuntu/anaconda3/lib/python3.6/site-packages/ray/rllib/policy/rnn_sequencing.py
-    - cp ~/sequential_social_dilemma_games/run_scripts/rnn_sequencing.py /home/ubuntu/anaconda3/lib/python3.6/site-packages/ray/rllib/policy/rnn_sequencing.py
-
-    # Nightly build install
-    - pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev6-cp36-cp36m-manylinux1_x86_64.whl
-    - pip install tabulate
-    - pip install tensorflow-gpu==2.0.0
-#    - pip install gputil
-#      # TBD why this is necessary
-    - pip uninstall numpy -y
-    - pip install numpy==1.16.0
+    - source activate tensorflow_p36 && cd sequential_social_dilemma_games && git checkout ppo_causal_fixes && pip install -r requirements.txt --ignore-installed && python setup.py develop
+#
+#    # Nightly build install
+    - source activate tensorflow_p36 && pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev6-cp36-cp36m-manylinux1_x86_64.whl
+    - source activate tensorflow_p36 && pip install tabulate
+#    - # we can remove this once it is merged in
+    - source activate tensorflow_p36 && python ~/sequential_social_dilemma_games/run_scripts/replace_rnn_sequencing.py
+    - source activate tensorflow_p36 && pip install tensorflow-gpu
+    - source activate tensorflow_p36 && pip install gputil
+##      # TBD why this is necessary
+#    - pip uninstall numpy -y
+#    - pip install numpy==1.16.0
 
 # Custom commands that will be run on the head node after common setup.
 head_setup_commands:
@@ -134,10 +132,12 @@ worker_setup_commands: []
 
 # Command to start ray on the head node. You don't need to change this.
 head_start_ray_commands:
+    - source activate tensorflow_p36
     - ray stop
     - ulimit -n 65536; ray start --head --redis-port=6379 --object-manager-port=8076 --autoscaling-config=~/ray_bootstrap_config.yaml
 
 # Command to start ray on worker nodes. You don't need to change this.
 worker_start_ray_commands:
+    - source activate tensorflow_p36
     - ray stop
     - ulimit -n 65536; ray start --redis-address=$RAY_HEAD_IP:6379 --object-manager-port=8076
