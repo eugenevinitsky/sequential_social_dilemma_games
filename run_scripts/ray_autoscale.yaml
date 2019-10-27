@@ -64,7 +64,7 @@ auth:
 # For more documentation on available fields, see:
 # http://boto3.readthedocs.io/en/latest/reference/services/ec2.html#EC2.ServiceResource.create_instances
 head_node:
-    InstanceType: m4.16xlarge
+    InstanceType: g3.8xlarge #m4.16xlarge
     ImageId: ami-004f26d60bce3a636 # Deep Learning AMI (Ubuntu) Version 24.3
     # ImageId:  ami-092a921f07f27f670 # GPU AMI
     InstanceMarketOptions:
@@ -119,7 +119,7 @@ setup_commands:
     # Nightly build install
     - pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev6-cp36-cp36m-manylinux1_x86_64.whl
     - pip install tabulate
-#    - pip install tensorflow-gpu==2.0.0
+    - pip install tensorflow-gpu==2.0.0
 #    - pip install gputil
 #      # TBD why this is necessary
     - pip uninstall numpy -y

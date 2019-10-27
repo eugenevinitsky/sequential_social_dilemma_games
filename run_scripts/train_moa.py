@@ -153,16 +153,18 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                 "influence_scaledown_end": tune.grid_search([300e6]),
                 "influence_scaledown_final_val": tune.grid_search([.5]),
                 "influence_only_when_visible": tune.grid_search([True]),
-                "vf_loss_coeff": 1e-4
 
     })
     if args.algorithm == "PPO":
         config.update({"num_sgd_iter": 10,
                        "train_batch_size": train_batch_size,
                        "sgd_minibatch_size": 500,
+                       "vf_loss_coeff": 1e-4
                        })
     elif args.algorithm == "A3C":
-        config.update({"sample_batch_size": 50})
+        config.update({"sample_batch_size": 50,
+                       "vf_loss_coeff": 0.5
+                       })
     elif args.algorithm == "IMPALA":
         config.update({"train_batch_size": train_batch_size,
                        "sample_batch_size": 50,
