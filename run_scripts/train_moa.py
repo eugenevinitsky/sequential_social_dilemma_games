@@ -243,4 +243,4 @@ if __name__=='__main__':
     if args.use_s3:
         exp_dict['upload_dir'] = s3_string
 
-    tune.run(**exp_dict, queue_trials=False)
+    tune.run(**exp_dict, queue_trials=True)
