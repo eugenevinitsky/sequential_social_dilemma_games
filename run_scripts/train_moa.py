@@ -163,12 +163,12 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
                        })
     elif args.algorithm == "A3C":
         config.update({"sample_batch_size": 50,
-                       "vf_loss_coeff": 0.5
+                       "vf_loss_coeff": 0.1
                        })
     elif args.algorithm == "IMPALA":
         config.update({"train_batch_size": train_batch_size,
                        "sample_batch_size": 50,
-                       "vf_loss_coeff": 0.5
+                       "vf_loss_coeff": 0.1
                        })
     else:
         sys.exit("The only available algorithms are A3C and PPO")
