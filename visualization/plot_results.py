@@ -5,7 +5,6 @@ import os.path
 import pandas as pd
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.ndimage import gaussian_filter1d
 from utility_funcs import get_all_subdirs
 
 from config.config_parser import get_ray_results_path, get_plot_path
@@ -62,6 +61,7 @@ def plot_with_mean(x_lists, y_lists, color, y_label):
     plt.xlabel('Environment steps (1e8)')
     plt.ylabel(y_label)
     plt.ylim(top=y_max + (y_max - y_min) / 100)
+    plt.ticklabel_format(useOffset=False)
 
 
 def extract_mean_agent_stats(dfs, keys):
@@ -115,7 +115,6 @@ def plot_csvs_results(paths):
     timesteps_totals = [[timestep / 1e8 for timestep in timesteps_total] for timesteps_total in timesteps_totals]
 
     reward_means = [df.episode_reward_mean for df in dfs]
-    #reward_means = [gaussian_filter1d(reward_mean, 1, mode='nearest') for reward_mean in reward_means]
     plots.append(PlotData(timesteps_totals, reward_means, 'reward', 'Mean episode reward', 'g'))
 
     episode_len_means = [df.episode_len_mean for df in dfs]
@@ -123,8 +122,8 @@ def plot_csvs_results(paths):
 
     agent_metric_details = [PlotDetails('policy_entropy', 'Policy Entropy', 'b'),
                             PlotDetails('policy_loss', 'Policy loss', 'r'),
-                            PlotDetails('vf_loss', 'Value function loss', 'r'),
-                            PlotDetails('total_a3c_loss', 'Total A3C loss', 'r'),
+                            PlotDetails('vf_loss', 'Value function loss', 'orange'),
+                            PlotDetails('total_a3c_loss', 'Total A3C loss', 'yellow'),
                             PlotDetails('aux_loss', 'Auxiliary task loss', 'black'),
                             PlotDetails('total_aux_reward', 'Auxiliary task reward', 'black')]
 
@@ -179,6 +178,15 @@ def plot_csvs_results(paths):
         except:
             pass
 
+    def plot_losses():
+        for plot in plots:
+            if 'loss' in plot.plot_details.column_name or 'reward' == plot.plot_details.column_name:
+                if len(plot.y_data) > 0:
+                    plot_with_mean(plot.x_data, plot.y_data,
+                                   plot.plot_details.color,
+                                   plot.plot_details.legend_name)
+
+    plot_and_save(plot_losses, path, 'all_losses')
 
 ray_results_path = get_ray_results_path()
 plot_path = get_plot_path()
