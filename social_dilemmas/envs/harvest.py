@@ -16,7 +16,6 @@ HARVEST_VIEW_SIZE = 7
 
 
 class HarvestEnv(MapEnv):
-
     def __init__(self, ascii_map=HARVEST_MAP, num_agents=1, render=False, return_agent_actions=False):
         super().__init__(ascii_map, num_agents, render,  return_agent_actions=return_agent_actions)
         self.apple_points = []
