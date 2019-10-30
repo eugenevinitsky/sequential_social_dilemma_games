@@ -1,7 +1,5 @@
 """Base class for an agent that defines the possible actions. """
 
-from gym.spaces import Box
-from gym.spaces import Discrete
 import numpy as np
 import utility_funcs as util
 
@@ -150,31 +148,19 @@ class Agent(object):
 HARVEST_ACTIONS = BASE_ACTIONS.copy()
 HARVEST_ACTIONS.update({7: 'FIRE'})  # Fire a penalty beam
 
-HARVEST_VIEW_SIZE = 7
-
 
 class HarvestAgent(Agent):
-
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=HARVEST_VIEW_SIZE):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
-
-    @property
-    def action_space(self):
-        return Discrete(8)
 
     # Ugh, this is gross, this leads to the actions basically being
     # defined in two places
     def action_map(self, action_number):
         """Maps action_number to a desired action in the map"""
         return HARVEST_ACTIONS[action_number]
-
-    @property
-    def observation_space(self):
-        return Box(low=0, high=1.0, shape=(2 * self.view_len + 1,
-                                           2 * self.view_len + 1, 3), dtype=np.float32)
 
     def hit(self, char):
         if char == 'F':
@@ -200,25 +186,14 @@ CLEANUP_ACTIONS = BASE_ACTIONS.copy()
 CLEANUP_ACTIONS.update({7: 'FIRE',  # Fire a penalty beam
                         8: 'CLEAN'})  # Fire a cleaning beam
 
-CLEANUP_VIEW_SIZE = 7
-
 
 class CleanupAgent(Agent):
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=CLEANUP_VIEW_SIZE):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
         # remember what you've stepped on
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
-
-    @property
-    def action_space(self):
-        return Discrete(9)
-
-    @property
-    def observation_space(self):
-        return Box(low=0.0, high=1.0, shape=(2 * self.view_len + 1,
-                                             2 * self.view_len + 1, 3), dtype=np.float32)
 
     # Ugh, this is gross, this leads to the actions basically being
     # defined in two places
@@ -249,25 +224,14 @@ class CleanupAgent(Agent):
 SWITCH_ACTIONS = BASE_ACTIONS.copy()
 SWITCH_ACTIONS.update({7: 'TOGGLE_SWITCH'})  # Fire a switch beam
 
-SWITCH_VIEW_SIZE = 5
-
 class SwitchAgent(Agent):
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=SWITCH_VIEW_SIZE):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
         self.view_len = view_len
         super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
         # remember what you've stepped on
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
         self.is_done = False
-
-    @property
-    def action_space(self):
-        return Discrete(8)
-
-    @property
-    def observation_space(self):
-        return Box(low=0, high=1.0, shape=(2 * self.view_len + 1,
-                                           2 * self.view_len + 1, 3), dtype=np.float32)
 
     # Ugh, this is gross, this leads to the actions basically being
     # defined in two places

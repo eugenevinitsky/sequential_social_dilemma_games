@@ -1,3 +1,5 @@
+from gym.spaces import Box, Dict
+from gym.spaces import Discrete
 import numpy as np
 import random
 
@@ -17,6 +19,8 @@ CLEANUP_COLORS = {'C': [100, 255, 255],  # Cyan cleaning beam
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
+CLEANUP_VIEW_SIZE = 7
+
 thresholdDepletion = 0.4
 thresholdRestoration = 0.0
 wasteSpawnProbability = 0.5
@@ -25,8 +29,8 @@ appleRespawnProbability = 0.05
 
 class CleanupEnv(MapEnv):
 
-    def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False):
-        super().__init__(ascii_map, num_agents, render)
+    def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False, return_agent_actions=False):
+        super().__init__(ascii_map, num_agents, render, return_agent_actions=return_agent_actions)
 
         # compute potential waste area
         unique, counts = np.unique(self.base_map, return_counts=True)
@@ -59,16 +63,23 @@ class CleanupEnv(MapEnv):
 
         self.color_map.update(CLEANUP_COLORS)
 
+        self.view_len = CLEANUP_VIEW_SIZE
+
     @property
     def action_space(self):
-        agents = list(self.agents.values())
-        return agents[0].action_space
+        return Discrete(9)
 
     @property
     def observation_space(self):
-        # FIXME(ev) this is an information leak
-        agents = list(self.agents.values())
-        return agents[0].observation_space
+        if self.return_agent_actions:
+            # We will append on some extra values to represent the actions of other agents
+            return Dict({"curr_obs": Box(low=-np.infty, high=np.infty, shape=(2 * self.view_len + 1,
+                                                 2 * self.view_len + 1, 3), dtype=np.float32),
+                         "other_agent_actions": Box(low=0, high=len(ACTIONS), shape=(self.num_agents - 1, ), dtype=np.int32,),
+                         "visible_agents": Box(low=0, high=self.num_agents, shape=(self.num_agents - 1,), dtype=np.int32)})
+        else:
+            return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+                                                 2 * self.view_len + 1, 3), dtype=np.float32)
 
     def custom_reset(self):
         """Initialize the walls and the waste"""
@@ -115,7 +126,7 @@ class CleanupEnv(MapEnv):
             # grid = util.return_view(map_with_agents, spawn_point,
             #                         CLEANUP_VIEW_SIZE, CLEANUP_VIEW_SIZE)
             # agent = CleanupAgent(agent_id, spawn_point, rotation, grid)
-            agent = CleanupAgent(agent_id, spawn_point, rotation, map_with_agents)
+            agent = CleanupAgent(agent_id, spawn_point, rotation, map_with_agents, view_len=CLEANUP_VIEW_SIZE)
             self.agents[agent_id] = agent
 
     def spawn_apples_and_waste(self):

@@ -1,6 +1,7 @@
 """Base map class that defines the rendering process
 """
 
+from collections import defaultdict
 import random
 
 import matplotlib.pyplot as plt
@@ -40,10 +41,10 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    '8': [250, 204, 255],  # Pink
                    '9': [238, 223, 16]}  # Yellow
 
-
 # the axes look like this when printed out
-# graphic is here just to resolve the difference between directions in row-column space
-# and in visual space
+# WARNING: increasing array position in the direction of down
+# so for example if you move_left when facing left
+# your y position decreases.
 #         ^
 #         |
 #         U
@@ -55,9 +56,10 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
 #         N
 #         |
 
+
 class MapEnv(MultiAgentEnv):
 
-    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None):
+    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None, return_agent_actions=False):
         """
 
         Parameters
@@ -71,9 +73,14 @@ class MapEnv(MultiAgentEnv):
             Whether to render the environment
         color_map: dict
             Specifies how to convert between ascii chars and colors
+        return_agent_actions: bool
+            If true, we the action space will include the actions of other agents
         """
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
+        self.return_agent_actions = return_agent_actions
+        if self.return_agent_actions:
+            self.prev_actions = defaultdict(lambda: [0] * self.num_agents)
         # map without agents or beams
         self.world_map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.beam_pos = []
@@ -189,16 +196,17 @@ class MapEnv(MultiAgentEnv):
             agent.grid = map_with_agents
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
-            rgb_arr = (rgb_arr - 128.0) / 128.0
-            observations[agent.agent_id] = rgb_arr
+            rgb_arr = (rgb_arr - 128.00) / 128.0
+            # concatenate on the prev_actions to the observations
+            if self.return_agent_actions:
+                prev_actions = np.array([actions[key] for key in sorted(actions.keys())
+                                         if key != agent.agent_id]).astype(np.int64)
+                observations[agent.agent_id] = {"curr_obs": rgb_arr, "other_agent_actions": prev_actions,
+                                                "visible_agents": self.find_visible_agents(agent.agent_id)}
+            else:
+                observations[agent.agent_id] = rgb_arr
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
-
-            # Add other agent visibility
-            if agent.agent_id not in info:
-                info[agent.agent_id] = {}
-            info[agent.agent_id]['visible_agents'] = \
-                self.find_visible_agents(agent.agent_id)
 
         dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, info
@@ -230,7 +238,14 @@ class MapEnv(MultiAgentEnv):
             #                               agent.row_size, agent.col_size)
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
             rgb_arr = (rgb_arr - 128.0) / 128.0
-            observations[agent.agent_id] = rgb_arr
+            # concatenate on the prev_actions to the observations
+            if self.return_agent_actions:
+                # No previous actions so just pass in zeros
+                prev_actions = np.array([0 for _ in range(self.num_agents - 1)]).astype(np.int64)
+                observations[agent.agent_id] = {"curr_obs": rgb_arr, "other_agent_actions": prev_actions,
+                                                "visible_agents": self.find_visible_agents(agent.agent_id)}
+            else:
+                observations[agent.agent_id] = rgb_arr
         return observations
 
     @property
@@ -323,32 +338,6 @@ class MapEnv(MultiAgentEnv):
                 rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
 
         return rgb_arr
-
-    def find_visible_agents(self, agent_id):
-        """Returns all the agents that can be seen by agent with agent_id
-
-        Args
-        ----
-        agent_id: str
-            The id of the agent whose visible agents we are asking about
-
-        Returns
-        -------
-        visible_agents: list
-            which agents can be seen by the agent with id "agent_id"
-
-        """
-        agent_pos = self.agents[agent_id].get_pos()
-        upper_lim = int(agent_pos[0] + self.agents[agent_id].row_size)
-        lower_lim = int(agent_pos[0] - self.agents[agent_id].row_size)
-        left_lim = int(agent_pos[1] - self.agents[agent_id].col_size)
-        right_lim = int(agent_pos[1] + self.agents[agent_id].col_size)
-
-        other_agent_pos = [(agent.get_pos(), other_agent_id) for other_agent_id, agent in
-                           self.agents.items() if other_agent_id != agent_id]
-        return [agent_tup[1] for agent_tup in other_agent_pos if
-                (lower_lim <= agent_tup[0][0] <= upper_lim
-                 and left_lim <= agent_tup[0][1] <= right_lim)]
 
     def render(self, filename=None):
         """ Creates an image of the map to plot or save.
@@ -687,13 +676,11 @@ class MapEnv(MultiAgentEnv):
 
     def rotate_view(self, orientation, view):
         """Takes a view of the map and rotates it the agent orientation
-
         Parameters
         ----------
         orientation: str
             str in {'UP', 'LEFT', 'DOWN', 'RIGHT'}
         view: np.ndarray (row, column, channel)
-
         Returns
         -------
         a rotated view
@@ -766,3 +753,26 @@ class MapEnv(MultiAgentEnv):
             return False
         else:
             return True
+
+    def find_visible_agents(self, agent_id):
+        """Returns all the agents that can be seen by agent with agent_id
+        Args
+        ----
+        agent_id: str
+            The id of the agent whose visible agents we are asking about
+        Returns
+        -------
+        visible_agents: list
+            which agents can be seen by the agent with id "agent_id"
+        """
+        agent_pos = self.agents[agent_id].get_pos()
+        upper_lim = int(agent_pos[0] + self.agents[agent_id].row_size)
+        lower_lim = int(agent_pos[0] - self.agents[agent_id].row_size)
+        left_lim = int(agent_pos[1] - self.agents[agent_id].col_size)
+        right_lim = int(agent_pos[1] + self.agents[agent_id].col_size)
+
+        # keep this sorted so the visibility matrix is always in order
+        other_agent_pos = [self.agents[agent_id].get_pos()for other_agent_id in
+                           sorted(self.agents.keys()) if other_agent_id != agent_id]
+        return np.array([1 if (lower_lim <= agent_tup[0] <= upper_lim
+                 and left_lim <= agent_tup[1] <= right_lim) else 0 for agent_tup in other_agent_pos])
