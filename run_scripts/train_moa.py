@@ -39,12 +39,12 @@ switch_default_params = {
 }
 
 
-def setup():
+def setup(args):
     env_creator = get_env_creator(args.env, args.num_agents, args)
-    single_env = env_creator()
     env_name = args.env + "_env"
     register_env(env_name, env_creator)
 
+    single_env = env_creator()
     obs_space = single_env.observation_space
     act_space = single_env.action_space
 
@@ -87,42 +87,42 @@ def setup():
 
     # hyperparams
     config.update({
-                "horizon": 1000,
-                "gamma": 0.99,
-                "lr_schedule":
-                [[0, hparams['lr_init']],
-                    [20000000, hparams['lr_final']]],
-                "train_sample_size": args.train_sample_size,
-                "train_batch_size": args.train_batch_size,
-                "num_workers": num_workers,
-                "num_envs_per_worker": args.num_envs_per_worker,
-                "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
-                "num_cpus_for_driver": cpus_for_driver,
-                "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
-                "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-                "entropy_coeff": hparams['entropy_coeff'],
-                "multiagent": {
-                    "policies": policy_graphs,
-                    "policy_mapping_fn": policy_mapping_fn,
-                },
-                "model": {"custom_model": "moa_lstm", "use_lstm": False,
-                          "custom_options": {"return_agent_actions": True, "cell_size": 128,
-                                             "num_other_agents": args.num_agents - 1, "fcnet_hiddens": [32, 32],
-                                             "train_moa_only_when_visible": tune.grid_search([True]),
-                                             "moa_weight": 10,
-                                             },
-                          "conv_filters": [[6, [3, 3], 1]]},
-                "num_other_agents": args.num_agents - 1,
-                "moa_weight": hparams['moa_weight'],
-                "train_moa_only_when_visible": tune.grid_search([True]),
-                "influence_reward_clip": 10,
-                "influence_divergence_measure": 'kl',
-                "influence_reward_weight": tune.grid_search([1.0]),
-                "influence_curriculum_steps": tune.grid_search([10e6]),
-                "influence_scaledown_start": tune.grid_search([100e6]),
-                "influence_scaledown_end": tune.grid_search([300e6]),
-                "influence_scaledown_final_val": tune.grid_search([.5]),
-                "influence_only_when_visible": tune.grid_search([True]),
+        "horizon": 1000,
+        "gamma": 0.99,
+        "lr_schedule": [[0, hparams['lr_init']],
+                        [20000000, hparams['lr_final']]],
+        "sample_batch_size": args.sample_batch_size,
+        "train_batch_size": args.train_batch_size,
+        "num_workers": num_workers,
+        "num_envs_per_worker": args.num_envs_per_worker,
+        "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
+        "num_cpus_for_driver": cpus_for_driver,
+        "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
+        "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
+        "entropy_coeff": hparams['entropy_coeff'],
+        "grad_clip": args.grad_clip,
+        "multiagent": {
+            "policies": policy_graphs,
+            "policy_mapping_fn": policy_mapping_fn,
+        },
+        "model": {"custom_model": "moa_lstm", "use_lstm": False,
+                  "custom_options": {"return_agent_actions": True, "cell_size": 128,
+                                     "num_other_agents": args.num_agents - 1, "fcnet_hiddens": [32, 32],
+                                     "train_moa_only_when_visible": tune.grid_search([True]),
+                                     "moa_weight": 10,
+                                     },
+                  "conv_filters": [[6, [3, 3], 1]]},
+        "num_other_agents": args.num_agents - 1,
+        "moa_weight": hparams['moa_weight'],
+        "train_moa_only_when_visible": tune.grid_search([True]),
+        "influence_reward_clip": 10,
+        "influence_divergence_measure": 'kl',
+        "influence_reward_weight": tune.grid_search([1.0]),
+        "influence_curriculum_steps": tune.grid_search([10e6]),
+        "influence_scaledown_start": tune.grid_search([100e6]),
+        "influence_scaledown_end": tune.grid_search([300e6]),
+        "influence_scaledown_final_val": tune.grid_search([.5]),
+        "influence_only_when_visible": tune.grid_search([True]),
     })
     if args.algorithm == "PPO":
         config.update({"num_sgd_iter": 10,
@@ -158,7 +158,7 @@ if __name__ == '__main__':
         hparams = harvest_default_params
     else:
         hparams = cleanup_default_params
-    env_name, config = setup()
+    env_name, config = setup(args)
 
     if args.exp_name is None:
         exp_name = args.env + '_' + args.algorithm
@@ -187,7 +187,8 @@ if __name__ == '__main__':
             'name': exp_name,
             'run_or_experiment': trainer,
             "stop": {
-                "training_iteration": args.training_iterations
+                "timesteps_total": args.stop_at_timesteps_total,
+                "episode_reward_min": args.stop_at_episode_reward_min
             },
             'checkpoint_freq': args.checkpoint_frequency,
             "config": config,

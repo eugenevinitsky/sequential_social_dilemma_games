@@ -10,7 +10,12 @@ def add_default_args(parser):
                         help='Size of the total dataset over which one epoch is computed.')
     parser.add_argument('--checkpoint_frequency', type=int, default=50,
                         help='Number of steps before a checkpoint is saved.')
-    parser.add_argument('--training_iterations', type=int, default=50, help='Total number of steps to train for')
+    parser.add_argument('--stop_at_timesteps_total', type=int, default=None,
+                        help='Experiment stops when this total amount of timesteps has been reached')
+    parser.add_argument('--stop_at_episode_reward_min', type=int, default=None,
+                        help='Experiment stops when this is the minimum episode reward within 1 iteration')
+    parser.add_argument('--num_samples', type=int, default=1,
+                        help='Amount of times to repeat all experiments')
     parser.add_argument('--num_cpus', type=int, default=2, help='Number of available CPUs')
     parser.add_argument('--num_gpus', type=int, default=0, help='Number of available GPUs')
     parser.add_argument('--use_gpus_for_workers', action='store_true', default=False,
@@ -33,3 +38,5 @@ def add_default_args(parser):
                         help='If true run a grid search over relevant hyperparameters')
     parser.add_argument('--num_switches', type=int, default=6,
                         help='Amount of switches in a switch map environment')
+    parser.add_argument('--grad_clip', type=float, default=40,
+                        help='Gradients are clipped by this amount per update.')
