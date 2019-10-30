@@ -1,436 +1,317 @@
-"""Note: Keep in sync with changes to VTracePolicyGraph."""
-
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
-import tensorflow as tf
+from gym.spaces import Box
 import numpy as np
-import gym
-
-import ray
-from ray.rllib.utils.error import UnsupportedSpaceException
-from ray.rllib.utils.explained_variance import explained_variance
-from ray.rllib.evaluation.policy_graph import PolicyGraph
-from ray.rllib.evaluation.postprocessing import compute_advantages
-from ray.rllib.evaluation.tf_policy_graph import TFPolicyGraph, \
-    LearningRateSchedule
-from ray.rllib.models.catalog import ModelCatalog
+from ray.rllib.policy.rnn_sequencing import add_time_dimension
+from ray.rllib.models.tf.misc import normc_initializer, get_activation_fn
+from ray.rllib.models.model import restore_original_dimensions
+from ray.rllib.models.modelv2 import ModelV2
+from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
 from ray.rllib.utils.annotations import override
+from ray.rllib.utils import try_import_tf
+from ray.rllib.policy.sample_batch import SampleBatch
 
+tf = try_import_tf()
 
-def agent_name_to_idx(name):
-    agent_num = int(name[6])
-    return agent_num
+class KerasRNN(RecurrentTFModelV2):
+    """Maps the input direct to an LSTM cell"""
 
-
-def calculate_surprisal(pred_states, true_states):
-    """Surprisal with self-supervised MSE on a trajectory.
-
-     The loss is based on the difference between the predicted encoding of the observation x at t+1 based on t,
-     and the true encoding x at t+1.
-     The loss is then -log(p(xt+1)|xt, at)
-     Difference is measured as mean-squared error corresponding to a fixed-variance Gaussian density.
-
-    Returns:
-        A scalar loss tensor.
-    """
-    # Remove the prediction for the final step, since t+1 is not known for this step.
-    pred_states = pred_states[:-1]  # [Batch size, Size of encoded observations]
-
-    # Remove first true state, as we have nothing to predict this from.
-    # the t+1 actions of other agents from all actions at t.
-    true_states = true_states[1:]
-
-    # Compute mean squared error of difference between prediction and truth
-    mse = np.square(true_states - pred_states).mean()
-
-    return mse
-
-
-class CuriosityLoss(object):
-    def __init__(self, pred_states, true_states, loss_weight=1.0):
-        """Surprisal with self-supervised MSE on a trajectory.
-
-         The loss is based on the difference between the predicted encoding of the observation x at t+1 based on t,
-         and the true encoding x at t+1.
-         The loss is then -log(p(xt+1)|xt, at)
-         Difference is measured as mean-squared error corresponding to a fixed-variance Gaussian density.
-
-        Returns:
-            A scalar loss tensor.
-        """
-        # Remove the prediction for the final step, since t+1 is not known for
-        # this step.
-        pred_states = pred_states[:-1]  # [Batch size, Size of encoded observations]
-
-        # Remove first true state, as we have nothing to predict this from.
-        # the t+1 actions of other agents from all actions at t.
-        true_states = true_states[1:]
-
-        # Compute mean squared error of difference between prediction and truth
-        mse = tf.losses.mean_squared_error(pred_states, true_states)
-
-        self.total_loss = mse * loss_weight
-        tf.print("Curiosity loss", self.total_loss, [self.total_loss])
-
-
-class A3CLoss(object):
     def __init__(self,
-                 action_dist,
-                 actions,
-                 advantages,
-                 v_target,
-                 vf,
-                 vf_loss_coeff=0.5,
-                 entropy_coeff=-0.01):
-        log_prob = action_dist.logp(actions)
+                 obs_space,
+                 action_space,
+                 num_outputs,
+                 model_config,
+                 name,
+                 cell_size=64,
+                 use_value_fn=False,
+                 append_others_actions=False):
+        super(KerasRNN, self).__init__(obs_space, action_space, num_outputs,
+                                       model_config, name)
 
-        # The "policy gradients" loss
-        self.pi_loss = -tf.reduce_sum(log_prob * advantages)
+        self.cell_size = cell_size
+        self.use_value_fn = use_value_fn
+        self.append_others_actions = append_others_actions
 
-        delta = vf - v_target
-        self.vf_loss = 0.5 * tf.reduce_sum(tf.square(delta))
-        self.entropy = tf.reduce_sum(action_dist.entropy())
-        self.total_loss = (self.pi_loss + self.vf_loss * vf_loss_coeff +
-                           self.entropy * entropy_coeff)
+        # Define input layers
+        # TODO(@internetcoffeephone) add in an option for prev_action_reward
 
+        # TODO(@internetcoffeephone) make this time distributed only at the last moment
+        input_layer = tf.keras.layers.Input(shape=(None,) + obs_space.shape, name="inputs")
+        flat_layer = tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten())(input_layer)
 
-class A3CPolicyGraph(LearningRateSchedule, TFPolicyGraph):
-    def __init__(self, observation_space, action_space, config):
-        config = dict(ray.rllib.agents.a3c.a3c.DEFAULT_CONFIG, **config)
-        self.config = config
-        self.sess = tf.get_default_session()
-
-        self.num_other_agents = config['num_other_agents']
-        self.agent_id = config['agent_id']
-
-        # Read curiosity options from config
-        cust_opts = config['model']['custom_options']
-        self.aux_loss_weight = cust_opts['aux_loss_weight']
-        self.aux_reward_clip = cust_opts['aux_reward_clip']
-        self.aux_reward_weight = cust_opts['aux_reward_weight']
-        self.aux_curriculum_steps = cust_opts['aux_curriculum_steps']
-        self.aux_scale_start = cust_opts['aux_scaledown_start']
-        self.aux_scale_end = cust_opts['aux_scaledown_end']
-        self.aux_scale_final_val = cust_opts['aux_scaledown_final_val']
-
-        # Use to compute aux curriculum weight
-        self.steps_processed = 0
-
-        # Compute output size of aux model
-        self.encoded_dim_size = observation_space.shape[0] * \
-                                observation_space.shape[1] * \
-                                self.config['model']['conv_filters']
-
-        # Setup the policy
-        self.observations = tf.placeholder(tf.float32,
-                                           [None] + list(observation_space.shape))
-
-        # Add other agents actions placeholder for MOA preds
-        # Add 1 to include own action so it can be conditioned on. Note: agent's
-        # own actions will always form the first column of this tensor.
-        self.others_actions = tf.placeholder(tf.int32,
-                                             shape=(None, self.num_other_agents + 1),
-                                             name="others_actions")
-
-        dist_class, self.num_actions = ModelCatalog.get_action_dist(
-            action_space, self.config["model"])
-        prev_actions = ModelCatalog.get_action_placeholder(action_space)
-        prev_rewards = tf.placeholder(tf.float32, [None], name="prev_reward")
-
-        # We now create three models, one for the policy, one auxiliary task model, and an encoded state model
-        self.rl_model, self.aux_model, self.encoder_model = ModelCatalog.get_double_fc_lstm_model({
-                "obs": self.observations,
-                "prev_actions": prev_actions,
-                "prev_rewards": prev_rewards,
-                "is_training": self._get_is_training_placeholder()},
-            encoded_dim_size=self.encoded_dim_size,
-            obs_space=observation_space,
-            num_outputs_lstm1=self.num_actions,
-            num_outputs_lstm2=self.encoded_dim_size,
-            options=self.config["model"],
-            lstm1_name="policy",
-            lstm2_name="aux_task")
-
-        action_dist = dist_class(self.rl_model.outputs)
-        self.action_probs = tf.nn.softmax(self.rl_model.outputs)
-        self.vf = self.rl_model.value_function()
-        self.var_list = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES,
-                                          tf.get_variable_scope().name)
-        self.encoded_observations = self.encoder_model.outputs
-        self.predicted_observations = self.aux_model.outputs
-
-        # Setup the policy loss
-        if isinstance(action_space, gym.spaces.Box):
-            ac_size = action_space.shape[0]
-            actions = tf.placeholder(tf.float32, [None, ac_size], name="ac")
-        elif isinstance(action_space, gym.spaces.Discrete):
-            actions = tf.placeholder(tf.int64, [None], name="ac")
+        if self.append_others_actions:
+            name = "pred_logits"
         else:
-            raise UnsupportedSpaceException("Action space {} is not supported for A3C.".format(action_space))
-        advantages = tf.placeholder(tf.float32, [None], name="advantages")
-        self.v_target = tf.placeholder(tf.float32, [None], name="v_target")
-        self.rl_loss = A3CLoss(action_dist, actions, advantages,
-                               self.v_target,
-                               self.vf,
-                               self.config["vf_loss_coeff"],
-                               self.config["entropy_coeff"])
+            name = "action_logits"
 
-        # Setup the aux task loss
-        self.aux_loss = CuriosityLoss(pred_states=self.aux_model.outputs,
-                                      true_states=self.encoder_model.outputs,
-                                      loss_weight=self.aux_loss_weight)
+        # Add the fully connected layers
+        hiddens = model_config["custom_options"].get("fcnet_hiddens")
+        last_layer = flat_layer
+        i = 1
+        activation = get_activation_fn(model_config.get("fcnet_activation"))
+        for size in hiddens:
+            last_layer = tf.keras.layers.Dense(
+                size,
+                name="fc_{}_{}".format(i, name),
+                activation=activation,
+                kernel_initializer=normc_initializer(1.0))(last_layer)
+            i += 1
 
-        # Total loss
-        self.total_loss = self.rl_loss.total_loss + self.aux_loss.total_loss
+        # TODO(@internetcoffeephone) add in the info that the actions will be appended in if append_others_actions is true
+        if self.append_others_actions:
+            num_other_agents = model_config['custom_options']['num_other_agents']
+            actions_layer = tf.keras.layers.Input(shape=(None, num_other_agents + 1), name="other_actions")
+            last_layer = tf.keras.layers.concatenate([last_layer, actions_layer])
 
-        # Initialize TFPolicyGraph
-        loss_in = [
-            ("obs", self.observations),
-            ("actions", actions),
-            ("prev_actions", prev_actions),
-            ("prev_rewards", prev_rewards),
-            ("advantages", advantages),
-            ("value_targets", self.v_target),
+        state_in_h = tf.keras.layers.Input(shape=(cell_size,), name="h")
+        state_in_c = tf.keras.layers.Input(shape=(cell_size,), name="c")
+        seq_in = tf.keras.layers.Input(shape=(), name="seq_in", dtype=tf.int32)
+
+        lstm_out, state_h, state_c = tf.keras.layers.LSTM(
+            cell_size, return_sequences=True, return_state=True, name="lstm")(
+            inputs=last_layer,
+            mask=tf.sequence_mask(seq_in),
+            initial_state=[state_in_h, state_in_c])
+
+        # Postprocess LSTM output with another hidden layer and compute values
+        logits = tf.keras.layers.Dense(
+            self.num_outputs,
+            activation=tf.keras.activations.linear,
+            name=name)(lstm_out)
+
+        inputs = [input_layer, seq_in, state_in_h, state_in_c]
+        if self.append_others_actions:
+            inputs.insert(1, actions_layer)
+        if use_value_fn:
+            value_out = tf.keras.layers.Dense(
+                1,
+                name="value_out",
+                activation=None,
+                kernel_initializer=normc_initializer(0.01))(lstm_out)
+            self.rnn_model = tf.keras.Model(
+                inputs=inputs,
+                outputs=[logits, value_out, state_h, state_c])
+        else:
+            self.rnn_model = tf.keras.Model(
+                inputs=inputs,
+                outputs=[logits, state_h, state_c])
+
+    @override(RecurrentTFModelV2)
+    def forward_rnn(self, input_dict, state, seq_lens):
+        try:
+            input = [input_dict["curr_obs"], seq_lens] + state
+            if self.append_others_actions:
+                input.insert(1, input_dict["prev_total_actions"])
+
+            if self.use_value_fn:
+                model_out, self._value_out, h, c = self.rnn_model(input)
+                return model_out, self._value_out, h, c
+            else:
+                model_out, h, c = self.rnn_model(input)
+                return model_out, h, c
+        except:
+            import ipdb; ipdb.set_trace()
+
+    @override(ModelV2)
+    def get_initial_state(self):
+        return [
+            np.zeros(self.cell_size, np.float32),
+            np.zeros(self.cell_size, np.float32),
         ]
-        LearningRateSchedule.__init__(self, self.config["lr"],
-                                      self.config["lr_schedule"])
-        TFPolicyGraph.__init__(
-            self,
-            observation_space,
-            action_space,
-            self.sess,
-            obs_input=self.observations,
-            action_sampler=action_dist.sample(),
-            action_prob=action_dist.sampled_action_prob(),
-            loss=self.total_loss,
-            model=self.rl_model,
-            loss_inputs=loss_in,
-            state_inputs=self.rl_model.state_in + self.aux_model.state_in,
-            state_outputs=self.rl_model.state_out + self.aux_model.state_out,
-            prev_action_input=prev_actions,
-            prev_reward_input=prev_rewards,
-            seq_lens=self.rl_model.seq_lens,
-            max_seq_len=self.config["model"]["max_seq_len"])
 
-        self.total_aux_reward = tf.get_variable("total_aux_reward", initializer=tf.constant(0.0))
 
-        self.stats = {
-            "cur_lr": tf.cast(self.cur_lr, tf.float64),
-            "policy_loss": self.rl_loss.pi_loss,
-            "policy_entropy": self.rl_loss.entropy,
-            "grad_gnorm": tf.global_norm(self._grads),
-            "var_gnorm": tf.global_norm(self.var_list),
-            "vf_loss": self.rl_loss.vf_loss,
-            "vf_explained_var": explained_variance(self.v_target, self.vf),
-            "total_a3c_loss": self.rl_loss.total_loss,
-            "aux_loss": self.aux_loss.total_loss,
-            "total_aux_reward": self.total_aux_reward
-        }
+class MOA_LSTM(RecurrentTFModelV2):
+    """An LSTM with two heads, one for taking actions and one for predicting actions."""
 
-        self.sess.run(tf.global_variables_initializer())
+    def __init__(self,
+                 obs_space,
+                 action_space,
+                 num_outputs,
+                 model_config,
+                 name):
+        super(MOA_LSTM, self).__init__(obs_space, action_space, num_outputs,
+                                       model_config, name)
 
-    @override(TFPolicyGraph)
-    def copy(self, existing_inputs):
-        # Optional, implement to work with the multi-GPU optimizer.
+        self.obs_space = obs_space
+
+        # The inputs of the shared trunk. We will concatenate the observation space with shared info about the
+        # visibility of agents. Currently we assume all the agents have equally sized action spaces.
+        self.num_outputs = num_outputs
+        self.num_other_agents = model_config['custom_options']['num_other_agents']
+
+        # Build the vision network here
+        # TODO(@internetcoffeephone) replace this with obs_space.original_space
+        total_obs = obs_space.shape[0]
+        vision_obs = total_obs - 2 * self.num_other_agents
+        vision_width = int(np.sqrt(vision_obs / 3))
+        vision_box = Box(low=-1.0, high=1.0, shape=(vision_width, vision_width, 3), dtype=np.float32)
+        # an extra none for the time dimension
+        inputs = tf.keras.layers.Input(
+            shape=(None,) + vision_box.shape, name="observations")
+
+        # A temp config with custom_model false so that we can get a basic vision model with the desired filters
+        # Build the CNN layer
+        last_layer = inputs
+        activation = get_activation_fn(model_config.get("conv_activation"))
+        filters = model_config.get("conv_filters")
+        for i, (out_size, kernel, stride) in enumerate(filters[:-1], 1):
+            last_layer = tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2D(
+                out_size,
+                kernel,
+                strides=(stride, stride),
+                activation=activation,
+                padding="same",
+                channels_last=True,
+                name="conv{}".format(i)))(last_layer)
+        out_size, kernel, stride = filters[-1]
+        if len(filters) == 1:
+            i = -1
+
+        # should be batch x time x height x width x channel
+        conv_out = tf.keras.layers.TimeDistributed(tf.keras.layers.Conv2D(
+            out_size,
+            kernel,
+            strides=(stride, stride),
+            activation=activation,
+            padding="valid",
+            name="conv{}".format(i + 1)))(last_layer)
+
+        self.base_model = tf.keras.Model(inputs, [conv_out])
+        self.register_variables(self.base_model.variables)
+        self.base_model.summary()
+
+        # now output two heads, one for action selection and one for the prediction of other agents
+        inner_obs_space = Box(low=-1, high=1, shape=conv_out.shape[2:], dtype=np.float32)
+
+        cell_size = model_config["custom_options"].get("cell_size")
+        self.actions_model = KerasRNN(inner_obs_space, action_space, num_outputs,
+                                      model_config, "actions", cell_size=cell_size, use_value_fn=True)
+
+        # predicts the actions of all the agents besides itself
+        # create a new input reader per worker
+        self.train_moa_only_when_visible = model_config['custom_options']['train_moa_only_when_visible']
+        self.moa_weight = model_config['custom_options']['moa_weight']
+
+        self.moa_model = KerasRNN(inner_obs_space, action_space, self.num_other_agents * num_outputs,
+                                  model_config, "moa_model", cell_size=cell_size, use_value_fn=False,
+                                  append_others_actions=True)
+        self.register_variables(self.actions_model.rnn_model.variables)
+        self.register_variables(self.moa_model.rnn_model.variables)
+        self.actions_model.rnn_model.summary()
+        self.moa_model.rnn_model.summary()
+
+    @override(ModelV2)
+    def forward(self, input_dict, state, seq_lens):
+        """Adds time dimension to batch before sending inputs to forward_rnn()"""
+        # first we add the time dimension for each object
+        new_dict = {"obs": {k: add_time_dimension(v, seq_lens) for k, v in input_dict["obs"].items()}}
+        new_dict.update({"prev_action": add_time_dimension(input_dict["prev_actions"], seq_lens)})
+        # new_dict.update({k: add_time_dimension(v, seq_lens) for k, v in input_dict.items() if k != "obs"})
+
+        output, new_state = self.forward_rnn(new_dict, state, seq_lens)
+        return tf.reshape(output, [-1, self.num_outputs]), new_state
+
+    def forward_rnn(self, input_dict, state, seq_lens):
+        # we operate on our obs, others previous actions, our previous actions, our previous rewards
+        # TODO(@internetcoffeephone) are we passing seq_lens correctly? should we pass prev_actions, prev_rewards etc?
+
+        trunk = self.base_model(input_dict["obs"]["curr_obs"])
+
+        pass_dict = {"curr_obs": trunk}
+
+        h1, c1, h2, c2 = state
+        # TODO(@internetcoffeephone) what's the right way to pass in the prev actions and such?
+        self._model_out, self._value_out, output_h1, output_c1 = self.actions_model.forward_rnn(pass_dict, [h1, c1], seq_lens)
+
+        # Cycle through all possible actions and get predictions for what other
+        # agents would do if this action was taken at each trajectory step.
+
+        # First we have to compute it over the trajectory to give us the hidden state that we will actually use
+        other_actions = input_dict["obs"]["other_agent_actions"]
+        agent_action = tf.cast(tf.expand_dims(input_dict["prev_action"], axis=-1), tf.float32)
+        stacked_actions = tf.concat([agent_action, other_actions], axis=-1)
+        pass_dict = {"curr_obs": trunk, "prev_total_actions": stacked_actions}
+
+        # Compute the action prediction. This is unused in the actual rollout and is only to generate
+        # a series of hidden states for the counterfactuals
+        action_pred, output_h2, output_c2 = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
+
+        # Now we can use that cell state to do the counterfactual predictions
+        counterfactual_preds = []
+        for i in range(self.num_outputs):
+            possible_actions = np.array([i])[np.newaxis, np.newaxis, :]
+            stacked_actions = tf.concat([possible_actions, other_actions], axis=-1)
+            pass_dict = {"curr_obs": trunk, "prev_total_actions": stacked_actions}
+            counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
+            counterfactual_preds.append(tf.expand_dims(counterfactual_pred, axis=-2))
+        self._counterfactual_preds = tf.concat(counterfactual_preds, axis=-2)
+
+        # TODO(@internetcoffeephone) move this into ppo_causal by using restore_original_dimensions()
+        self._other_agent_actions = input_dict["obs"]["other_agent_actions"]
+        self._visibility = input_dict["obs"]["visible_agents"]
+
+        return self._model_out, [output_h1, output_c1, output_h2, output_c2]
+
+    def value_function(self):
+        return tf.reshape(self._value_out, [-1])
+
+    def encoded_observations(self):
         raise NotImplementedError
 
-    @override(PolicyGraph)
-    def get_initial_state(self):
-        return self.rl_model.state_init + self.aux_model.state_init
+    def predicted_observations(self):
+        raise NotImplementedError
 
-    @override(TFPolicyGraph)
-    def _build_compute_actions(self,
-                               builder,
-                               obs_batch,
-                               state_batches=None,
-                               prev_action_batch=None,
-                               prev_reward_batch=None,
-                               episodes=None):
-        state_batches = state_batches or []
-        if len(self._state_inputs) != len(state_batches):
-            raise ValueError(
-                "Must pass in RNN state batches for placeholders {}, got {}".
-                format(self._state_inputs, state_batches))
-        builder.add_feed_dict(self.extra_compute_action_feed_dict())
+    def counterfactual_actions(self):
+        return self._counterfactual_preds
 
-        # Extract matrix of other agents' past actions, including agent's own
-        if type(episodes) == dict and 'all_agents_actions' in episodes.keys():
-            # Call from visualizer_rllib, change episodes format so it complies with the default format.
-            self_index = agent_name_to_idx(self.agent_id)
-            # First get own action
-            all_actions = [episodes['all_agents_actions'][self_index]]
-            others_actions = [e for i, e in enumerate(
-                episodes['all_agents_actions']) if self_index != i]
-            all_actions.extend(others_actions)
-            all_actions = np.reshape(np.array(all_actions), [1, -1])
-        else:
-            own_actions = np.atleast_2d(np.array(
-                [e.prev_action for e in episodes[self.agent_id]]))
-            all_actions = self.extract_last_actions_from_episodes(
-                episodes, own_actions=own_actions)
+    def moa_preds_from_batch(self, train_batch):
+        """Convenience function that calls this model with a tensor batch.
 
-        builder.add_feed_dict({self._obs_input: obs_batch,
-                               self.others_actions: all_actions})
+        All this does is unpack the tensor batch to call this model with the
+        right input dict, state, and seq len arguments.
+        """
 
-        if state_batches:
-            seq_lens = np.ones(len(obs_batch))
-            builder.add_feed_dict({self._seq_lens: seq_lens,
-                                   self.aux_model.seq_lens: seq_lens})
-        if self._prev_action_input is not None and prev_action_batch:
-            builder.add_feed_dict({self._prev_action_input: prev_action_batch})
-        if self._prev_reward_input is not None and prev_reward_batch:
-            builder.add_feed_dict({self._prev_reward_input: prev_reward_batch})
+        obs_dict = restore_original_dimensions(train_batch["obs"], self.obs_space)
+        curr_obs = obs_dict["curr_obs"]
 
-        builder.add_feed_dict({self._is_training: False})
-        builder.add_feed_dict(dict(zip(self._state_inputs, state_batches)))
-        fetches = builder.add_fetches([self._sampler] + self._state_outputs +
-                                      [self.extra_compute_action_fetches()])
+        # stack the agent actions together
+        other_agent_actions = tf.cast(obs_dict["other_agent_actions"], tf.float32)
+        agent_actions = tf.cast(tf.expand_dims(train_batch[SampleBatch.PREV_ACTIONS], axis=1), tf.float32)
+        prev_total_actions = tf.concat([agent_actions, other_agent_actions], axis=-1)
 
-        return fetches[0], fetches[1:-1], fetches[-1]
+        # Now we add the appropriate time dimension
+        curr_obs = add_time_dimension(curr_obs, train_batch.get("seq_lens"))
+        prev_total_actions = add_time_dimension(prev_total_actions, train_batch.get("seq_lens"))
 
-    def _get_loss_inputs_dict(self, batch):
-        # Override parent function to add seq_lens to tensor for additional LSTM
-        loss_inputs = super(A3CPolicyGraph, self)._get_loss_inputs_dict(batch)
-        loss_inputs[self.aux_model.seq_lens] = loss_inputs[self._seq_lens]
-        return loss_inputs
-
-    @override(TFPolicyGraph)
-    def gradients(self, optimizer):
-        grads = tf.gradients(self._loss, self.var_list)
-        self.grads, _ = tf.clip_by_global_norm(grads, self.config["grad_clip"])
-        clipped_grads = list(zip(self.grads, self.var_list))
-        return clipped_grads
-
-    @override(TFPolicyGraph)
-    def extra_compute_grad_fetches(self):
-        """Extra values to fetch and return from compute_gradients()."""
-        return {
-            "stats": self.stats,
+        trunk = self.base_model(curr_obs)
+        input_dict = {
+            "curr_obs": trunk,
+            "is_training": True,
+            "prev_total_actions": prev_total_actions
         }
+        if SampleBatch.PREV_ACTIONS in train_batch:
+            input_dict["prev_actions"] = train_batch[SampleBatch.PREV_ACTIONS]
+        if SampleBatch.PREV_REWARDS in train_batch:
+            input_dict["prev_rewards"] = train_batch[SampleBatch.PREV_REWARDS]
+        states = []
 
-    @override(TFPolicyGraph)
-    def extra_compute_action_fetches(self):
-        """Extra values to fetch and return from compute_actions().
+        # TODO(@internetcoffeephone) remove the magic number
+        i = 2
+        while "state_in_{}".format(i) in train_batch:
+            states.append(train_batch["state_in_{}".format(i)])
+            i += 1
 
-        By default we only return action probability info (if present).
-        """
-        return dict(
-            TFPolicyGraph.extra_compute_action_fetches(self),
-            **{"vf_preds": self.vf,
-               "encoded_observations": self.encoded_observations,
-               "predicted_observations": self.predicted_observations})
+        moa_preds, _, _ = self.moa_model.forward_rnn(input_dict, states, train_batch.get("seq_lens"))
+        return moa_preds
 
-    def _value(self, ob, others_actions, prev_action, prev_reward, *args):
-        """Compute the value function output for a single observation
-        """
-        feed_dict = {self.observations: [ob],
-                     self.others_actions: [others_actions],
-                     self.rl_model.seq_lens: [1],
-                     self._prev_action_input: [prev_action],
-                     self._prev_reward_input: [prev_reward]}
-        assert len(args) == len(self.rl_model.state_in), \
-            (args, self.rl_model.state_in)
-        for k, v in zip(self.rl_model.state_in, args):
-            feed_dict[k] = v
-        vf = self.sess.run(self.vf, feed_dict)
-        return vf[0]
+    def action_logits(self):
+        return self._model_out
 
-    @override(PolicyGraph)
-    def postprocess_trajectory(self,
-                               sample_batch,
-                               other_agent_batches=None,
-                               episode=None):
-        # Extract matrix of self and other agents' actions.
-        own_actions = np.atleast_2d(np.array(sample_batch['actions']))
-        own_actions = np.reshape(own_actions, [-1, 1])
-        all_actions = self.extract_last_actions_from_episodes(
-            other_agent_batches, own_actions=own_actions, batch_type=True)
-        sample_batch['others_actions'] = all_actions
+    # TODO(@internetcoffeephone) pull out the time slice
+    def visibility(self):
+        return tf.reshape(self._visibility, [-1, self.num_other_agents])
 
-        # Compute auxiliary reward and add to batch.
-        sample_batch = self.compute_auxiliary_reward(sample_batch)
+    def other_agent_actions(self):
+        return tf.reshape(self._other_agent_actions, [-1, self.num_other_agents])
 
-        completed = sample_batch["dones"][-1]
-        if completed:
-            last_r = 0
-        else:
-            next_state = []
-            for i in range(len(self.rl_model.state_in)):
-                next_state.append([sample_batch["state_out_{}".format(i)][-1]])
-            prev_action = sample_batch['prev_actions'][-1]
-            prev_reward = sample_batch['prev_rewards'][-1]
-
-            last_r = self._value(sample_batch["new_obs"][-1],
-                                 all_actions[-1], prev_action, prev_reward,
-                                 *next_state)
-
-        sample_batch = compute_advantages(sample_batch, last_r, self.config["gamma"],
-                                          self.config["lambda"])
-        return sample_batch
-
-    def compute_auxiliary_reward(self, trajectory):
-        """Compute auxiliary reward of this agent
-        """
-        # Logging auxiliary metrics
-        aux_reward_per_agent_step = [calculate_surprisal(trajectory['predicted_observations'][i],
-                                                         trajectory['encoded_observations'][i])
-                                     for i in range(len(trajectory['obs']))]
-
-        total_aux_reward = np.sum(aux_reward_per_agent_step)
-        self.total_aux_reward.load(total_aux_reward, session=self.sess)
-
-        # Clip auxiliary reward
-        aux_reward_per_agent_step = np.clip(aux_reward_per_agent_step,
-                                            -self.aux_reward_clip,
-                                             self.aux_reward_clip)
-
-        # Add to trajectory
-        trajectory['rewards'] = trajectory['rewards'] + aux_reward_per_agent_step * self.aux_reward_weight
-
-        return trajectory
-
-    def extract_last_actions_from_episodes(self, episodes, batch_type=False,
-                                           own_actions=None):
-        """Pulls every other agent's previous actions out of structured data.
-        Args:
-            episodes: the structured data type. Typically a dict of episode
-                objects.
-            batch_type: if True, the structured data is a dict of tuples,
-                where the second tuple element is the relevant dict containing
-                previous actions.
-            own_actions: an array of the agents own actions. If provided, will
-                be the first column of the created action matrix.
-        Returns: a real valued array of size [batch, num_other_agents] (meaning
-            each agents' actions goes down one column, each row is a timestep)
-        """
-        if episodes is None:
-            print("Why are there no episodes?")
-            import pdb
-            pdb.set_trace()
-
-        # Need to sort agent IDs so same agent is consistently in
-        # same part of input space.
-        agent_ids = sorted(episodes.keys())
-        prev_actions = []
-
-        for agent_id in agent_ids:
-            if agent_id == self.agent_id:
-                continue
-            if batch_type:
-                prev_actions.append(episodes[agent_id][1]['actions'])
-            else:
-                prev_actions.append(
-                    [e.prev_action for e in episodes[agent_id]])
-
-        all_actions = np.transpose(np.array(prev_actions))
-
-        # Attach agents own actions as column 1
-        if own_actions is not None:
-            if len(all_actions) is not 0:
-                all_actions = np.hstack((own_actions, all_actions))
-            else:
-                all_actions = own_actions
-
-        return all_actions
+    @override(ModelV2)
+    def get_initial_state(self):
+        return self.actions_model.get_initial_state() + self.moa_model.get_initial_state()
