@@ -92,6 +92,8 @@ def setup():
                 "lr_schedule":
                 [[0, hparams['lr_init']],
                     [20000000, hparams['lr_final']]],
+                "train_sample_size": args.train_sample_size,
+                "train_batch_size": args.train_batch_size,
                 "num_workers": num_workers,
                 "num_envs_per_worker": args.num_envs_per_worker,
                 "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
@@ -121,30 +123,21 @@ def setup():
                 "influence_scaledown_end": tune.grid_search([300e6]),
                 "influence_scaledown_final_val": tune.grid_search([.5]),
                 "influence_only_when_visible": tune.grid_search([True]),
-
     })
     if args.algorithm == "PPO":
         config.update({"num_sgd_iter": 10,
-                       "train_batch_size": args.train_batch_size,
                        "sgd_minibatch_size": 500,
                        "vf_loss_coeff": 1e-4
                        })
-    elif args.algorithm == "A3C":
-        config.update({"sample_batch_size": 50,
-                       "vf_loss_coeff": 0.1
-                       })
-    elif args.algorithm == "IMPALA":
-        config.update({"train_batch_size": args.train_batch_size,
-                       "sample_batch_size": 50,
-                       "vf_loss_coeff": 0.1
-                       })
+    elif args.algorithm == "A3C" or args.algorithm == "IMPALA":
+        config.update({"vf_loss_coeff": 0.1})
     else:
-        sys.exit("The only available algorithms are A3C and PPO")
+        sys.exit("The only available algorithms are A3C, PPO and IMPALA")
 
     if args.grid_search:
         config.update({'moa_weight': tune.grid_search([10, 100]),
                        'lr_schedule': [[0, tune.grid_search([1e-2, 1e-3, 1e-4])],
-                                        [20000000, hparams['lr_final']]],
+                                       [20000000, hparams['lr_final']]],
                        'vf_loss_coeff': tune.grid_search([0.5, 1e-4, 1e-5]),
                        'entropy_coeff': tune.grid_search([0, 1e-3, 1e-4]),
                        'influence_reward_weight': tune.grid_search([1.0, 10.0])})
@@ -153,7 +146,7 @@ def setup():
     return env_name, config
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     args = parser.parse_args()
     if args.multi_node and args.local_mode:
         sys.exit("You cannot have both local mode and multi node on at the same time")
