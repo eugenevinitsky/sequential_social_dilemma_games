@@ -1,3 +1,4 @@
+from gym.spaces import Box, Dict, Discrete
 import numpy as np
 from ray import tune
 
@@ -16,7 +17,7 @@ SWITCH_COLORS = {'D': [180, 180, 180],  # Grey closed door - same color as walls
 
 GIVE_EXTERNAL_SWITCH_REWARD = int(False)
 
-SWITCH_VIEW_SIZE = 5
+SWITCH_VIEW_SIZE = 3
 
 
 class SwitchEnv(MapEnv):
@@ -81,13 +82,22 @@ class SwitchEnv(MapEnv):
 
     @property
     def action_space(self):
-        agents = list(self.agents.values())
-        return agents[0].action_space
+        return Discrete(8)
 
     @property
     def observation_space(self):
-        agents = list(self.agents.values())
-        return agents[0].observation_space
+        if self.return_agent_actions:
+            # We will append on some extra values to represent the actions of other agents
+            return Dict({"curr_obs": Box(low=-np.infty, high=np.infty, shape=(2 * self.view_len + 1,
+                                                                              2 * self.view_len + 1, 3),
+                                         dtype=np.float32),
+                         "other_agent_actions": Box(low=0, high=len(ACTIONS), shape=(self.num_agents - 1,),
+                                                    dtype=np.int32, ),
+                         "visible_agents": Box(low=0, high=self.num_agents, shape=(self.num_agents - 1,),
+                                               dtype=np.int32)})
+        else:
+            return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
+                                                 2 * self.view_len + 1, 3), dtype=np.float32)
 
     def setup_agents(self):
         map_with_agents = self.get_map_with_agents()
