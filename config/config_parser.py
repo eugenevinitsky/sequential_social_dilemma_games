@@ -65,7 +65,7 @@ def sanitize_int_flag(flag_string):
 
 
 def get_redis_address():
-    address = config.get('network', 'redis_address')
+    address = config.get('network', 'address')
     return address if address else None
 
 

@@ -101,6 +101,8 @@ def plot_csvs_results(paths):
         with open(path, 'r') as f:
             fo = io.StringIO()
             data = f.readlines()
+            # TODO: Fix due to breaking ray update: Nested dictionary results are now flattened for CSV writing: {“a”: {“b”: 1}} => {“a/b”: 1}
+            # The current case handles nested dictionary results, not flattened ones.
             fo.writelines(re.sub("/{([^}]*)}/", "", line) for line in data)
             fo.seek(0)
             df = pd.read_csv(fo, sep=",")
