@@ -177,7 +177,8 @@ def main(unused_argv):
             "run": alg_run,
             "env": env_name,
             "stop": {
-                "training_iteration": FLAGS.training_iterations
+                "timesteps_total": FLAGS.stop_at_timesteps_total,
+                "episode_reward_min": FLAGS.stop_at_episode_reward_min
             },
             'checkpoint_freq': FLAGS.checkpoint_frequency,
             "config": config,
