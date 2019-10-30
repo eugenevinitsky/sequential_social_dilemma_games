@@ -18,6 +18,7 @@ GIVE_EXTERNAL_SWITCH_REWARD = int(False)
 
 SWITCH_VIEW_SIZE = 5
 
+
 class SwitchEnv(MapEnv):
     def __init__(self, args, num_agents=1, render=False):
         super().__init__(SWITCH_MAP, num_agents, render)
