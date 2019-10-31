@@ -148,6 +148,7 @@ def get_a3c_trainer(aux_model_type, aux_config):
             setup_curiosity_mixins as setup_aux_mixins,\
             get_curiosity_mixins as get_aux_mixins,\
             curiosity_postprocess_trajectory as aux_postprocess_trajectory
+        aux_config = {}
         model_name = "CuriosityA3C"
 
     aux_config["use_gae"] = False
