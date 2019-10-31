@@ -44,7 +44,7 @@ def setup(args):
     env_name = args.env + "_env"
     register_env(env_name, env_creator)
 
-    single_env = env_creator()
+    single_env = env_creator(args.num_agents)
     obs_space = single_env.observation_space
     act_space = single_env.action_space
 
@@ -167,6 +167,7 @@ if __name__ == '__main__':
     print('Commencing experiment', exp_name)
 
     config['env'] = env_name
+    config['eager'] = args.eager_mode
 
     eastern = pytz.timezone('US/Eastern')
     date = datetime.now(tz=pytz.utc)
@@ -180,8 +181,6 @@ if __name__ == '__main__':
         trainer = CausalPPOMOATrainer
     if args.algorithm == "IMPALA":
         trainer = CausalImpalaTrainer
-
-    config['eager'] = args.eager_mode
 
     exp_dict = {
             'name': exp_name,

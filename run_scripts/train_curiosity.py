@@ -9,14 +9,12 @@ from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 
-from algorithms.curiosity import CuriosityA3CTrainer
+from algorithms.a3c_aux import get_a3c_trainer
 from models.curiosity_model import CuriosityLSTM
 from config.default_args import add_default_args
 
-from config import config_parser
 from social_dilemmas.envs.env_creator import get_env_creator
 
-hparams = config_parser.get_env_params()
 parser = argparse.ArgumentParser()
 add_default_args(parser)
 
@@ -26,7 +24,7 @@ def setup(args):
     env_name = args.env + "_env"
     register_env(env_name, env_creator)
 
-    single_env = env_creator(1)
+    single_env = env_creator(args.num_agents)
     obs_space = single_env.observation_space
     act_space = single_env.action_space
 
@@ -52,7 +50,7 @@ def setup(args):
     config['env_config']['func_create'] = tune.function(env_creator)
     config['env_config']['env_name'] = env_name
     if env_name == 'switch_env':
-        config['env_config']['num_switches'] = hparams['num_switches']
+        config['env_config']['num_switches'] = args.num_switches
 
     # Calculate device configurations
     gpus_for_driver = int(args.use_gpu_for_driver)
@@ -72,8 +70,8 @@ def setup(args):
     config.update({
         "horizon": 1000,
         "gamma": 0.99,
-        "lr_schedule": [[0, hparams['lr_init']],
-                        [20000000, hparams['lr_final']]],
+        "lr_schedule": [[0, args.lr_init],
+                        [20000000, args.lr_final]],
         "sample_batch_size": args.sample_batch_size,
         "train_batch_size": args.train_batch_size,
         "num_workers": num_workers,
@@ -82,7 +80,7 @@ def setup(args):
         "num_cpus_for_driver": cpus_for_driver,
         "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
         "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
-        "entropy_coeff": hparams['entropy_coeff'],
+        "entropy_coeff": args.entropy_coeff,
         "grad_clip": args.grad_clip,
         "multiagent": {
             "policy_graphs": policy_graphs,
@@ -91,24 +89,26 @@ def setup(args):
         "model": {"custom_model": "curiosity_lstm",
                   "use_lstm": False,
                   "lstm_cell_size": 128,
-                  "conv_filters": 6,
+                  "conv_filters": [[6, [3, 3], 1]],
                   "fcnet_hiddens": [32, 32],
                   "custom_options": {
-                      "aux_loss_weight": hparams["aux_loss_weight"],
+                      "aux_loss_weight": args.aux_loss_weight,
                       "aux_reward_clip": 10,
-                      "aux_reward_weight": hparams["aux_reward_weight"],
+                      "aux_reward_weight": args.aux_reward_weight,
                       "aux_curriculum_steps": 1e7,
                       "aux_scaledown_start": 1e8,
                       "aux_scaledown_end": 3e8,
-                      "aux_scaledown_final_val": 0.5}
+                      "aux_scaledown_final_val": 0.5,
+                      "cell_size": 128,
+                      "num_other_agents": args.num_agents - 1}
                   },
         "callbacks": single_env.get_environment_callbacks(),
     })
 
     if args.grid_search:
-        config["entropy_coeff"] = tune.grid_search(hparams['entropy_tune'])
-        config["model"]["custom_options"]["aux_loss_weight"] = tune.grid_search(hparams['aux_loss_weight_tune'])
-        config["model"]["custom_options"]["aux_reward_weight_tune"] = tune.grid_search(hparams['aux_reward_weight_tune'])
+        config["entropy_coeff"] = tune.grid_search(args.entropy_tune)
+        config["model"]["custom_options"]["aux_loss_weight"] = tune.grid_search(args.aux_loss_weight_tune)
+        config["model"]["custom_options"]["aux_reward_weight_tune"] = tune.grid_search(args.aux_reward_weight_tune)
 
     return env_name, config
 
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     config['env'] = env_name
     config['eager'] = args.eager_mode
 
-    trainer = CuriosityA3CTrainer
+    trainer = get_a3c_trainer("curiosity", config)
 
     exp_dict = {
             'name': exp_name,

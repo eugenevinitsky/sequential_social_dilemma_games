@@ -20,7 +20,7 @@ from ray.rllib.utils import try_import_tf
 from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.agents.trainer_template import build_trainer
 
-from algorithms.common_funcs import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
+from algorithms.common_funcs_causal import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
     causal_postprocess_trajectory, CAUSAL_CONFIG
 
 tf = try_import_tf()

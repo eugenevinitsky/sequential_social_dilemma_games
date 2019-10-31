@@ -1,9 +1,9 @@
 def add_default_args(parser):
     parser.add_argument('--exp_name', type=str, default='causal_env', help='Name experiment will be stored under')
-    parser.add_argument('--env', type=str, default='cleanup', help='Name of the environment to rollout. Can be '
-                                                                   'cleanup or harvest.')
-    parser.add_argument('--algorithm', type=str, default='PPO', help='Name of the rllib algorithm to use.')
-    parser.add_argument('--num_agents', type=int, default=2, help='Number of agent policies')
+    parser.add_argument('--env', type=str, default='switch', help='Name of the environment to use. Can be\
+                                                                   cleanup or harvest.')
+    parser.add_argument('--algorithm', type=str, default='A3C', help='Name of the rllib algorithm to use.')
+    parser.add_argument('--num_agents', type=int, default=1, help='Number of agent policies')
     parser.add_argument('--sample_batch_size', type=int, default=1000,
                         help='Size of samples taken from single workers, concatenated to size train_batch_size.')
     parser.add_argument('--train_batch_size', type=int, default=30000,
@@ -28,7 +28,7 @@ def add_default_args(parser):
                         help='Number of envs to place on a single worker')
     parser.add_argument('--multi_node', action='store_true', default=False,
                         help='If true the experiments are run in multi-cluster mode')
-    parser.add_argument('--local_mode', action='store_true', default=False,
+    parser.add_argument('--local_mode', action='store_true', default=True,
                         help='Force all the computation onto the driver. Useful for debugging.')
     parser.add_argument('--eager_mode', action='store_true', default=False,
                         help='Perform eager execution. Useful for debugging.')
@@ -40,3 +40,22 @@ def add_default_args(parser):
                         help='Amount of switches in a switch map environment')
     parser.add_argument('--grad_clip', type=float, default=40,
                         help='Gradients are clipped by this amount per update.')
+
+    parser.add_argument('--lr_init', type=float, default=0.001, help='Initial learning rate in curriculum.')
+    parser.add_argument('--lr_final', type=float, default=0.001, help='Final learning rate in curriculum.')
+
+    parser.add_argument('--entropy_coeff', type=float, default=0.001, help='Entropy reward weight.')
+    parser.add_argument('--aux_loss_weight', type=float, default=1,
+                        help='Loss weight of the auxiliary network')
+    parser.add_argument('--aux_reward_weight', type=float, default=1,
+                        help='Reward weight of the auxiliary network')
+
+    parser.add_argument('--entropy_tune', nargs='+', type=float, default=[.001],
+                        help='When --grid_search is provided, perform a grid search over these entropy_coeff\
+                                parameters. Replaces --entropy_coeff when used.')
+    parser.add_argument('--aux_loss_weight_tune', nargs='+', type=float, default=[1],
+                        help='When --grid_search is provided, perform a grid search over these aux_loss_weight\
+                                parameters. Replaces --aux_reward_weight when used.')
+    parser.add_argument('--aux_reward_weight_tune', nargs='+', type=float, default=[.0001],
+                        help='When --grid_search is provided, perform a grid search over these aux_reward_weight\
+                                parameters. Replaces --entropy_coeff.')

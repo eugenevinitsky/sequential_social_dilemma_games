@@ -16,7 +16,7 @@ from ray.rllib.agents.a3c.a3c import DEFAULT_CONFIG, \
     validate_config
 from ray.rllib.agents.a3c.a3c_tf_policy import postprocess_advantages
 
-from algorithms.common_funcs import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
+from algorithms.common_funcs_causal import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
     causal_postprocess_trajectory, CAUSAL_CONFIG
 
 CAUSAL_CONFIG["use_gae"] = False
@@ -47,9 +47,9 @@ class A3CLoss(object):
 
 
 def postprocess_a3c_causal(policy,
-                        sample_batch,
-                        other_agent_batches=None,
-                        episode=None):
+                           sample_batch,
+                           other_agent_batches=None,
+                           episode=None):
     """Adds the policy logits, VF preds, and advantages to the trajectory."""
 
     batch = causal_postprocess_trajectory(policy, sample_batch)
@@ -103,13 +103,11 @@ def stats(policy, train_batch):
         "cur_lr": tf.cast(policy.cur_lr, tf.float64),
         "policy_loss": policy.loss.pi_loss,
         "policy_entropy": policy.loss.entropy,
-        "var_gnorm": tf.global_norm(
-            [x for x in policy.model.trainable_variables()]),
+        "var_gnorm": tf.global_norm([x for x in policy.model.trainable_variables()]),
         "vf_loss": policy.loss.vf_loss,
-    }
-    base_stats["total_influence"] = train_batch["total_influence"]
-    base_stats['reward_without_influence'] = train_batch['reward_without_influence']
-    base_stats['moa_loss'] = policy.moa_loss / policy.moa_weight
+        "total_influence": train_batch["total_influence"],
+        'reward_without_influence': train_batch['reward_without_influence'],
+        'moa_loss': policy.moa_loss / policy.moa_weight}
     return base_stats
 
 
@@ -135,6 +133,7 @@ def setup_mixins(policy, obs_space, action_space, config):
     ValueNetworkMixin.__init__(policy)
     LearningRateSchedule.__init__(policy, config["lr"], config["lr_schedule"])
     setup_causal_mixins(policy, obs_space, action_space, config)
+
 
 A3CTFPolicy = build_tf_policy(
     name="A3CTFPolicy",
