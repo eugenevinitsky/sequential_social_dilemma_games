@@ -11,6 +11,7 @@ from ray.rllib.policy.sample_batch import SampleBatch
 
 tf = try_import_tf()
 
+
 class KerasRNN(RecurrentTFModelV2):
     """Maps the input direct to an LSTM cell"""
 
@@ -96,19 +97,16 @@ class KerasRNN(RecurrentTFModelV2):
 
     @override(RecurrentTFModelV2)
     def forward_rnn(self, input_dict, state, seq_lens):
-        try:
-            input = [input_dict["curr_obs"], seq_lens] + state
-            if self.append_others_actions:
-                input.insert(1, input_dict["prev_total_actions"])
+        input = [input_dict["curr_obs"], seq_lens] + state
+        if self.append_others_actions:
+            input.insert(1, input_dict["prev_total_actions"])
 
-            if self.use_value_fn:
-                model_out, self._value_out, h, c = self.rnn_model(input)
-                return model_out, self._value_out, h, c
-            else:
-                model_out, h, c = self.rnn_model(input)
-                return model_out, h, c
-        except:
-            import ipdb; ipdb.set_trace()
+        if self.use_value_fn:
+            model_out, self._value_out, h, c = self.rnn_model(input)
+            return model_out, self._value_out, h, c
+        else:
+            model_out, h, c = self.rnn_model(input)
+            return model_out, h, c
 
     @override(ModelV2)
     def get_initial_state(self):
@@ -259,7 +257,7 @@ class MOA_LSTM(RecurrentTFModelV2):
     def moa_preds_from_batch(self, train_batch):
         """Convenience function that calls this model with a tensor batch.
 
-        All this does is unpack the tensor batch to call this model with the
+        What this does is unpack the tensor batch to call this model with the
         right input dict, state, and seq len arguments.
         """
 
