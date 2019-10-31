@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 
 python train_curiosity.py \
---train_batch_size 1000 \
---sample_batch_size 30000 \
---num_cpus 2 \
 --exp_name curiosity_switch \
---stop_at_timesteps_total 50000 \
---algorithm A3C
+--env switch \
+--algorithm A3C \
+--sample_batch_size 1000 \
+--train_batch_size 30000 \
+--stop_at_timesteps_total 500000 \
+--memory 5e10 \
+--num_cpus 24 \
+--num_gpus 4 \
+--use_gpu_for_driver \
+--num_switches = 1 \
