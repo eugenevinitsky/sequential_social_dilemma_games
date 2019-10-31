@@ -16,6 +16,7 @@ def add_default_args(parser):
                         help='Experiment stops when this is the minimum episode reward within 1 iteration')
     parser.add_argument('--num_samples', type=int, default=1,
                         help='Amount of times to repeat all experiments')
+    parser.add_argument('--memory', type=int, default=int(2e9), help='Amount of total usable memory')
     parser.add_argument('--num_cpus', type=int, default=2, help='Number of available CPUs')
     parser.add_argument('--num_gpus', type=int, default=0, help='Number of available GPUs')
     parser.add_argument('--use_gpus_for_workers', action='store_true', default=False,
@@ -32,6 +33,7 @@ def add_default_args(parser):
                         help='Force all the computation onto the driver. Useful for debugging.')
     parser.add_argument('--eager_mode', action='store_true', default=False,
                         help='Perform eager execution. Useful for debugging.')
+    parser.add_argument('--address', type=str, default=None, help='The address of the Ray cluster to connect to.')
     parser.add_argument('--use_s3', action='store_true', default=False,
                         help='If true upload to s3')
     parser.add_argument('--grid_search', action='store_true', default=False,

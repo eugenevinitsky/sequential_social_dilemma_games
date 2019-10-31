@@ -117,10 +117,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.multi_node and args.local_mode:
         sys.exit("You cannot have both local mode and multi node on at the same time")
-    if args.multi_node:
-        ray.init(local_mode=args.local_mode, address='localhost:6379')
-    else:
-        ray.init(local_mode=args.local_mode)
+    ray.init(address=args.address, local_mode=args.local_mode, memory=args.memory)
     env_name, config = setup(args)
 
     if args.exp_name is None:
