@@ -97,8 +97,9 @@ class SwitchEnv(MapEnv):
                          "visible_agents": Box(low=0, high=self.num_agents, shape=(self.num_agents - 1,),
                                                dtype=np.int32)})
         else:
-            return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
-                                                 2 * self.view_len + 1, 3), dtype=np.float32)
+            return Dict({"curr_obs": Box(low=-np.infty, high=np.infty, shape=(2 * self.view_len + 1,
+                                                                              2 * self.view_len + 1, 3),
+                                         dtype=np.float32)})
 
     def setup_agents(self):
         map_with_agents = self.get_map_with_agents()
