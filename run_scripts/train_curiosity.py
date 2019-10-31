@@ -131,17 +131,17 @@ if __name__ == '__main__':
 
     trainer = get_a3c_trainer("curiosity", config)
 
-    exp_dict = {
-            'name': exp_name,
-            'run_or_experiment': trainer,
-            "stop": {
-                "timesteps_total": args.stop_at_timesteps_total,
-                "episode_reward_min": args.stop_at_episode_reward_min
-            },
-            'checkpoint_freq': args.checkpoint_frequency,
-            "config": config,
-            'num_samples': args.num_samples
-        }
+    exp_dict = {'name': exp_name,
+                'run_or_experiment': trainer,
+                "stop": {},
+                'checkpoint_freq': args.checkpoint_frequency,
+                'config': config,
+                'num_samples': args.num_samples
+                }
+    if args.stop_at_episode_reward_min is not None:
+        exp_dict['stop']['episode_reward_min'] = args.stop_at_episode_reward_min
+    if args.stop_at_timesteps_total is not None:
+        exp_dict['stop']['timesteps_total'] = args.stop_at_timesteps_total
 
     if args.use_s3:
         eastern = pytz.timezone('US/Eastern')
