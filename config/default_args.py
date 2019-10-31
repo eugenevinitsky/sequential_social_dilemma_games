@@ -1,5 +1,5 @@
 def add_default_args(parser):
-    parser.add_argument('--exp_name', type=str, default='causal_env', help='Name experiment will be stored under')
+    parser.add_argument('--exp_name', type=str, default='nameless_experiment', help='Name experiment will be stored under')
     parser.add_argument('--env', type=str, default='switch', help='Name of the environment to use. Can be\
                                                                    cleanup or harvest.')
     parser.add_argument('--algorithm', type=str, default='A3C', help='Name of the rllib algorithm to use.')
@@ -10,9 +10,9 @@ def add_default_args(parser):
                         help='Size of the total dataset over which one epoch is computed.')
     parser.add_argument('--checkpoint_frequency', type=int, default=50,
                         help='Number of steps before a checkpoint is saved.')
-    parser.add_argument('--stop_at_timesteps_total', type=int, default=None,
+    parser.add_argument('--stop_at_timesteps_total', type=int, default=int(5e6),
                         help='Experiment stops when this total amount of timesteps has been reached')
-    parser.add_argument('--stop_at_episode_reward_min', type=int, default=None,
+    parser.add_argument('--stop_at_episode_reward_min', type=float, default=1000.0,
                         help='Experiment stops when this is the minimum episode reward within 1 iteration')
     parser.add_argument('--num_samples', type=int, default=1,
                         help='Amount of times to repeat all experiments')
@@ -29,7 +29,7 @@ def add_default_args(parser):
                         help='Number of envs to place on a single worker')
     parser.add_argument('--multi_node', action='store_true', default=False,
                         help='If true the experiments are run in multi-cluster mode')
-    parser.add_argument('--local_mode', action='store_true', default=True,
+    parser.add_argument('--local_mode', action='store_true', default=False,
                         help='Force all the computation onto the driver. Useful for debugging.')
     parser.add_argument('--eager_mode', action='store_true', default=False,
                         help='Perform eager execution. Useful for debugging.')
@@ -47,15 +47,15 @@ def add_default_args(parser):
     parser.add_argument('--lr_final', type=float, default=0.001, help='Final learning rate in curriculum.')
 
     parser.add_argument('--entropy_coeff', type=float, default=0.001, help='Entropy reward weight.')
-    parser.add_argument('--aux_loss_weight', type=float, default=1,
+    parser.add_argument('--aux_loss_weight', type=float, default=1.0,
                         help='Loss weight of the auxiliary network')
-    parser.add_argument('--aux_reward_weight', type=float, default=1,
+    parser.add_argument('--aux_reward_weight', type=float, default=0.001,
                         help='Reward weight of the auxiliary network')
 
     parser.add_argument('--entropy_tune', nargs='+', type=float, default=[.001],
                         help='When --grid_search is provided, perform a grid search over these entropy_coeff\
                                 parameters. Replaces --entropy_coeff when used.')
-    parser.add_argument('--aux_loss_weight_tune', nargs='+', type=float, default=[1],
+    parser.add_argument('--aux_loss_weight_tune', nargs='+', type=float, default=[1.0],
                         help='When --grid_search is provided, perform a grid search over these aux_loss_weight\
                                 parameters. Replaces --aux_reward_weight when used.')
     parser.add_argument('--aux_reward_weight_tune', nargs='+', type=float, default=[.0001],
