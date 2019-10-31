@@ -149,13 +149,11 @@ class CuriosityLSTM(RecurrentTFModelV2):
         self.base_model = tf.keras.Model(inputs, [conv_out])
         self.register_variables(self.base_model.variables)
         self.base_model.summary()
-        # TODO: Replace hardcoded reshape shape
-        self._true_encoded_obs = tf.reshape(self.base_model.outputs[0], (-1, -1, 150))
 
         # now output two heads, one for action selection and one for the prediction the next state
         inner_obs_space = Box(low=-1, high=1, shape=conv_out.shape[2:], dtype=np.float32)
         inner_obs_shape = inner_obs_space.shape
-        inner_obs_size = inner_obs_shape[0] * inner_obs_shape[1] * inner_obs_shape[2]
+        inner_obs_size = int(inner_obs_shape[0] * inner_obs_shape[1] * inner_obs_shape[2])
 
         cell_size = model_config["custom_options"].get("cell_size")
         self.policy_model = KerasRNN(inner_obs_space, action_space, num_outputs,
@@ -178,73 +176,40 @@ class CuriosityLSTM(RecurrentTFModelV2):
         # first we add the time dimension for each object
         new_dict = {"obs": {k: add_time_dimension(v, seq_lens) for k, v in input_dict["obs"].items()}}
         new_dict.update({"prev_action": add_time_dimension(input_dict["prev_actions"], seq_lens)})
-        # new_dict.update({k: add_time_dimension(v, seq_lens) for k, v in input_dict.items() if k != "obs"})
 
         output, new_state = self.forward_rnn(new_dict, state, seq_lens)
         return tf.reshape(output, [-1, self.num_outputs]), new_state
 
     def forward_rnn(self, input_dict, state, seq_lens):
         trunk = self.base_model(input_dict["obs"]["curr_obs"])
-        pass_dict = {"curr_obs": trunk}
+        pass_dict = {"curr_obs": trunk, "test_var": 0}
         h1, c1, h2, c2 = state
+
+        # Save true encoded environment
+        # TODO: Replace hardcoded reshape shape
+        self._true_encoded_obs = tf.reshape(trunk, (-1, 150))
 
         # Compute the next action
         self._model_out, self._value_out, output_h1, output_c1 = self.policy_model.forward_rnn(pass_dict, [h1, c1],
                                                                                                seq_lens)
-
         # Compute the next state prediction
         self._pred_encoded_obs, output_h2, output_c2 = self.curiosity_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
+        self._pred_encoded_obs = tf.reshape(self._pred_encoded_obs, (-1, 150))
 
         return self._model_out, [output_h1, output_c1, output_h2, output_c2]
-
-    def value_function(self):
-        return tf.reshape(self._value_out, [-1])
-
-    def encoded_observations(self):
-        return self._true_encoded_obs
-
-    def predicted_observations(self):
-        return self._pred_encoded_obs
 
     def action_logits(self):
         return self._model_out
 
+    def value_function(self):
+        return tf.reshape(self._value_out, [-1])
+
+    def true_encoded_observations(self):
+        return self._true_encoded_obs
+
+    def predicted_encoded_observations(self):
+        return self._pred_encoded_obs
+
     @override(ModelV2)
     def get_initial_state(self):
         return self.policy_model.get_initial_state() + self.curiosity_model.get_initial_state()
-
-    def aux_preds_from_batch(self, train_batch):
-        """Convenience function that calls this model with a tensor batch.
-
-        All this does is unpack the tensor batch tto call this model with the
-        right input dict, state, and seq len arguments.
-        """
-
-        obs_dict = restore_original_dimensions(train_batch["obs"], self.obs_space)
-        curr_obs = obs_dict["curr_obs"]
-        agent_actions = tf.cast(tf.expand_dims(train_batch[SampleBatch.PREV_ACTIONS], axis=1), tf.float32)
-
-        # Now we add the appropriate time dimension
-        curr_obs = add_time_dimension(curr_obs, train_batch.get("seq_lens"))
-        agent_actions = add_time_dimension(agent_actions, train_batch.get("seq_lens"))
-
-        trunk = self.base_model(curr_obs)
-        input_dict = {
-            "curr_obs": trunk,
-            "is_training": True,
-            "agent_actions": agent_actions
-        }
-        if SampleBatch.PREV_ACTIONS in train_batch:
-            input_dict["prev_actions"] = train_batch[SampleBatch.PREV_ACTIONS]
-        if SampleBatch.PREV_REWARDS in train_batch:
-            input_dict["prev_rewards"] = train_batch[SampleBatch.PREV_REWARDS]
-        states = []
-
-        # TODO(@internetcoffeephone) remove the magic number
-        i = 2
-        while "state_in_{}".format(i) in train_batch:
-            states.append(train_batch["state_in_{}".format(i)])
-            i += 1
-
-        aux_preds, _, _ = self.curiosity_model.forward_rnn(input_dict, states, train_batch.get("seq_lens"))
-        return aux_preds

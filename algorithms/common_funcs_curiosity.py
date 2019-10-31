@@ -63,8 +63,8 @@ class CuriosityLoss(object):
 
 def setup_curiosity_loss(logits, model, policy, train_batch):
     # Instantiate the prediction loss
-    aux_preds = model.aux_preds_from_batch(train_batch)
-    true_states = model._true_encoded_obs
+    aux_preds = model.predicted_encoded_observations()
+    true_states = model.true_encoded_observations()
     curiosity_loss = CuriosityLoss(aux_preds, true_states, loss_weight=policy.aux_loss_weight)
     return curiosity_loss
 
@@ -99,7 +99,7 @@ def compute_curiosity_reward(policy, trajectory):
     # Add to trajectory
     trajectory['total_aux_reward'] = reward
     trajectory['reward_without_aux'] = trajectory['rewards']
-    trajectory['rewards'] += (reward * policy.curr_aux_reward_weight)
+    trajectory['rewards'] = trajectory['rewards'] + (reward * policy.curr_aux_reward_weight)
 
     return trajectory
 
@@ -107,9 +107,9 @@ def compute_curiosity_reward(policy, trajectory):
 def curiosity_fetches(policy):
     """Adds value function, logits, moa predictions of counterfactual actions to experience train_batches."""
     return {
-        # Be aware that this is frozen here so that we don't propagate agent actions through the reward
-        ENCODED_OBSERVATIONS: policy.model.encoded_observations(),
-        PREDICTED_OBSERVATIONS: policy.model.predicted_observations(),
+        ACTION_LOGITS: policy.model.action_logits(),
+        ENCODED_OBSERVATIONS: policy.model.true_encoded_observations(),
+        PREDICTED_OBSERVATIONS: policy.model.predicted_encoded_observations(),
     }
 
 
