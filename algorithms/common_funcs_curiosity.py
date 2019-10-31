@@ -7,7 +7,6 @@ tf = try_import_tf()
 # Frozen logits of the policy that computed the action
 ACTION_LOGITS = "action_logits"
 POLICY_SCOPE = "func"
-OBSERVATIONS = "obs"
 ENCODED_OBSERVATIONS = "enc_obs"
 PREDICTED_OBSERVATIONS = "pred_obs"
 
@@ -64,9 +63,9 @@ class CuriosityLoss(object):
 
 def setup_curiosity_loss(logits, model, policy, train_batch):
     # Instantiate the prediction loss
-    pred_states = model.preds_from_batch(train_batch)
-    true_states = model.encoder_model.outputs
-    curiosity_loss = CuriosityLoss(pred_states, true_states, loss_weight=policy.aux_loss_weight)
+    aux_preds = model.aux_preds_from_batch(train_batch)
+    true_states = model._true_encoded_obs
+    curiosity_loss = CuriosityLoss(aux_preds, true_states, loss_weight=policy.aux_loss_weight)
     return curiosity_loss
 
 
@@ -85,21 +84,21 @@ def compute_curiosity_reward(policy, trajectory):
     # Probability of the next action for all other agents. Shape is [B, N, A]. This is the predicted probability
     # given the actions that we DID take.
     # extract out the probability under the actions we actually did take
-    true_obs = trajectory[OBSERVATIONS]
+    true_obs = trajectory[ENCODED_OBSERVATIONS]
     pred_obs = trajectory[PREDICTED_OBSERVATIONS]
 
     aux_reward_per_agent_step = [calculate_surprisal(pred, truth) for pred, truth in zip(pred_obs, true_obs)]
 
     # Clip curiosity reward
-    reward = np.clip(aux_reward_per_agent_step, -policy.influence_reward_clip, policy.influence_reward_clip)
+    reward = np.clip(aux_reward_per_agent_step, -policy.aux_reward_clip, policy.aux_reward_clip)
 
     # Get influence curriculum weight
     # TODO(@internetcoffeephone) move this into a schedule mixin
     policy.steps_processed += len(trajectory['obs'])
 
     # Add to trajectory
-    trajectory['total_curiosity'] = reward
-    trajectory['reward_without_influence'] = trajectory['rewards']
+    trajectory['total_aux_reward'] = reward
+    trajectory['reward_without_aux'] = trajectory['rewards']
     trajectory['rewards'] += (reward * policy.curr_aux_reward_weight)
 
     return trajectory
@@ -116,6 +115,7 @@ def curiosity_fetches(policy):
 
 class ConfigInitializerMixIn(object):
     def __init__(self, config):
+        config = config['model']['custom_options']
         self.num_other_agents = config['num_other_agents']
         self.aux_loss_weight = config['aux_loss_weight']
         self.aux_reward_clip = config['aux_reward_clip']
@@ -123,6 +123,7 @@ class ConfigInitializerMixIn(object):
 
 class AuxScheduleMixIn(object):
     def __init__(self, config):
+        config = config['model']['custom_options']
         self.aux_reward_weight = config['aux_reward_weight']
         self.aux_curriculum_steps = config['aux_curriculum_steps']
         self.inf_scale_start = config['aux_scaledown_start']

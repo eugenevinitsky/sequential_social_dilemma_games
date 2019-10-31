@@ -1,9 +1,11 @@
 from gym.spaces import Box
 import numpy as np
-from ray.rllib.policy.rnn_sequencing import add_time_dimension
 from ray.rllib.models.tf.misc import normc_initializer, get_activation_fn
+from ray.rllib.models.model import restore_original_dimensions
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
+from ray.rllib.policy.rnn_sequencing import add_time_dimension
+from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.utils.annotations import override
 from ray.rllib.utils import try_import_tf
 
@@ -111,10 +113,11 @@ class CuriosityLSTM(RecurrentTFModelV2):
         self.num_other_agents = model_config['custom_options']['num_other_agents']
 
         # Calculate vision network input shape
-        # TODO(@internetcoffeephone) why did this calculation involve num_agents in original?
+        # TODO(@internetcoffeephone) add original size calculation
         # an extra none for the time dimension
+        original_obs_dims = (7, 7, 3)
         inputs = tf.keras.layers.Input(
-            shape=(None,) + obs_space.shape, name="observations")
+            shape=(None,) + original_obs_dims, name="observations")
 
         # A temp config with custom_model false so that we can get a basic vision model with the desired filters
         # Build the CNN layer
@@ -146,10 +149,13 @@ class CuriosityLSTM(RecurrentTFModelV2):
         self.base_model = tf.keras.Model(inputs, [conv_out])
         self.register_variables(self.base_model.variables)
         self.base_model.summary()
-        self._true_encoded_obs = self.base_model.outputs
+        # TODO: Replace hardcoded reshape shape
+        self._true_encoded_obs = tf.reshape(self.base_model.outputs[0], (-1, -1, 150))
 
         # now output two heads, one for action selection and one for the prediction the next state
         inner_obs_space = Box(low=-1, high=1, shape=conv_out.shape[2:], dtype=np.float32)
+        inner_obs_shape = inner_obs_space.shape
+        inner_obs_size = inner_obs_shape[0] * inner_obs_shape[1] * inner_obs_shape[2]
 
         cell_size = model_config["custom_options"].get("cell_size")
         self.policy_model = KerasRNN(inner_obs_space, action_space, num_outputs,
@@ -159,8 +165,8 @@ class CuriosityLSTM(RecurrentTFModelV2):
         # create a new input reader per worker
         self.aux_loss_weight = model_config['custom_options']['aux_loss_weight']
 
-        self.curiosity_model = KerasRNN(inner_obs_space, action_space, inner_obs_space,
-                                        model_config, "curiosity_model", cell_size=cell_size, use_value_fn=False)
+        self.curiosity_model = KerasRNN(inner_obs_space, action_space, inner_obs_size, model_config, "curiosity_model",
+                                        cell_size=cell_size, use_value_fn=False)
         self.register_variables(self.policy_model.rnn_model.variables)
         self.register_variables(self.curiosity_model.rnn_model.variables)
         self.policy_model.rnn_model.summary()
@@ -206,3 +212,39 @@ class CuriosityLSTM(RecurrentTFModelV2):
     @override(ModelV2)
     def get_initial_state(self):
         return self.policy_model.get_initial_state() + self.curiosity_model.get_initial_state()
+
+    def aux_preds_from_batch(self, train_batch):
+        """Convenience function that calls this model with a tensor batch.
+
+        All this does is unpack the tensor batch tto call this model with the
+        right input dict, state, and seq len arguments.
+        """
+
+        obs_dict = restore_original_dimensions(train_batch["obs"], self.obs_space)
+        curr_obs = obs_dict["curr_obs"]
+        agent_actions = tf.cast(tf.expand_dims(train_batch[SampleBatch.PREV_ACTIONS], axis=1), tf.float32)
+
+        # Now we add the appropriate time dimension
+        curr_obs = add_time_dimension(curr_obs, train_batch.get("seq_lens"))
+        agent_actions = add_time_dimension(agent_actions, train_batch.get("seq_lens"))
+
+        trunk = self.base_model(curr_obs)
+        input_dict = {
+            "curr_obs": trunk,
+            "is_training": True,
+            "agent_actions": agent_actions
+        }
+        if SampleBatch.PREV_ACTIONS in train_batch:
+            input_dict["prev_actions"] = train_batch[SampleBatch.PREV_ACTIONS]
+        if SampleBatch.PREV_REWARDS in train_batch:
+            input_dict["prev_rewards"] = train_batch[SampleBatch.PREV_REWARDS]
+        states = []
+
+        # TODO(@internetcoffeephone) remove the magic number
+        i = 2
+        while "state_in_{}".format(i) in train_batch:
+            states.append(train_batch["state_in_{}".format(i)])
+            i += 1
+
+        aux_preds, _, _ = self.curiosity_model.forward_rnn(input_dict, states, train_batch.get("seq_lens"))
+        return aux_preds
