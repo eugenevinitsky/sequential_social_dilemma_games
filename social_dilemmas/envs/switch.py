@@ -108,7 +108,7 @@ class SwitchEnv(MapEnv):
             spawn_point = self.spawn_point()
             rotation = self.spawn_rotation()
             grid = map_with_agents
-            agent = SwitchAgent(agent_id, spawn_point, rotation, grid)
+            agent = SwitchAgent(agent_id, spawn_point, rotation, grid, SWITCH_VIEW_SIZE)
             self.agents[agent_id] = agent
 
     def custom_reset(self):
