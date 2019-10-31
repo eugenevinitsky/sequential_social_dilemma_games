@@ -204,7 +204,7 @@ class MapEnv(MultiAgentEnv):
                 observations[agent.agent_id] = {"curr_obs": rgb_arr, "other_agent_actions": prev_actions,
                                                 "visible_agents": self.find_visible_agents(agent.agent_id)}
             else:
-                observations[agent.agent_id] = rgb_arr
+                observations[agent.agent_id] = {"curr_obs": rgb_arr}
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
 
@@ -245,7 +245,7 @@ class MapEnv(MultiAgentEnv):
                 observations[agent.agent_id] = {"curr_obs": rgb_arr, "other_agent_actions": prev_actions,
                                                 "visible_agents": self.find_visible_agents(agent.agent_id)}
             else:
-                observations[agent.agent_id] = rgb_arr
+                observations[agent.agent_id] = {"curr_obs": rgb_arr}
         return observations
 
     @property
