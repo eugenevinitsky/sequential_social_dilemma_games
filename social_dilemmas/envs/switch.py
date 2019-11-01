@@ -1,6 +1,5 @@
 from gym.spaces import Box, Dict, Discrete
 import numpy as np
-from ray import tune
 
 from social_dilemmas.envs.agent import SwitchAgent
 from social_dilemmas.maps import SWITCH_MAP
@@ -192,5 +191,5 @@ class SwitchEnv(MapEnv):
 
     @staticmethod
     def get_environment_callbacks():
-        callbacks = {"on_episode_end": tune.function(SwitchEnv.on_episode_end)}
+        callbacks = {"on_episode_end": SwitchEnv.on_episode_end}
         return callbacks
