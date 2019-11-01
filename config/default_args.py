@@ -21,7 +21,7 @@ def add_default_args(parser):
     parser.add_argument('--num_gpus', type=int, default=0, help='Number of available GPUs')
     parser.add_argument('--use_gpus_for_workers', action='store_true', default=False,
                         help='Set to true to run workers on GPUs rather than CPUs')
-    parser.add_argument('--use_gpu_for_driver', action='store_true', default=False,
+    parser.add_argument('--use_gpu_for_driver', action='store_true', default=True,
                         help='Set to true to run driver on GPU rather than CPU.')
     parser.add_argument('--num_workers_per_device', type=float, default=1,
                         help='Number of workers to place on a single device (CPU or GPU)')
