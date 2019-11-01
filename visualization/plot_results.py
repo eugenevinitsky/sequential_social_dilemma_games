@@ -1,6 +1,3 @@
-import ast
-import io
-import re
 import os.path
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -64,29 +61,24 @@ def plot_with_mean(x_lists, y_lists, color, y_label):
     plt.ticklabel_format(useOffset=False)
 
 
-def extract_mean_agent_stats(dfs, keys):
+def extract_stats(dfs, keys):
+    column_names = dfs[0].columns.values.tolist()
+    available_keys = [name.split('/')[-1] for name in column_names]
+    keys = [key for key in keys if key in available_keys]
+
     all_df_lists = {}
     for key in keys:
         all_df_lists[key] = []
 
+    # Per file, extract the mean trajectory for each key.
     for df in dfs:
-        info = list(df['info'])
-        learner_dicts = [ast.literal_eval(info_line)['learner'] for info_line in info]
         df_list = {}
-        keys = [key for key in keys if key in next(iter(learner_dicts[0].values()))]
         for key in keys:
-            df_list[key] = []
-        for learner_dict in learner_dicts:
-            summed_values = {}
-            for key in keys:
-                summed_values[key] = 0
-            for agent, agent_stats in learner_dict.items():
-                for key in keys:
-                    value = agent_stats[key]
-                    summed_values[key] += value
-            for key, value in summed_values.items():
-                mean = value / len(learner_dict)
-                df_list[key].append(mean)
+            key_column_names = [name for name in column_names if key == name.split('/')[-1]]
+            key_columns = df[key_column_names]
+            mean_trajectory = list(key_columns.mean(axis=1))
+            df_list[key] = mean_trajectory
+
         for key, value in df_list.items():
             all_df_lists[key].append(value)
     return all_df_lists
@@ -98,17 +90,10 @@ def plot_csvs_results(paths):
     # Commas are delimiters, and replacing them with quotechars does not help as they are nested.
     dfs = []
     for path in paths:
-        with open(path, 'r') as f:
-            fo = io.StringIO()
-            data = f.readlines()
-            # TODO: Fix due to breaking ray update: Nested dictionary results are now flattened for CSV writing: {“a”: {“b”: 1}} => {“a/b”: 1}
-            # The current case handles nested dictionary results, not flattened ones.
-            fo.writelines(re.sub("/{([^}]*)}/", "", line) for line in data)
-            fo.seek(0)
-            df = pd.read_csv(fo, sep=",")
-            # Set NaN values to 0, common at start of training due to ray behavior
-            df = df.fillna(0)
-            dfs.append(df)
+        df = pd.read_csv(path, sep=",")
+        # Set NaN values to 0, common at start of training due to ray behavior
+        df = df.fillna(0)
+        dfs.append(df)
 
     plots = []
 
@@ -122,53 +107,27 @@ def plot_csvs_results(paths):
     episode_len_means = [df.episode_len_mean for df in dfs]
     plots.append(PlotData(timesteps_totals, episode_len_means, 'episode_length', 'Mean episode length', 'pink'))
 
-    agent_metric_details = [PlotDetails('policy_entropy', 'Policy Entropy', 'b'),
-                            PlotDetails('policy_loss', 'Policy loss', 'r'),
-                            PlotDetails('vf_loss', 'Value function loss', 'orange'),
-                            PlotDetails('total_a3c_loss', 'Total A3C loss', 'yellow'),
-                            PlotDetails('aux_loss', 'Auxiliary task loss', 'black'),
-                            PlotDetails('total_aux_reward', 'Auxiliary task reward', 'black')]
+    metric_details = [PlotDetails('policy_entropy', 'Policy Entropy', 'b'),
+                      PlotDetails('policy_loss', 'Policy loss', 'r'),
+                      PlotDetails('vf_loss', 'Value function loss', 'orange'),
+                      PlotDetails('total_a3c_loss', 'Total A3C loss', 'yellow'),
+                      PlotDetails('aux_loss', 'Auxiliary task loss', 'black'),
+                      PlotDetails('total_aux_reward', 'Auxiliary task reward', 'black'),
+                      PlotDetails('total_successes_mean', 'Total successes', 'black'),
+                      PlotDetails('switches_on_at_termination_mean', 'Switches on at termination', 'black'),
+                      PlotDetails('total_pulled_on_mean', 'Total switched on', 'black'),
+                      PlotDetails('total_pulled_off_mean', 'Total switched off', 'black'),
+                      PlotDetails('timestep_first_switch_pull_mean', 'Time at first switch pull', 'black'),
+                      PlotDetails('timestep_last_switch_pull_mean', 'Time at last switch pull', 'black')]
 
-    episode_metric_details = [PlotDetails('total_successes_mean', 'Total successes', 'black'),
-                              PlotDetails('switches_on_at_termination_mean', 'Switches on at termination', 'black'),
-                              PlotDetails('total_pulled_on_mean', 'Total switched on', 'black'),
-                              PlotDetails('total_pulled_off_mean', 'Total switched off', 'black'),
-                              PlotDetails('timestep_first_switch_pull_mean', 'Time at first switch pull', 'black'),
-                              PlotDetails('timestep_last_switch_pull_mean', 'Time at last switch pull', 'black')]
-
-    agent_stats = extract_mean_agent_stats(dfs, [detail.column_name for detail in agent_metric_details])
-    for metric in agent_metric_details:
-        if metric.column_name in agent_stats:
+    extracted_data = extract_stats(dfs, [detail.column_name for detail in metric_details])
+    for metric in metric_details:
+        if metric.column_name in extracted_data:
             plots.append(PlotData(timesteps_totals,
-                                  agent_stats[metric.column_name],
+                                  extracted_data[metric.column_name],
                                   metric.column_name,
                                   metric.legend_name,
                                   metric.color))
-
-    for metric in episode_metric_details:
-        metric_data = []
-        for df in dfs:
-            # Parse the dictionaries in each row
-            custom_metrics_column = df['custom_metrics']
-            # Replace nan with a string, then back to np.nan.
-            # Directly evaluating this is not allowed by ast.literal_eval.
-            # Metric may not exist yet in a row at the start of an experiment, hence we check for this.
-            column = []
-            for row in custom_metrics_column:
-                row_eval = ast.literal_eval(row.replace(' nan', '\'nan\''))
-                if metric.column_name in row_eval:
-                    column.append(row_eval[metric.column_name])
-                else:
-                    column.append(np.nan)
-            column = np.array(column, dtype=np.float)
-            metric_data.append(column)
-
-        plots.append(PlotData(timesteps_totals,
-                              metric_data,
-                              metric.column_name,
-                              metric.legend_name,
-                              metric.color))
-
     path = paths[0]
 
     for plot in plots:
@@ -189,6 +148,7 @@ def plot_csvs_results(paths):
                                    plot.plot_details.legend_name)
 
     plot_and_save(plot_losses, path, 'all_losses')
+
 
 ray_results_path = get_ray_results_path()
 plot_path = get_plot_path()
