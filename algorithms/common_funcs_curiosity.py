@@ -125,30 +125,19 @@ class AuxScheduleMixIn(object):
     def __init__(self, config):
         config = config['model']['custom_options']
         self.aux_reward_weight = config['aux_reward_weight']
-        self.aux_curriculum_steps = config['aux_curriculum_steps']
-        self.inf_scale_start = config['aux_scaledown_start']
-        self.inf_scale_end = config['aux_scaledown_end']
-        self.inf_scale_final_val = config['aux_scaledown_final_val']
+        self.aux_reward_curriculum_time = config['aux_reward_curriculum_steps']
+        self.aux_reward_curriculum_weights = config['aux_reward_curriculum_weights']
         self.steps_processed = 0
         self.curr_aux_reward_weight = self.aux_reward_weight
 
     def current_aux_curriculum_weight(self):
         """ Computes multiplier for aux reward based on training steps
         taken and curriculum parameters.
-
-        Returns: scalar float aux weight
         """
-        if self.steps_processed < self.aux_curriculum_steps:
-            percent = float(self.steps_processed) / self.aux_curriculum_steps
-            self.curr_aux_reward_weight = percent * self.aux_reward_weight
-        elif self.steps_processed > self.inf_scale_start:
-            percent = (self.steps_processed - self.inf_scale_start) \
-                      / float(self.inf_scale_end - self.inf_scale_start)
-            diff = self.aux_reward_weight - self.inf_scale_final_val
-            scaled = self.aux_reward_weight - diff * percent
-            self.curr_aux_reward_weight = max(self.inf_scale_final_val, scaled)
-        else:
-            self.curr_aux_reward_weight = self.aux_reward_weight
+        scale = np.interp(self.steps_processed,
+                          self.aux_reward_curriculum_steps,
+                          self.aux_reward_curriculum_weights)
+        self.curr_aux_reward_weight = scale * self.aux_reward_weight
 
 
 def setup_curiosity_mixins(policy, obs_space, action_space, config):

@@ -51,6 +51,11 @@ def add_default_args(parser):
                         help='Loss weight of the auxiliary network')
     parser.add_argument('--aux_reward_weight', type=float, default=0.001,
                         help='Reward weight of the auxiliary network')
+    parser.add_argument('--aux_reward_curriculum_steps', nargs='+', type=int, default=[0, int(1e7), int(1e8), int(3e8)],
+                        help="Amounts of environment steps at which to change scaling the aux reward.")
+    parser.add_argument('--aux_reward_curriculum_weights', type=float, default=[0.0, 1.0, 1.0, 0.5],
+                        help="Multipliers for the aux reward curriculum. Linearly interpolates using \
+                         --aux_reward_curriculum_time")
 
     parser.add_argument('--entropy_tune', nargs='+', type=float, default=[.001],
                         help='When --grid_search is provided, perform a grid search over these entropy_coeff\

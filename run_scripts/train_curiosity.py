@@ -47,7 +47,7 @@ def setup(args):
     config = agent_cls._default_config.copy()
 
     # information for replay
-    config['env_config']['func_create'] = tune.function(env_creator)
+    config['env_config']['func_create'] = env_creator
     config['env_config']['env_name'] = env_name
     if env_name == 'switch_env':
         config['env_config']['num_switches'] = args.num_switches
@@ -84,7 +84,7 @@ def setup(args):
         "grad_clip": args.grad_clip,
         "multiagent": {
             "policy_graphs": policy_graphs,
-            "policy_mapping_fn": tune.function(policy_mapping_fn),
+            "policy_mapping_fn": policy_mapping_fn,
                       },
         "model": {"custom_model": "curiosity_lstm",
                   "use_lstm": False,
@@ -95,10 +95,8 @@ def setup(args):
                       "aux_loss_weight": args.aux_loss_weight,
                       "aux_reward_clip": 10,
                       "aux_reward_weight": args.aux_reward_weight,
-                      "aux_curriculum_steps": 1e7,
-                      "aux_scaledown_start": 1e8,
-                      "aux_scaledown_end": 3e8,
-                      "aux_scaledown_final_val": 0.5,
+                      "aux_reward_curriculum_steps": args.aux_reward_curriculum_steps,
+                      "aux_reward_curriculum_weights": args.aux_reward_curriculum_weights,
                       "cell_size": 128,
                       "num_other_agents": args.num_agents - 1}
                   },
