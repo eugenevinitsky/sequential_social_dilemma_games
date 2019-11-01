@@ -1,6 +1,7 @@
 import numpy as np
-
+from ray.rllib.policy.policy import Policy
 from ray.rllib.utils import try_import_tf
+from ray.rllib.utils.annotations import override
 
 tf = try_import_tf()
 
@@ -91,6 +92,7 @@ def compute_curiosity_reward(policy, trajectory):
 
     # Clip curiosity reward
     reward = np.clip(aux_reward_per_agent_step, -policy.aux_reward_clip, policy.aux_reward_clip)
+    reward = reward * policy.cur_aux_reward_weight
 
     # Get influence curriculum weight
     # TODO(@internetcoffeephone) move this into a schedule mixin
@@ -99,7 +101,7 @@ def compute_curiosity_reward(policy, trajectory):
     # Add to trajectory
     trajectory['total_aux_reward'] = reward
     trajectory['reward_without_aux'] = trajectory['rewards']
-    trajectory['rewards'] = trajectory['rewards'] + (reward * policy.curr_aux_reward_weight)
+    trajectory['rewards'] = trajectory['rewards'] + reward
 
     return trajectory
 
@@ -124,20 +126,29 @@ class ConfigInitializerMixIn(object):
 class AuxScheduleMixIn(object):
     def __init__(self, config):
         config = config['model']['custom_options']
-        self.aux_reward_weight = config['aux_reward_weight']
         self.aux_reward_curriculum_time = config['aux_reward_curriculum_steps']
         self.aux_reward_curriculum_weights = config['aux_reward_curriculum_weights']
         self.steps_processed = 0
-        self.curr_aux_reward_weight = self.aux_reward_weight
+        self.cur_aux_reward_weight = self.compute_weight()
+        # TODO: cur_aux_reward_weight_tensor seems to get stuck.
+        self.cur_aux_reward_weight_tensor = tf.get_variable("cur_aux_reward_weight",
+                                                            initializer=self.cur_aux_reward_weight,
+                                                            trainable=False)
 
-    def current_aux_curriculum_weight(self):
+    def compute_weight(self):
         """ Computes multiplier for aux reward based on training steps
         taken and curriculum parameters.
         """
-        scale = np.interp(self.steps_processed,
-                          self.aux_reward_curriculum_steps,
-                          self.aux_reward_curriculum_weights)
-        self.curr_aux_reward_weight = scale * self.aux_reward_weight
+        weight = np.interp(self.steps_processed,
+                           self.aux_reward_curriculum_time,
+                           self.aux_reward_curriculum_weights)
+        return weight
+
+    @override(Policy)
+    def on_global_var_update(self, global_vars):
+        super(AuxScheduleMixIn, self).on_global_var_update(global_vars)
+        self.cur_aux_reward_weight = self.compute_weight()
+        self.cur_aux_reward_weight_tensor.load(self.cur_aux_reward_weight, session=self._sess)
 
 
 def setup_curiosity_mixins(policy, obs_space, action_space, config):

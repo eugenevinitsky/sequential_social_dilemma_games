@@ -101,6 +101,7 @@ def stats(policy, train_batch):
                   "policy_entropy": policy.loss.entropy,
                   "var_gnorm": tf.global_norm([x for x in policy.model.trainable_variables()]),
                   "vf_loss": policy.loss.vf_loss,
+                  "cur_aux_reward_weight": tf.cast(policy.cur_aux_reward_weight_tensor, tf.float64),
                   "total_aux_reward": train_batch["total_aux_reward"],
                   'reward_without_aux': train_batch['reward_without_aux'],
                   'aux_loss': policy.aux_loss * policy.aux_loss_weight}

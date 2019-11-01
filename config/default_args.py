@@ -43,19 +43,23 @@ def add_default_args(parser):
     parser.add_argument('--grad_clip', type=float, default=40,
                         help='Gradients are clipped by this amount per update.')
 
-    parser.add_argument('--lr_init', type=float, default=0.001, help='Initial learning rate in curriculum.')
-    parser.add_argument('--lr_final', type=float, default=0.001, help='Final learning rate in curriculum.')
+    parser.add_argument('--lr_curriculum_steps', nargs='+', type=int, default=[0, int(2e7)],
+                        help="Amounts of environment steps at which the learning rate has a value specified in"
+                             "--lr_curriculum_weights")
+    parser.add_argument('--lr_curriculum_weights', nargs='+', type=float, default=[.001, .0001],
+                        help="Values for the learning rate curriculum. Linearly interpolates using "
+                             "--lr_curriculum_steps")
 
     parser.add_argument('--entropy_coeff', type=float, default=0.001, help='Entropy reward weight.')
     parser.add_argument('--aux_loss_weight', type=float, default=1.0,
                         help='Loss weight of the auxiliary network')
-    parser.add_argument('--aux_reward_weight', type=float, default=0.001,
-                        help='Reward weight of the auxiliary network')
-    parser.add_argument('--aux_reward_curriculum_steps', nargs='+', type=int, default=[0, int(1e7), int(1e8), int(3e8)],
-                        help="Amounts of environment steps at which to change scaling the aux reward.")
-    parser.add_argument('--aux_reward_curriculum_weights', type=float, default=[0.0, 1.0, 1.0, 0.5],
-                        help="Multipliers for the aux reward curriculum. Linearly interpolates using \
-                         --aux_reward_curriculum_time")
+
+    parser.add_argument('--aux_reward_curriculum_steps', nargs='+', type=int, default=[0, int(1e8)],
+                        help="Amounts of environment steps at which the aux reward has a value specified in"
+                             "--aux_reward_curriculum_weights")
+    parser.add_argument('--aux_reward_curriculum_weights', nargs='+', type=float, default=[1.0, 0.5],
+                        help="Values for the aux reward curriculum. Linearly interpolates using "
+                             "--aux_reward_curriculum_steps")
 
     parser.add_argument('--entropy_tune', nargs='+', type=float, default=[.001],
                         help='When --grid_search is provided, perform a grid search over these entropy_coeff\

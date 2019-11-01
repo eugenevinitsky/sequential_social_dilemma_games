@@ -70,8 +70,7 @@ def setup(args):
     config.update({
         "horizon": 1000,
         "gamma": 0.99,
-        "lr_schedule": [[0, args.lr_init],
-                        [20000000, args.lr_final]],
+        "lr_schedule": list(zip(args.lr_curriculum_steps, args.lr_curriculum_weights)),
         "sample_batch_size": args.sample_batch_size,
         "train_batch_size": args.train_batch_size,
         "num_workers": num_workers,
@@ -94,7 +93,6 @@ def setup(args):
                   "custom_options": {
                       "aux_loss_weight": args.aux_loss_weight,
                       "aux_reward_clip": 10,
-                      "aux_reward_weight": args.aux_reward_weight,
                       "aux_reward_curriculum_steps": args.aux_reward_curriculum_steps,
                       "aux_reward_curriculum_weights": args.aux_reward_curriculum_weights,
                       "cell_size": 128,

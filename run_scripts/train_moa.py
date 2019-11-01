@@ -89,8 +89,7 @@ def setup(args):
     config.update({
         "horizon": 1000,
         "gamma": 0.99,
-        "lr_schedule": [[0, hparams['lr_init']],
-                        [20000000, hparams['lr_final']]],
+        "lr_schedule": list(zip(args.lr_curriculum_steps, args.lr_curriculum_weights)),
         "sample_batch_size": args.sample_batch_size,
         "train_batch_size": args.train_batch_size,
         "num_workers": num_workers,
