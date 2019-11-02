@@ -93,6 +93,7 @@ def setup(args):
                   "custom_options": {
                       "aux_loss_weight": args.aux_loss_weight,
                       "aux_reward_clip": 10,
+                      "aux_reward_weight": args.aux_reward_weight,
                       "aux_reward_curriculum_steps": args.aux_reward_curriculum_steps,
                       "aux_reward_curriculum_weights": args.aux_reward_curriculum_weights,
                       "cell_size": 128,
@@ -104,7 +105,7 @@ def setup(args):
     if args.grid_search:
         config["entropy_coeff"] = tune.grid_search(args.entropy_tune)
         config["model"]["custom_options"]["aux_loss_weight"] = tune.grid_search(args.aux_loss_weight_tune)
-        config["model"]["custom_options"]["aux_reward_weight_tune"] = tune.grid_search(args.aux_reward_weight_tune)
+        config["model"]["custom_options"]["aux_reward_weight"] = tune.grid_search(args.aux_reward_weight_tune)
 
     return env_name, config
 
