@@ -82,7 +82,7 @@ def setup(args):
         "entropy_coeff": args.entropy_coeff,
         "grad_clip": args.grad_clip,
         "multiagent": {
-            "policy_graphs": policy_graphs,
+            "policies": policy_graphs,
             "policy_mapping_fn": policy_mapping_fn,
                       },
         "model": {"custom_model": "curiosity_lstm",
