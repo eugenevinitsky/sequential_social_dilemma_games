@@ -70,6 +70,6 @@ def add_default_args(parser):
     parser.add_argument('--aux_loss_weight_tune', nargs='+', type=float, default=[1.0],
                         help='When --grid_search is provided, perform a grid search over these aux_loss_weight\
                                 parameters. Replaces --aux_reward_weight when used.')
-    parser.add_argument('--aux_reward_weight_tune', nargs='+', type=float, default=[.0001],
+    parser.add_argument('--aux_reward_weight_tune', nargs='+', type=float, default=[.001],
                         help='When --grid_search is provided, perform a grid search over these aux_reward_weight\
                                 parameters. Replaces --entropy_coeff.')
