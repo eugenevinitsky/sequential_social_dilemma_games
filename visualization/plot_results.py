@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from utility_funcs import get_all_subdirs
 
-from config.config_parser import get_ray_results_path, get_plot_path
+ray_results_path = os.path.expanduser("~/ray_results")
+plot_path = os.path.expanduser("~/ray_results_plot")
 
 
 class PlotDetails(object):
@@ -149,9 +150,6 @@ def plot_csvs_results(paths):
 
     plot_and_save(plot_losses, path, 'all_losses')
 
-
-ray_results_path = get_ray_results_path()
-plot_path = get_plot_path()
 
 category_folders = get_all_subdirs(ray_results_path)
 experiment_folders = [get_all_subdirs(category_folder) for category_folder in category_folders]
