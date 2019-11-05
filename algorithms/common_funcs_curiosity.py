@@ -123,7 +123,7 @@ class ConfigInitializerMixIn(object):
 class AuxScheduleMixIn(object):
     def __init__(self, config):
         config = config['model']['custom_options']
-        self.aux_reward_weight = config['aux_reward_weight']
+        self.baseline_aux_reward_weight = config['aux_reward_weight']
         self.aux_reward_curriculum_steps = config['aux_reward_curriculum_steps']
         self.aux_reward_curriculum_weights = config['aux_reward_curriculum_weights']
         self.timestep = 0
@@ -147,7 +147,7 @@ class AuxScheduleMixIn(object):
         weight = np.interp(self.timestep,
                            self.aux_reward_curriculum_steps,
                            self.aux_reward_curriculum_weights)
-        return weight
+        return weight * self.baseline_aux_reward_weight
 
 
 def setup_curiosity_mixins(policy, obs_space, action_space, config):
