@@ -153,9 +153,11 @@ def plot_csvs_results(paths):
 
 category_folders = get_all_subdirs(ray_results_path)
 experiment_folders = [get_all_subdirs(category_folder) for category_folder in category_folders]
-# Sort by device
+
 for experiment_folder in experiment_folders:
     csvs = []
     for subdir in experiment_folder:
-        csvs.append(subdir + "/progress.csv")
+        csv_path = subdir + "/progress.csv"
+        if os.path.getsize(csv_path) > 0:
+            csvs.append(csv_path)
     plot_csvs_results(csvs)
