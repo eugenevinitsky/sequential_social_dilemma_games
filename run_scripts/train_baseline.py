@@ -152,7 +152,11 @@ def setup(env, hparams, algorithm, train_batch_size, num_cpus, num_gpus,
 
 
 def main(unused_argv):
-    ray.init()
+    ray.init(address=args.address,
+             local_mode=args.local_mode,
+             memory=args.memory,
+             object_store_memory=args.object_store_memory,
+             redis_max_memory=args.redis_max_memory)
     if FLAGS.env == 'harvest':
         hparams = harvest_default_params
     else:

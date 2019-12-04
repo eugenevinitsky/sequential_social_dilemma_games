@@ -149,7 +149,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.multi_node and args.local_mode:
         sys.exit("You cannot have both local mode and multi node on at the same time")
-    ray.init(address=args.address, local_mode=args.local_mode, memory=args.memory)
+    ray.init(address=args.address,
+             local_mode=args.local_mode,
+             memory=args.memory,
+             object_store_memory=args.object_store_memory,
+             redis_max_memory=args.redis_max_memory)
 
     if args.env == 'harvest':
         hparams = harvest_default_params
