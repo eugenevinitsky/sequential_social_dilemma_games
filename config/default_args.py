@@ -17,9 +17,9 @@ def add_default_args(parser):
     parser.add_argument('--num_samples', type=int, default=1,
                         help='Amount of times to repeat all experiments')
     parser.add_argument('--memory', type=int, default=int(2e9), help='Amount of total usable memory')
-    parser.add_argument('--object_store_memory', type=int, default=int(1e9),
+    parser.add_argument('--object_store_memory', type=int, default=None,
                         help='Amount of memory for the object store')
-    parser.add_argument('--redis_max_memory', type=int, default=int(1e9), help='Amount of memory for redis')
+    parser.add_argument('--redis_max_memory', type=int, default=None, help='Amount of memory for redis')
 
     parser.add_argument('--num_cpus', type=int, default=2, help='Number of available CPUs')
     parser.add_argument('--num_gpus', type=int, default=0, help='Number of available GPUs')
