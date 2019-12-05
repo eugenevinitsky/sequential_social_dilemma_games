@@ -148,8 +148,7 @@ if __name__ == '__main__':
         eastern = pytz.timezone('US/Eastern')
         date = datetime.now(tz=pytz.utc)
         date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
-        s3_string = "s3://ssd-reproduce/" \
-                    + date + '/' + exp_name
+        s3_string = "s3://ssd-reproduce/" + date + '/' + exp_name
         exp_dict['upload_dir'] = s3_string
 
     tune.run(**exp_dict, queue_trials=True)
