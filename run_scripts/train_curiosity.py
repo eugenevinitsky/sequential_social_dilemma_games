@@ -66,6 +66,13 @@ def setup(args):
         num_gpus_per_worker = 0
         num_cpus_per_worker = spare_cpus / num_workers
 
+    # conv_filters = [[6, [3, 3], 1]]
+    # fcnet_hiddens = [32, 32]
+    # lstm_cell_size = 128
+    conv_filters = [[6, [3, 3], 1]]
+    fcnet_hiddens = [32, 32]
+    lstm_cell_size = 16
+
     # hyperparams
     config.update({
         "horizon": 1000,
@@ -87,16 +94,15 @@ def setup(args):
                       },
         "model": {"custom_model": "curiosity_lstm",
                   "use_lstm": False,
-                  "lstm_cell_size": 128,
-                  "conv_filters": [[6, [3, 3], 1]],
-                  "fcnet_hiddens": [32, 32],
+                  "conv_filters": conv_filters,
+                  "fcnet_hiddens": fcnet_hiddens,
                   "custom_options": {
                       "aux_loss_weight": args.aux_loss_weight,
                       "aux_reward_clip": 10,
                       "aux_reward_weight": args.aux_reward_weight,
                       "aux_reward_curriculum_steps": args.aux_reward_curriculum_steps,
                       "aux_reward_curriculum_weights": args.aux_reward_curriculum_weights,
-                      "cell_size": 128,
+                      "cell_size": lstm_cell_size,
                       "num_other_agents": args.num_agents - 1}
                   },
         "callbacks": single_env.get_environment_callbacks(),
