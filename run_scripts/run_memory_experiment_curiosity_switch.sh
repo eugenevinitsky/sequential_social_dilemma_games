@@ -5,8 +5,8 @@ python train_curiosity.py \
 --exp_name curiosity_switch_memory_experiment \
 --env switch \
 --algorithm A3C \
---sample_batch_size 1000 \
---train_batch_size 30000 \
+--sample_batch_size 10 \
+--train_batch_size 30 \
 --stop_at_timesteps_total $((1 * 10 ** 9)) \
 --memory $((4 * 10 ** 9)) \
 --object_store_memory $((1 * 10 ** 9)) \
