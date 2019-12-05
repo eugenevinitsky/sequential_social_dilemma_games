@@ -184,15 +184,15 @@ class CuriosityLSTM(RecurrentTFModelV2):
         h1, c1, h2, c2 = state
 
         # Save true encoded environment
-        # TODO: Replace hardcoded reshape shape
-        self._true_encoded_obs = tf.reshape(trunk, (-1, 150))
+        encoded_size = self.curiosity_model.num_outputs
+        self._true_encoded_obs = tf.reshape(trunk, (-1, encoded_size))
 
         # Compute the next action
         self._model_out, self._value_out, output_h1, output_c1 = self.policy_model.forward_rnn(pass_dict, [h1, c1],
                                                                                                seq_lens)
         # Compute the next state prediction
         self._pred_encoded_obs, output_h2, output_c2 = self.curiosity_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
-        self._pred_encoded_obs = tf.reshape(self._pred_encoded_obs, (-1, 150))
+        self._pred_encoded_obs = tf.reshape(self._pred_encoded_obs, (-1, encoded_size))
 
         return self._model_out, [output_h1, output_c1, output_h2, output_c2]
 
