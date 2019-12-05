@@ -70,7 +70,7 @@ def setup(args):
     # fcnet_hiddens = [32, 32]
     # lstm_cell_size = 128
     conv_filters = [[3, [3, 3], 1]]
-    fcnet_hiddens = [32, 32]
+    fcnet_hiddens = [8, 8]
     lstm_cell_size = 16
 
     # hyperparams
