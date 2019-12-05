@@ -25,9 +25,9 @@ from ray.rllib.utils import try_import_tf
 from ray.rllib.agents.trainer_template import build_trainer
 
 from algorithms.common_funcs_causal import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
-    CAUSAL_CONFIG, causal_postprocess_trajectory
+    causal_postprocess_trajectory
 
-CAUSAL_CONFIG.update(DEFAULT_CONFIG)
+CAUSAL_CONFIG = DEFAULT_CONFIG
 
 
 tf = try_import_tf()

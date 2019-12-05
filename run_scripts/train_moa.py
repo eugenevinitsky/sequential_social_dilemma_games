@@ -9,7 +9,7 @@ from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 
-from algorithms.a3c_causal import CausalA3CMOATrainer
+from algorithms.a3c_aux import get_a3c_trainer
 from algorithms.ppo_causal import CausalPPOMOATrainer
 from algorithms.impala_causal import CausalImpalaTrainer
 from models.moa_model import MOA_LSTM
@@ -18,25 +18,6 @@ from social_dilemmas.envs.env_creator import get_env_creator
 
 parser = argparse.ArgumentParser()
 add_default_args(parser)
-
-harvest_default_params = {
-    'lr_init': 0.00136,
-    'lr_final': 0.000028,
-    'entropy_coeff': .000687,
-    'moa_weight': 10.911
-}
-cleanup_default_params = {
-    'lr_init': 0.00126,
-    'lr_final': 0.000012,
-    'entropy_coeff': .00176,
-    'moa_weight': 15.007
-}
-switch_default_params = {
-    'lr_init': 0.001,
-    'lr_final': 0.0001,
-    'entropy_coeff': .001,
-    'aux_weight': 1
-}
 
 
 def setup(args):
@@ -96,32 +77,32 @@ def setup(args):
         "num_envs_per_worker": args.num_envs_per_worker,
         "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
         "num_cpus_for_driver": cpus_for_driver,
-        "num_gpus_per_worker": num_gpus_per_worker,   # Can be a fraction
-        "num_cpus_per_worker": num_cpus_per_worker,   # Can be a fraction
-        "entropy_coeff": hparams['entropy_coeff'],
+        "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
+        "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
+        "entropy_coeff": args.entropy_coeff,
         "grad_clip": args.grad_clip,
         "multiagent": {
             "policies": policy_graphs,
             "policy_mapping_fn": policy_mapping_fn,
         },
-        "model": {"custom_model": "moa_lstm", "use_lstm": False,
-                  "custom_options": {"return_agent_actions": True, "cell_size": 128,
-                                     "num_other_agents": args.num_agents - 1, "fcnet_hiddens": [32, 32],
-                                     "train_moa_only_when_visible": tune.grid_search([True]),
-                                     "moa_weight": 10,
-                                     },
-                  "conv_filters": [[6, [3, 3], 1]]},
-        "num_other_agents": args.num_agents - 1,
-        "moa_weight": hparams['moa_weight'],
-        "train_moa_only_when_visible": tune.grid_search([True]),
-        "influence_reward_clip": 10,
-        "influence_divergence_measure": 'kl',
-        "influence_reward_weight": tune.grid_search([1.0]),
-        "influence_curriculum_steps": tune.grid_search([10e6]),
-        "influence_scaledown_start": tune.grid_search([100e6]),
-        "influence_scaledown_end": tune.grid_search([300e6]),
-        "influence_scaledown_final_val": tune.grid_search([.5]),
-        "influence_only_when_visible": tune.grid_search([True]),
+        "model": {"custom_model": "moa_lstm",
+                  "use_lstm": False,
+                  "custom_options": {
+                      "aux_loss_weight": args.aux_loss_weight,
+                      "aux_reward_clip": 10,
+                      "aux_reward_weight": args.aux_reward_weight,
+                      "aux_reward_curriculum_steps": args.aux_reward_curriculum_steps,
+                      "aux_reward_curriculum_weights": args.aux_reward_curriculum_weights,
+                      "cell_size": 128,
+                      "num_other_agents": args.num_agents - 1,
+                      "return_agent_actions": True,
+                      "fcnet_hiddens": [32, 32],
+                      "influence_divergence_measure": 'kl',
+                      "train_moa_only_when_visible": tune.grid_search([True]),
+                      "influence_only_when_visible": tune.grid_search([True]),
+                  },
+                  "conv_filters": [[6, [3, 3], 1]]
+                  },
     })
     if args.algorithm == "PPO":
         config.update({"num_sgd_iter": 10,
@@ -134,14 +115,10 @@ def setup(args):
         sys.exit("The only available algorithms are A3C, PPO and IMPALA")
 
     if args.grid_search:
-        config.update({'moa_weight': tune.grid_search([10, 100]),
-                       'lr_schedule': [[0, tune.grid_search([1e-2, 1e-3, 1e-4])],
-                                       [20000000, hparams['lr_final']]],
-                       'vf_loss_coeff': tune.grid_search([0.5, 1e-4, 1e-5]),
-                       'entropy_coeff': tune.grid_search([0, 1e-3, 1e-4]),
-                       'influence_reward_weight': tune.grid_search([1.0, 10.0])})
-        if args.algorithm == "A3C":
-            config.update({"sample_batch_size": tune.grid_search([50, 500])})
+        config["entropy_coeff"] = tune.grid_search(args.entropy_tune)
+        config["model"]["custom_options"]["aux_loss_weight"] = tune.grid_search(args.aux_loss_weight_tune)
+        config["model"]["custom_options"]["aux_reward_weight"] = tune.grid_search(args.aux_reward_weight_tune)
+
     return env_name, config
 
 
@@ -154,11 +131,6 @@ if __name__ == '__main__':
              memory=args.memory,
              object_store_memory=args.object_store_memory,
              redis_max_memory=args.redis_max_memory)
-
-    if args.env == 'harvest':
-        hparams = harvest_default_params
-    else:
-        hparams = cleanup_default_params
     env_name, config = setup(args)
 
     if args.exp_name is None:
@@ -170,14 +142,8 @@ if __name__ == '__main__':
     config['env'] = env_name
     config['eager'] = args.eager_mode
 
-    eastern = pytz.timezone('US/Eastern')
-    date = datetime.now(tz=pytz.utc)
-    date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
-    s3_string = "s3://ssd-reproduce/" \
-                + date + '/' + exp_name
-
     if args.algorithm == "A3C":
-        trainer = CausalA3CMOATrainer
+        trainer = get_a3c_trainer("causal", config)
     if args.algorithm == "PPO":
         trainer = CausalPPOMOATrainer
     if args.algorithm == "IMPALA":
@@ -196,6 +162,10 @@ if __name__ == '__main__':
         exp_dict['stop']['timesteps_total'] = args.stop_at_timesteps_total
 
     if args.use_s3:
+        eastern = pytz.timezone('US/Eastern')
+        date = datetime.now(tz=pytz.utc)
+        date = date.astimezone(pytz.timezone('US/Pacific')).strftime("%m-%d-%Y")
+        s3_string = "s3://ssd-reproduce/" + date + '/' + exp_name
         exp_dict['upload_dir'] = s3_string
 
     tune.run(**exp_dict, queue_trials=True)

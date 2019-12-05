@@ -139,8 +139,7 @@ def get_a3c_trainer(aux_model_type, aux_config):
             causal_fetches as aux_fetches,\
             setup_causal_mixins as setup_aux_mixins,\
             get_causal_mixins as get_aux_mixins,\
-            causal_postprocess_trajectory as aux_postprocess_trajectory,\
-            CAUSAL_CONFIG as aux_config
+            causal_postprocess_trajectory as aux_postprocess_trajectory
         model_name = "CausalMOAA3C"
     elif aux_model_type == "curiosity":
         from algorithms.common_funcs_curiosity import\
@@ -149,13 +148,12 @@ def get_a3c_trainer(aux_model_type, aux_config):
             setup_curiosity_mixins as setup_aux_mixins,\
             get_curiosity_mixins as get_aux_mixins,\
             curiosity_postprocess_trajectory as aux_postprocess_trajectory
-        aux_config = {}
         model_name = "CuriosityA3C"
 
-    aux_config["use_gae"] = False
+    aux_config = {"use_gae": False}
     aux_config.update(DEFAULT_CONFIG)
 
-    A3CTFPolicy = build_tf_policy(
+    a3c_tf_policy = build_tf_policy(
         name="A3CTFPolicy",
         get_default_config=lambda: aux_config,
         loss_fn=partial(actor_critic_loss, setup_aux_loss),
@@ -169,7 +167,7 @@ def get_a3c_trainer(aux_model_type, aux_config):
 
     trainer = build_trainer(
         name=model_name,
-        default_policy=A3CTFPolicy,
+        default_policy=a3c_tf_policy,
         default_config=aux_config,
         validate_config=validate_config)
 

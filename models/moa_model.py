@@ -186,7 +186,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         # predicts the actions of all the agents besides itself
         # create a new input reader per worker
         self.train_moa_only_when_visible = model_config['custom_options']['train_moa_only_when_visible']
-        self.moa_weight = model_config['custom_options']['moa_weight']
+        self.moa_weight = model_config['custom_options']['aux_loss_weight']
 
         self.moa_model = KerasRNN(inner_obs_space, action_space, self.num_other_agents * num_outputs,
                                   model_config, "moa_model", cell_size=cell_size, use_value_fn=False,

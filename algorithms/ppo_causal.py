@@ -21,13 +21,13 @@ from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.agents.trainer_template import build_trainer
 
 from algorithms.common_funcs_causal import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
-    causal_postprocess_trajectory, CAUSAL_CONFIG
+    causal_postprocess_trajectory
 
 tf = try_import_tf()
 
 POLICY_SCOPE = "func"
 
-CAUSAL_CONFIG.update(DEFAULT_CONFIG)
+CAUSAL_CONFIG = DEFAULT_CONFIG
 
 
 def loss_with_moa(policy, model, dist_class, train_batch):

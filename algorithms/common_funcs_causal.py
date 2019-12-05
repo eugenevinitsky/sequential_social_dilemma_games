@@ -1,32 +1,13 @@
-import copy
 import sys
 
 import numpy as np
 import scipy
 
-# TODO(@evinitsky) put this in alphabetical order
-
-import ray
 from ray.rllib.agents.ppo.ppo_policy import kl_and_loss_stats
-# TODO(@evinitsky) move config vals into a default config
-from ray.rllib.evaluation.postprocessing import compute_advantages
 from ray.rllib.models import ModelCatalog
-from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.utils import try_import_tf
 
-from ray.rllib.utils.tf_ops import make_tf_callable
-
-CAUSAL_CONFIG = {"num_other_agents": 1,
-                 "moa_weight": 10.0,
-                 "train_moa_only_when_visible": True,
-                 "influence_reward_clip": 10,
-                 "influence_reward_weight": 1.0,
-                 "influence_curriculum_steps": 10e6,
-                 "influence_scaledown_start": 100e6,
-                 "influence_scaledown_end": 300e6,
-                 "influence_scaledown_final_val": .5,
-                 "influence_only_when_visible": True,
-                 "influence_divergence_measure": "kl"}
+from algorithms.common_funcs import AuxScheduleMixIn
 
 tf = try_import_tf()
 
@@ -64,8 +45,7 @@ def kl_div(p, q):
 
 
 class MOALoss(object):
-    def __init__(self, pred_logits, true_actions, num_actions,
-                 loss_weight=1.0, others_visibility=None):
+    def __init__(self, pred_logits, true_actions, loss_weight=1.0, others_visibility=None):
         """Train MOA model with supervised cross entropy loss on a trajectory.
         The model is trying to predict others' actions at timestep t+1 given all
         actions at timestep t.
@@ -97,7 +77,7 @@ def setup_moa_loss(logits, model, policy, train_batch):
     # Instantiate the prediction loss
     moa_preds = model.moa_preds_from_batch(train_batch)
     moa_preds = tf.reshape(moa_preds, [-1, policy.model.num_other_agents, logits.shape[-1]])
-    others_actions = train_batch[ALL_ACTIONS]
+    true_actions = train_batch[ALL_ACTIONS]
     # 0/1 multiplier array representing whether each agent is visible to
     # the current agent.
     if policy.train_moa_only_when_visible:
@@ -105,8 +85,9 @@ def setup_moa_loss(logits, model, policy, train_batch):
         others_visibility = train_batch[VISIBILITY]
     else:
         others_visibility = None
-    moa_loss = MOALoss(moa_preds, others_actions,
-                       logits.shape[-1], loss_weight=policy.moa_weight,
+    moa_loss = MOALoss(moa_preds,
+                       true_actions,
+                       loss_weight=policy.aux_loss_weight,
                        others_visibility=others_visibility)
     return moa_loss
 
@@ -161,19 +142,17 @@ def compute_influence_reward(policy, trajectory):
         #     visibility = get_agent_visibility_multiplier(trajectory, policy.num_other_agents)
         influence_per_agent_step *= visibility
 
+    cur_aux_reward_weight = policy.compute_weight()
+
     # Summarize and clip influence reward
     influence = np.sum(influence_per_agent_step, axis=-1)
-    influence = np.clip(influence, -policy.influence_reward_clip, policy.influence_reward_clip)
-
-    # Get influence curriculum weight
-    # TODO(@evinitsky) move this into a schedule mixin
-    policy.steps_processed += len(trajectory['obs'])
-    inf_weight = policy.curr_influence_weight
+    influence = np.clip(influence, -policy.aux_reward_clip, policy.aux_reward_clip)
+    influence = influence * cur_aux_reward_weight
 
     # Add to trajectory
-    trajectory['total_influence'] = influence
-    trajectory['reward_without_influence'] = trajectory['rewards']
-    trajectory['rewards'] = trajectory['rewards'] + (influence * inf_weight)
+    trajectory['total_aux_reward'] = influence
+    trajectory['reward_without_aux'] = trajectory['rewards']
+    trajectory['rewards'] = trajectory['rewards'] + influence
 
     return trajectory
 
@@ -274,49 +253,21 @@ def causal_fetches(policy):
 
 class ConfigInitializerMixIn(object):
     def __init__(self, config):
-        self.train_moa_only_when_visible = config['train_moa_only_when_visible']
+        config = config['model']['custom_options']
         self.num_other_agents = config['num_other_agents']
-        self.moa_weight = config['moa_weight']
+        self.aux_loss_weight = config['aux_loss_weight']
+        self.aux_reward_clip = config['aux_reward_clip']
+        self.train_moa_only_when_visible = config['train_moa_only_when_visible']
         self.train_moa_only_when_visible = config['train_moa_only_when_visible']
         self.influence_divergence_measure = config['influence_divergence_measure']
         self.influence_only_when_visible = config['influence_only_when_visible']
-        self.influence_reward_clip = config['influence_reward_clip']
-
-
-class InfluenceScheduleMixIn(object):
-    def __init__(self, config):
-        self.influence_reward_weight = config['influence_reward_weight']
-        self.influence_curriculum_steps = config['influence_curriculum_steps']
-        self.inf_scale_start = config['influence_scaledown_start']
-        self.inf_scale_end = config['influence_scaledown_end']
-        self.inf_scale_final_val = config['influence_scaledown_final_val']
-        self.steps_processed = 0
-        self.curr_influence_weight = self.influence_reward_weight
-
-    def current_influence_curriculum_weight(self):
-        """ Computes multiplier for influence reward based on training steps
-        taken and curriculum parameters.
-
-        Returns: scalar float influence weight
-        """
-        if self.steps_processed < self.influence_curriculum_steps:
-            percent = float(self.steps_processed) / self.influence_curriculum_steps
-            self.curr_influence_weight = percent * self.influence_reward_weight
-        elif self.steps_processed > self.inf_scale_start:
-            percent = (self.steps_processed - self.inf_scale_start) \
-                      / float(self.inf_scale_end - self.inf_scale_start)
-            diff = self.influence_reward_weight - self.inf_scale_final_val
-            scaled = self.influence_reward_weight - diff * percent
-            self.curr_influence_weight = max(self.inf_scale_final_val, scaled)
-        else:
-            self.curr_influence_weight = self.influence_reward_weight
 
 
 def extra_stats(policy, train_batch):
     base_stats = kl_and_loss_stats(policy, train_batch)
-    base_stats["total_influence"] = train_batch["total_influence"]
-    base_stats['reward_without_influence'] = train_batch['reward_without_influence']
-    base_stats['moa_loss'] = policy.moa_loss / policy.moa_weight
+    base_stats["total_influence"] = train_batch["total_aux_reward"]
+    base_stats['reward_without_influence'] = train_batch['reward_without_aux']
+    base_stats['aux_loss'] = policy.moa_loss / policy.moa_weight
     return base_stats
 
 
@@ -335,9 +286,9 @@ def build_model(policy, obs_space, action_space, config):
 
 
 def setup_causal_mixins(policy, obs_space, action_space, config):
-    InfluenceScheduleMixIn.__init__(policy, config)
+    AuxScheduleMixIn.__init__(policy, config)
     ConfigInitializerMixIn.__init__(policy, config)
 
 
 def get_causal_mixins():
-    return [ConfigInitializerMixIn, InfluenceScheduleMixIn]
+    return [ConfigInitializerMixIn, AuxScheduleMixIn]
