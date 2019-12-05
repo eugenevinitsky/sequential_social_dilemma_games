@@ -60,10 +60,10 @@ def add_default_args(parser):
 
     parser.add_argument('--aux_reward_weight', type=float, default=0.001,
                         help="The auxiliary reward weight.")
-    parser.add_argument('--aux_reward_curriculum_steps', nargs='+', type=int, default=[0, int(1e8)],
+    parser.add_argument('--aux_reward_curriculum_steps', nargs='+', type=int, default=[0, int(1e7), int(1e8)],
                         help="Amounts of environment steps at which the aux reward has a value specified in"
                              "--aux_reward_curriculum_weights")
-    parser.add_argument('--aux_reward_curriculum_weights', nargs='+', type=float, default=[1.0, 0.5],
+    parser.add_argument('--aux_reward_curriculum_weights', nargs='+', type=float, default=[0, 1.0, 0.5],
                         help="Values for the aux reward curriculum. Linearly interpolates using "
                              "--aux_reward_curriculum_steps. The final value is"
                              " --aux_reward_weight * interpolated_value")
