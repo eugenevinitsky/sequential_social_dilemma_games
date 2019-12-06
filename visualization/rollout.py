@@ -1,32 +1,17 @@
 """Defines a multi-agent controller to rollout environment episodes w/
    agent policies."""
 
+import argparse
 import utility_funcs
 import numpy as np
 import os
 import sys
 import shutil
-import tensorflow as tf
 
+from config.default_args import add_default_args
 from social_dilemmas.envs.cleanup import CleanupEnv
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.switch import SwitchEnv
-
-FLAGS = tf.app.flags.FLAGS
-
-tf.app.flags.DEFINE_string(
-    "vid_path",
-    os.path.abspath(os.path.join(os.path.dirname(__file__), "./videos")),
-    "Path to directory where videos are saved.",
-)
-tf.app.flags.DEFINE_string(
-    "env", "switch", "Name of the environment to rollout. Can be cleanup or harvest."
-)
-tf.app.flags.DEFINE_string(
-    "render_type", "pretty", "Can be pretty or fast. Implications obvious."
-)
-tf.app.flags.DEFINE_integer("horizon", 600, "Number of rendered frames.")
-tf.app.flags.DEFINE_integer("fps", 10, "Number of frames per second.")
 
 
 class Controller(object):
@@ -66,7 +51,7 @@ class Controller(object):
 
         for i in range(horizon):
             agents = list(self.env.agents.values())
-            action_dim = agents[0].action_space.n
+            action_dim = self.env.action_space.n
             agent_action_dict = dict()
             for agent in agents:
                 rand_action = np.random.randint(action_dim)
@@ -128,15 +113,14 @@ class Controller(object):
             )
 
 
-def main(unused_argv):
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    add_default_args(parser)
+    args = parser.parse_args()
     c = Controller(env_name=FLAGS.env)
     c.render_rollout(
-        path=FLAGS.vid_path,
-        horizon=FLAGS.horizon,
-        render_type=FLAGS.render_type,
-        fps=FLAGS.fps,
+        path="rollout.mp4",
+        horizon=1000,
+        render_type="pretty",
+        fps=60,
     )
-
-
-if __name__ == "__main__":
-    tf.app.run(main)
