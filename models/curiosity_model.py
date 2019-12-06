@@ -95,7 +95,7 @@ class KerasRNN(RecurrentTFModelV2):
 
 
 class CuriosityLSTM(RecurrentTFModelV2):
-    """An LSTM with two heads, one for taking actions and one for predicting actions."""
+    """An LSTM with two heads, one for taking actions and one for predicting future state."""
 
     def __init__(self,
                  obs_space,
