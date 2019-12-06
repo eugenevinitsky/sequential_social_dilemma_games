@@ -9,8 +9,6 @@ os: linux
 
 dist: bionic
 
-sudo: required
-
 install:
   - pip install flake8 .
   - pip install pytest
