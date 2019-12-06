@@ -4,13 +4,18 @@ from social_dilemmas.envs.switch import SwitchEnv
 
 
 def get_env_creator(env, num_agents, args):
-    if env == 'harvest':
+    if env == "harvest":
+
         def env_creator(_):
             return HarvestEnv(num_agents=num_agents, return_agent_actions=True)
-    elif env == 'cleanup':
+
+    elif env == "cleanup":
+
         def env_creator(_):
             return CleanupEnv(num_agents=num_agents, return_agent_actions=True)
-    elif env == 'switch':
+
+    elif env == "switch":
+
         def env_creator(_):
             return SwitchEnv(num_agents=num_agents, args=args)
 

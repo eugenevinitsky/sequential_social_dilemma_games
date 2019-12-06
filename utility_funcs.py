@@ -5,11 +5,11 @@ import numpy as np
 
 
 def save_img(rgb_arr, path, name):
-    plt.imshow(rgb_arr, interpolation='nearest')
+    plt.imshow(rgb_arr, interpolation="nearest")
     plt.savefig(path + name)
 
 
-def make_video_from_image_dir(vid_path, img_folder, video_name='trajectory', fps=5):
+def make_video_from_image_dir(vid_path, img_folder, video_name="trajectory", fps=5):
     """
     Create a video from a directory of images
     """
@@ -24,15 +24,16 @@ def make_video_from_image_dir(vid_path, img_folder, video_name='trajectory', fps
     make_video_from_rgb_imgs(rgb_imgs, vid_path, video_name=video_name, fps=fps)
 
 
-def make_video_from_rgb_imgs(rgb_arrs, vid_path, video_name='trajectory',
-                             fps=5, format="mp4v", resize=(640, 480)):
+def make_video_from_rgb_imgs(
+    rgb_arrs, vid_path, video_name="trajectory", fps=5, format="mp4v", resize=(640, 480)
+):
     """
     Create a video from a list of rgb arrays
     """
     print("Rendering video...")
-    if vid_path[-1] != '/':
-        vid_path += '/'
-    video_path = vid_path + video_name + '.mp4'
+    if vid_path[-1] != "/":
+        vid_path += "/"
+    video_path = vid_path + video_name + ".mp4"
 
     if resize is not None:
         width, height = resize
@@ -81,12 +82,12 @@ def return_view(grid, pos, row_size, col_size):
     right_edge = x + col_size
     top_edge = y - row_size
     bot_edge = y + row_size
-    pad_mat, left_pad, top_pad = pad_if_needed(left_edge, right_edge,
-                                               top_edge, bot_edge, grid)
+    pad_mat, left_pad, top_pad = pad_if_needed(
+        left_edge, right_edge, top_edge, bot_edge, grid
+    )
     x += left_pad
     y += top_pad
-    view = pad_mat[x - col_size: x + col_size + 1,
-                   y - row_size: y + row_size + 1]
+    view = pad_mat[x - col_size : x + col_size + 1, y - row_size : y + row_size + 1]
     return view
 
 
@@ -104,21 +105,31 @@ def pad_if_needed(left_edge, right_edge, top_edge, bot_edge, matrix):
     if bot_edge > col_dim - 1:
         bot_pad = bot_edge - (col_dim - 1)
 
-    return pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0), left_pad, top_pad
+    return (
+        pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, 0),
+        left_pad,
+        top_pad,
+    )
 
 
 def pad_matrix(left_pad, right_pad, top_pad, bot_pad, matrix, const_val=1):
-    pad_mat = np.pad(matrix, ((left_pad, right_pad), (top_pad, bot_pad)),
-                     'constant', constant_values=(const_val, const_val))
+    pad_mat = np.pad(
+        matrix,
+        ((left_pad, right_pad), (top_pad, bot_pad)),
+        "constant",
+        constant_values=(const_val, const_val),
+    )
     return pad_mat
 
 
 def get_all_subdirs(path):
-    return [path + '/' + d for d in os.listdir(path) if os.path.isdir(path + '/' + d)]
+    return [path + "/" + d for d in os.listdir(path) if os.path.isdir(path + "/" + d)]
 
 
 def get_all_files(path):
-    return [path + '/' + d for d in os.listdir(path) if not os.path.isdir(path + '/' + d)]
+    return [
+        path + "/" + d for d in os.listdir(path) if not os.path.isdir(path + "/" + d)
+    ]
 
 
 def update_nested_dict(d0, d1):

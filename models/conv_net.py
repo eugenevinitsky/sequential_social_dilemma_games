@@ -20,10 +20,11 @@ class ConvNet(Model):
         with tf.name_scope("custom_net"):
             last_layer = slim.conv2d(
                 inputs,
-                options['conv_filters'],
+                options["conv_filters"],
                 [3, 3],
                 1,
                 activation_fn=tf.nn.relu,
-                scope="conv")
+                scope="conv",
+            )
             output = flatten(last_layer)
             return output, last_layer

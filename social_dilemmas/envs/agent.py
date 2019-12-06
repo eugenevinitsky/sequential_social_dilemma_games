@@ -4,18 +4,21 @@ import numpy as np
 import utility_funcs as util
 
 # basic moves every agent should do
-BASE_ACTIONS = {0: 'MOVE_LEFT',  # Move left
-                1: 'MOVE_RIGHT',  # Move right
-                2: 'MOVE_UP',  # Move up
-                3: 'MOVE_DOWN',  # Move down
-                4: 'STAY',  # don't move
-                5: 'TURN_CLOCKWISE',  # Rotate counter clockwise
-                6: 'TURN_COUNTERCLOCKWISE'}  # Rotate clockwise
+BASE_ACTIONS = {
+    0: "MOVE_LEFT",  # Move left
+    1: "MOVE_RIGHT",  # Move right
+    2: "MOVE_UP",  # Move up
+    3: "MOVE_DOWN",  # Move down
+    4: "STAY",  # don't move
+    5: "TURN_CLOCKWISE",  # Rotate counter clockwise
+    6: "TURN_COUNTERCLOCKWISE",
+}  # Rotate clockwise
 
 
 class Agent(object):
-
-    def __init__(self, agent_id, start_pos, start_orientation, grid, row_size, col_size):
+    def __init__(
+        self, agent_id, start_pos, start_orientation, grid, row_size, col_size
+    ):
         """Superclass for all agents.
 
         Parameters
@@ -74,8 +77,7 @@ class Agent(object):
         raise NotImplementedError
 
     def get_state(self):
-        return util.return_view(self.grid, self.get_pos(),
-                                self.row_size, self.col_size)
+        return util.return_view(self.grid, self.get_pos(), self.row_size, self.col_size)
 
     def compute_reward(self):
         reward = self.reward_this_turn
@@ -108,7 +110,7 @@ class Agent(object):
         new_row, new_col = ego_new_pos
         # You can't walk through walls, closed doors or switches
         temp_pos = new_pos.copy()
-        if self.grid[new_row, new_col] in ['@', 'D', 's', 'S']:
+        if self.grid[new_row, new_col] in ["@", "D", "s", "S"]:
             temp_pos = self.get_pos()
         return temp_pos
 
@@ -127,7 +129,7 @@ class Agent(object):
         new_row, new_col = ego_new_pos
         # you can't walk through walls
         temp_pos = new_pos.copy()
-        if self.grid[new_row, new_col] == '@':
+        if self.grid[new_row, new_col] == "@":
             temp_pos = self.get_pos()
         self.set_pos(temp_pos)
         # TODO(ev) list array consistency
@@ -146,13 +148,15 @@ class Agent(object):
 
 
 HARVEST_ACTIONS = BASE_ACTIONS.copy()
-HARVEST_ACTIONS.update({7: 'FIRE'})  # Fire a penalty beam
+HARVEST_ACTIONS.update({7: "FIRE"})  # Fire a penalty beam
 
 
 class HarvestAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
         self.view_len = view_len
-        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        super().__init__(
+            agent_id, start_pos, start_orientation, grid, view_len, view_len
+        )
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
 
@@ -163,11 +167,11 @@ class HarvestAgent(Agent):
         return HARVEST_ACTIONS[action_number]
 
     def hit(self, char):
-        if char == 'F':
+        if char == "F":
             self.reward_this_turn -= 50
 
     def fire_beam(self, char):
-        if char == 'F':
+        if char == "F":
             self.reward_this_turn -= 1
 
     def get_done(self):
@@ -175,22 +179,25 @@ class HarvestAgent(Agent):
 
     def consume(self, char):
         """Defines how an agent interacts with the char it is standing on"""
-        if char == 'A':
+        if char == "A":
             self.reward_this_turn += 1
-            return ' '
+            return " "
         else:
             return char
 
 
 CLEANUP_ACTIONS = BASE_ACTIONS.copy()
-CLEANUP_ACTIONS.update({7: 'FIRE',  # Fire a penalty beam
-                        8: 'CLEAN'})  # Fire a cleaning beam
+CLEANUP_ACTIONS.update(
+    {7: "FIRE", 8: "CLEAN"}  # Fire a penalty beam
+)  # Fire a cleaning beam
 
 
 class CleanupAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
         self.view_len = view_len
-        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        super().__init__(
+            agent_id, start_pos, start_orientation, grid, view_len, view_len
+        )
         # remember what you've stepped on
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
@@ -202,32 +209,35 @@ class CleanupAgent(Agent):
         return CLEANUP_ACTIONS[action_number]
 
     def fire_beam(self, char):
-        if char == 'F':
+        if char == "F":
             self.reward_this_turn -= 1
 
     def get_done(self):
         return False
 
     def hit(self, char):
-        if char == 'F':
+        if char == "F":
             self.reward_this_turn -= 50
 
     def consume(self, char):
         """Defines how an agent interacts with the char it is standing on"""
-        if char == 'A':
+        if char == "A":
             self.reward_this_turn += 1
-            return ' '
+            return " "
         else:
             return char
 
 
 SWITCH_ACTIONS = BASE_ACTIONS.copy()
-SWITCH_ACTIONS.update({7: 'TOGGLE_SWITCH'})  # Fire a switch beam
+SWITCH_ACTIONS.update({7: "TOGGLE_SWITCH"})  # Fire a switch beam
+
 
 class SwitchAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
         self.view_len = view_len
-        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        super().__init__(
+            agent_id, start_pos, start_orientation, grid, view_len, view_len
+        )
         # remember what you've stepped on
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
@@ -242,7 +252,7 @@ class SwitchAgent(Agent):
     def fire_beam(self, char):
         # Cost of firing a switch beam
         # Nothing for now.
-        if char == 'F':
+        if char == "F":
             self.reward_this_turn += 0
 
     def get_done(self):
@@ -250,9 +260,9 @@ class SwitchAgent(Agent):
 
     def consume(self, char):
         """Defines how an agent interacts with the char it is standing on"""
-        if char == 'd':
+        if char == "d":
             self.reward_this_turn += 1
             self.is_done = True
-            return ' '
+            return " "
         else:
             return char
