@@ -1,4 +1,5 @@
 import argparse
+import copy
 from datetime import datetime
 import sys
 
@@ -10,10 +11,11 @@ from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 
 from algorithms.a3c_aux import get_a3c_trainer
-from models.curiosity_model import CuriosityLSTM
 from config.default_args import add_default_args
-
+from models.curiosity_model import CuriosityLSTM
 from social_dilemmas.envs.env_creator import get_env_creator
+from utility_funcs import update_nested_dict
+
 
 parser = argparse.ArgumentParser()
 add_default_args(parser)
@@ -44,7 +46,7 @@ def setup(args):
         return agent_id
 
     agent_cls = get_agent_class(args.algorithm)
-    config = agent_cls._default_config.copy()
+    config = copy.deepcopy(agent_cls._default_config)
 
     # information for replay
     config['env_config']['func_create'] = env_creator
@@ -74,7 +76,7 @@ def setup(args):
     lstm_cell_size = 16
 
     # hyperparams
-    config.update({
+    update_nested_dict(config, {
         "horizon": 1000,
         "gamma": 0.99,
         "lr_schedule": list(zip(args.lr_curriculum_steps, args.lr_curriculum_weights)),

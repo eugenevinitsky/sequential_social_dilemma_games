@@ -119,3 +119,14 @@ def get_all_subdirs(path):
 
 def get_all_files(path):
     return [path + '/' + d for d in os.listdir(path) if not os.path.isdir(path + '/' + d)]
+
+
+def update_nested_dict(d0, d1):
+    for k, v in d1.items():
+        if k in d0 and type(v) is dict:
+            if type(d0[k]) is dict:
+                update_nested_dict(d0[k], d1[k])
+            else:
+                raise TypeError
+        else:
+            d0[k] = d1[k]

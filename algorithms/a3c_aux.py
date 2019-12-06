@@ -150,8 +150,7 @@ def get_a3c_trainer(aux_model_type, aux_config):
             curiosity_postprocess_trajectory as aux_postprocess_trajectory
         model_name = "CuriosityA3C"
 
-    aux_config = {"use_gae": False}
-    aux_config.update(DEFAULT_CONFIG)
+    aux_config["use_gae"] = False
 
     a3c_tf_policy = build_tf_policy(
         name="A3CTFPolicy",
