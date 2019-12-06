@@ -117,7 +117,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     add_default_args(parser)
     args = parser.parse_args()
-    c = Controller(env_name=FLAGS.env)
+    c = Controller(env_name=args.env)
     c.render_rollout(
         path="rollout.mp4",
         horizon=1000,

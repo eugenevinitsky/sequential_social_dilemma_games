@@ -815,7 +815,6 @@ class TestHarvestEnv(unittest.TestCase):
         """Just check that the step method works at all for all possible actions"""
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=1)
         self.env.reset()
-        agents = list(self.env.agents.values())
         action_dim = self.env.action_space.n
         for i in range(action_dim):
             self.env.step({"agent-0": i})
