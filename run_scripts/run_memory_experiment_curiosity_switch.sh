@@ -6,13 +6,12 @@ python train_curiosity.py \
 --env switch \
 --algorithm A3C \
 --sample_batch_size 10 \
---train_batch_size 30 \
+--train_batch_size 100 \
 --stop_at_timesteps_total $((1 * 10 ** 9)) \
 --memory $((4 * 10 ** 9)) \
 --object_store_memory $((1 * 10 ** 9)) \
 --redis_max_memory $((1 * 10 ** 9)) \
---num_cpus 8 \
---num_gpus 1 \
---use_gpu_for_driver \
+--num_cpus 5 \
+--num_gpus 0 \
 --num_switches 6 \
---num_samples 10
+--num_samples 1
