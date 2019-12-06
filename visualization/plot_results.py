@@ -161,7 +161,7 @@ def plot_csvs_results(paths):
     path = paths[0]
 
     for plot in plots:
-        plot_fn = lambda: plot_with_mean(
+        def plot_fn(): plot_with_mean(
             plot.x_data,
             plot.y_data,
             plot.plot_details.color,
@@ -169,7 +169,7 @@ def plot_csvs_results(paths):
         )
         try:
             plot_and_save(plot_fn, path, plot.plot_details.column_name)
-        except:
+        except ZeroDivisionError:
             pass
 
     def plot_losses():

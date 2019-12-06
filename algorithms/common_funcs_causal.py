@@ -118,8 +118,8 @@ def causal_postprocess_trajectory(
 def compute_influence_reward(policy, trajectory):
     """Compute influence of this agent on other agents and add to rewards.
     """
-    # Probability of the next action for all other agents. Shape is [B, N, A]. This is the predicted probability
-    # given the actions that we DID take.
+    # Probability of the next action for all other agents. Shape is [B, N, A].
+    # This is the predicted probability given the actions that we DID take.
     # extract out the probability under the actions we actually did take
     true_probs = trajectory[COUNTERFACTUAL_ACTIONS]
     traj_index = list(range(len(trajectory["obs"])))
@@ -172,7 +172,8 @@ def compute_influence_reward(policy, trajectory):
 
 
 def agent_name_to_idx(agent_num, self_id):
-    """split agent id around the index and return its appropriate position in terms of the other agents"""
+    """split agent id around the index and return its appropriate position in terms
+    of the other agents"""
     agent_num = int(agent_num)
     if agent_num > self_id:
         return agent_num - 1
@@ -255,9 +256,11 @@ def extract_last_actions_from_episodes(episodes, batch_type=False, own_actions=N
 
 
 def causal_fetches(policy):
-    """Adds value function, logits, moa predictions of counterfactual actions to experience train_batches."""
+    """Adds value function, logits, moa predictions of counterfactual actions
+    to experience train_batches."""
     return {
-        # Be aware that this is frozen here so that we don't propagate agent actions through the reward
+        # Be aware that this is frozen here so that we don't
+        # propagate agent actions through the reward
         ACTION_LOGITS: policy.model.action_logits(),
         COUNTERFACTUAL_ACTIONS: policy.model.counterfactual_actions(),
         # TODO(@evinitsky) remove this once we figure out how to split the obs

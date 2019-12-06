@@ -1,7 +1,5 @@
-import click
 import os
 import subprocess
-import sys
 
 import ray
 

@@ -122,7 +122,8 @@ class CuriosityLSTM(RecurrentTFModelV2):
             shape=(None,) + original_obs_dims, name="observations"
         )
 
-        # A temp config with custom_model false so that we can get a basic vision model with the desired filters
+        # A temp config with custom_model false so that we can get a basic vision model
+        # with the desired filters
         # Build the CNN layer
         last_layer = inputs
         activation = get_activation_fn(model_config.get("conv_activation"))

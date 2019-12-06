@@ -14,7 +14,7 @@ from ray.rllib.policy.tf_policy import LearningRateSchedule
 from ray.rllib.utils.tf_ops import make_tf_callable
 from ray.rllib.utils import try_import_tf
 from ray.rllib.agents.trainer_template import build_trainer
-from ray.rllib.agents.a3c.a3c import DEFAULT_CONFIG, validate_config
+from ray.rllib.agents.a3c.a3c import validate_config
 from ray.rllib.agents.a3c.a3c_tf_policy import postprocess_advantages
 
 tf = try_import_tf()

@@ -3,7 +3,6 @@
 
 import argparse
 import collections
-from collections import defaultdict
 import json
 import numpy as np
 import os
@@ -15,19 +14,12 @@ from ray.cloudpickle import cloudpickle
 from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.env import MultiAgentEnv
 from ray.rllib.env.base_env import _DUMMY_AGENT_ID
-from ray.rllib.evaluation.sample_batch import DEFAULT_POLICY_ID
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
-
-# from ray.rllib.evaluation.sampler import clip_action
 
 from models.conv_to_fc_net import ConvToFCNet
 from models.conv_to_fc_net_actions import ConvToFCNetActions
 from models.conv_net import ConvNet
-from models.conv_to_fc_net_actions_no_lstm import (
-    ConvToFCNetActions as ConvToFCNetActionsNoLSTM,
-)
-from models.conv_to_fc_net_no_lstm import ConvToFCNet as ConvToFCNetNoLSTM
 import utility_funcs
 
 
@@ -52,10 +44,6 @@ class DefaultMapping(collections.defaultdict):
     def __missing__(self, key):
         self[key] = value = self.default_factory(key)
         return value
-
-
-def default_policy_agent_mapping(unused_agent_id):
-    return DEFAULT_POLICY_ID
 
 
 def visualizer_rllib(args):
@@ -122,8 +110,6 @@ def visualizer_rllib(args):
     print("Loading checkpoint", checkpoint)
     agent.restore(checkpoint)
 
-    policy_agent_mapping = default_policy_agent_mapping
-
     if hasattr(agent, "local_evaluator"):
         env = agent.local_evaluator.env
         multiagent = isinstance(env, MultiAgentEnv)
@@ -137,7 +123,7 @@ def visualizer_rllib(args):
     else:
         env = env_creator()
         multiagent = False
-        use_lstm = {DEFAULT_POLICY_ID: False}
+        # use_lstm = {DEFAULT_POLICY_ID: False}
 
     if args.save_video:
         shape = env.base_map.shape

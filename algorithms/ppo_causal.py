@@ -1,11 +1,3 @@
-import copy
-import sys
-
-import numpy as np
-import scipy
-
-# TODO(@evinitsky) put this in alphabetical order
-
 from ray.rllib.agents.ppo.ppo_policy import (
     PPOLoss,
     BEHAVIOUR_LOGITS,
@@ -93,7 +85,8 @@ def loss_with_moa(policy, model, dist_class, train_batch):
 
 
 def extra_fetches(policy):
-    """Adds value function, logits, moa predictions of counterfactual actions to experience train_batches."""
+    """Adds value function, logits, moa predictions of counterfactual action
+    to experience train_batches."""
     ppo_fetches = vf_preds_and_logits_fetches(policy)
     ppo_fetches.update(causal_fetches(policy))
     return ppo_fetches

@@ -28,7 +28,6 @@ class ConvToFCNetv2(RecurrentTFModelV2):
         filters = model_config.get("conv_filters")
         if not filters:
             filters = _get_filter_config(obs_space.shape)
-        vf_share_layers = model_config.get("vf_share_layers")
 
         inputs = tf.keras.layers.Input(shape=obs_space, name="observations")
         last_layer = inputs

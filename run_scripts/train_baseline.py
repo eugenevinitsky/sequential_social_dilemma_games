@@ -1,69 +1,20 @@
+import argparse
+import sys
+
 import ray
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
-from ray.tune import run_experiments
 from ray.tune.registry import register_env
 import tensorflow as tf
 
+from config.default_args import add_default_args
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
-from models.conv_to_fc_net import ConvToFCNet
 from models.conv_to_fcnet_v2 import ConvToFCNetv2
 
-FLAGS = tf.app.flags.FLAGS
-
-tf.app.flags.DEFINE_string(
-    "exp_name",
-    None,
-    "Name of the ray_results experiment directory where results are stored.",
-)
-tf.app.flags.DEFINE_string(
-    "env", "cleanup", "Name of the environment to rollout. Can be cleanup or harvest."
-)
-tf.app.flags.DEFINE_string("algorithm", "A3C", "Name of the rllib algorithm to use.")
-tf.app.flags.DEFINE_integer("num_agents", 5, "Number of agent policies")
-tf.app.flags.DEFINE_integer(
-    "train_batch_size",
-    30000,
-    "Size of the total dataset over which one epoch is computed.",
-)
-tf.app.flags.DEFINE_integer(
-    "checkpoint_frequency", 20, "Number of steps before a checkpoint is saved."
-)
-tf.app.flags.DEFINE_integer(
-    "training_iterations", 10000, "Total number of steps to train for"
-)
-tf.app.flags.DEFINE_integer("num_cpus", 2, "Number of available CPUs")
-tf.app.flags.DEFINE_integer("num_gpus", 1, "Number of available GPUs")
-tf.app.flags.DEFINE_boolean(
-    "use_gpus_for_workers", False, "Set to true to run workers on GPUs rather than CPUs"
-)
-tf.app.flags.DEFINE_boolean(
-    "use_gpu_for_driver", False, "Set to true to run driver on GPU rather than CPU."
-)
-tf.app.flags.DEFINE_float(
-    "num_workers_per_device",
-    1,
-    "Number of workers to place on a single device (CPU or GPU)",
-)
-tf.app.flags.DEFINE_boolean(
-    "return_agent_actions",
-    0,
-    "If true we return the previous actions of all the agents",
-)
-
-harvest_default_params = {
-    "lr_init": 0.00136,
-    "lr_final": 0.000028,
-    "entropy_coeff": 0.000687,
-}
-
-cleanup_default_params = {
-    "lr_init": 0.00126,
-    "lr_final": 0.000012,
-    "entropy_coeff": 0.00176,
-}
+parser = argparse.ArgumentParser()
+add_default_args(parser)
 
 
 def setup(
@@ -172,6 +123,9 @@ def setup(
 
 
 def main(unused_argv):
+    args = parser.parse_args()
+    if args.multi_node and args.local_mode:
+        sys.exit("You cannot have both local mode and multi node on at the same time")
     ray.init(
         address=args.address,
         local_mode=args.local_mode,
@@ -179,44 +133,9 @@ def main(unused_argv):
         object_store_memory=args.object_store_memory,
         redis_max_memory=args.redis_max_memory,
     )
-    if FLAGS.env == "harvest":
-        hparams = harvest_default_params
-    else:
-        hparams = cleanup_default_params
-    alg_run, env_name, config = setup(
-        FLAGS.env,
-        hparams,
-        FLAGS.algorithm,
-        FLAGS.train_batch_size,
-        FLAGS.num_cpus,
-        FLAGS.num_gpus,
-        FLAGS.num_agents,
-        FLAGS.use_gpus_for_workers,
-        FLAGS.use_gpu_for_driver,
-        FLAGS.num_workers_per_device,
-        FLAGS.return_agent_actions,
-    )
+    env_name, config = setup(args)
 
-    if FLAGS.exp_name is None:
-        exp_name = FLAGS.env + "_" + FLAGS.algorithm
-    else:
-        exp_name = FLAGS.exp_name
-    print("Commencing experiment", exp_name)
-
-    run_experiments(
-        {
-            exp_name: {
-                "run": alg_run,
-                "env": env_name,
-                "stop": {
-                    "timesteps_total": FLAGS.stop_at_timesteps_total,
-                    "episode_reward_min": FLAGS.stop_at_episode_reward_min,
-                },
-                "checkpoint_freq": FLAGS.checkpoint_frequency,
-                "config": config,
-            }
-        }
-    )
+    # print("Commencing experiment", exp_name)
 
 
 if __name__ == "__main__":

@@ -64,7 +64,8 @@ class KerasRNN(RecurrentTFModelV2):
             )(last_layer)
             i += 1
 
-        # TODO(@evinitsky) add in the info that the actions will be appended in if append_others_actions is true
+        # TODO(@evinitsky) add in the info that the actions will be appended in
+        #  if append_others_actions is true
         if self.append_others_actions:
             num_other_agents = model_config["custom_options"]["num_other_agents"]
             actions_layer = tf.keras.layers.Input(
@@ -138,8 +139,9 @@ class MOA_LSTM(RecurrentTFModelV2):
 
         self.obs_space = obs_space
 
-        # The inputs of the shared trunk. We will concatenate the observation space with shared info about the
-        # visibility of agents. Currently we assume all the agents have equally sized action spaces.
+        # The inputs of the shared trunk. We will concatenate the observation space with
+        # shared info about the visibility of agents.
+        # Currently we assume all the agents have equally sized action spaces.
         self.num_outputs = num_outputs
         self.num_other_agents = model_config["custom_options"]["num_other_agents"]
 
@@ -156,7 +158,8 @@ class MOA_LSTM(RecurrentTFModelV2):
             shape=(None,) + vision_box.shape, name="observations"
         )
 
-        # A temp config with custom_model false so that we can get a basic vision model with the desired filters
+        # A temp config with custom_model false so that we can get a basic vision model
+        # with the desired filters
         # Build the CNN layer
         last_layer = inputs
         activation = get_activation_fn(model_config.get("conv_activation"))
@@ -243,14 +246,16 @@ class MOA_LSTM(RecurrentTFModelV2):
         new_dict.update(
             {"prev_action": add_time_dimension(input_dict["prev_actions"], seq_lens)}
         )
-        # new_dict.update({k: add_time_dimension(v, seq_lens) for k, v in input_dict.items() if k != "obs"})
+        # new_dict.update({k: add_time_dimension(v, seq_lens)
+        # for k, v in input_dict.items() if k != "obs"})
 
         output, new_state = self.forward_rnn(new_dict, state, seq_lens)
         return tf.reshape(output, [-1, self.num_outputs]), new_state
 
     def forward_rnn(self, input_dict, state, seq_lens):
         # we operate on our obs, others previous actions, our previous actions, our previous rewards
-        # TODO(@evinitsky) are we passing seq_lens correctly? should we pass prev_actions, prev_rewards etc?
+        # TODO(@evinitsky) are we passing seq_lens correctly?
+        #  should we pass prev_actions, prev_rewards etc?
 
         trunk = self.base_model(input_dict["obs"]["curr_obs"])
 
@@ -268,7 +273,8 @@ class MOA_LSTM(RecurrentTFModelV2):
         # Cycle through all possible actions and get predictions for what other
         # agents would do if this action was taken at each trajectory step.
 
-        # First we have to compute it over the trajectory to give us the hidden state that we will actually use
+        # First we have to compute it over the trajectory to give us the hidden state
+        # that we will actually use
         other_actions = input_dict["obs"]["other_agent_actions"]
         agent_action = tf.cast(
             tf.expand_dims(input_dict["prev_action"], axis=-1), tf.float32

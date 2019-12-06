@@ -1,8 +1,14 @@
-"""This file temporarily replaces the rnn_sequencing file of ray/rllib/policy/rnn_sequencing.py until it the fix is merged in"""
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
+import numpy as np
+
+from ray.rllib.utils.annotations import DeveloperAPI
+from ray.rllib.utils import try_import_tf
+
+"""This file temporarily replaces the rnn_sequencing file of ray/rllib/policy/rnn_sequencing.py
+ until it the fix is merged in"""
 
 """RNN utils for RLlib.
 
@@ -17,10 +23,6 @@ meaningfully affect the loss function. This happens to be true for all the
 current algorithms: https://github.com/ray-project/ray/issues/2992
 """
 
-import numpy as np
-
-from ray.rllib.utils.annotations import DeveloperAPI
-from ray.rllib.utils import try_import_tf
 
 tf = try_import_tf()
 
