@@ -12,8 +12,8 @@ class TestRollout(unittest.TestCase):
         path = os.path.abspath(os.path.dirname(__file__))
         self.controller.render_rollout(horizon=5, path=path)
         # cleanup
-        if os.path.exists("trajectory.mp4"):
-            os.remove("trajectory.mp4")
+        if os.path.exists("cleanup_trajectory.mp4"):
+            os.remove("cleanup_trajectory.mp4")
 
 
 if __name__ == "__main__":
