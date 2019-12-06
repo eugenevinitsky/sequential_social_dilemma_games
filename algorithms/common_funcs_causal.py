@@ -45,7 +45,9 @@ def kl_div(p, q):
 
 
 class MOALoss(object):
-    def __init__(self, pred_logits, true_actions, loss_weight=1.0, others_visibility=None):
+    def __init__(
+        self, pred_logits, true_actions, loss_weight=1.0, others_visibility=None
+    ):
         """Train MOA model with supervised cross entropy loss on a trajectory.
         The model is trying to predict others' actions at timestep t+1 given all
         actions at timestep t.
@@ -61,7 +63,9 @@ class MOALoss(object):
         true_actions = tf.cast(true_actions[1:, 1:], tf.int32)  # [B, N]
 
         # Compute softmax cross entropy
-        self.ce_per_entry = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=true_actions, logits=action_logits)
+        self.ce_per_entry = tf.nn.sparse_softmax_cross_entropy_with_logits(
+            labels=true_actions, logits=action_logits
+        )
 
         # Zero out the loss if the other agent isn't visible to this one.
         if others_visibility is not None:
@@ -76,7 +80,9 @@ class MOALoss(object):
 def setup_moa_loss(logits, model, policy, train_batch):
     # Instantiate the prediction loss
     moa_preds = model.moa_preds_from_batch(train_batch)
-    moa_preds = tf.reshape(moa_preds, [-1, policy.model.num_other_agents, logits.shape[-1]])
+    moa_preds = tf.reshape(
+        moa_preds, [-1, policy.model.num_other_agents, logits.shape[-1]]
+    )
     true_actions = train_batch[ALL_ACTIONS]
     # 0/1 multiplier array representing whether each agent is visible to
     # the current agent.
@@ -85,19 +91,20 @@ def setup_moa_loss(logits, model, policy, train_batch):
         others_visibility = train_batch[VISIBILITY]
     else:
         others_visibility = None
-    moa_loss = MOALoss(moa_preds,
-                       true_actions,
-                       loss_weight=policy.aux_loss_weight,
-                       others_visibility=others_visibility)
+    moa_loss = MOALoss(
+        moa_preds,
+        true_actions,
+        loss_weight=policy.aux_loss_weight,
+        others_visibility=others_visibility,
+    )
     return moa_loss
 
 
-def causal_postprocess_trajectory(policy,
-                           sample_batch,
-                           other_agent_batches=None,
-                           episode=None):
+def causal_postprocess_trajectory(
+    policy, sample_batch, other_agent_batches=None, episode=None
+):
     # Extract matrix of self and other agents' actions.
-    own_actions = np.atleast_2d(np.array(sample_batch['actions']))
+    own_actions = np.atleast_2d(np.array(sample_batch["actions"]))
     own_actions = np.reshape(own_actions, [-1, 1])
     all_actions = np.hstack((own_actions, sample_batch[OTHERS_ACTIONS]))
     sample_batch[ALL_ACTIONS] = all_actions
@@ -115,22 +122,29 @@ def compute_influence_reward(policy, trajectory):
     # given the actions that we DID take.
     # extract out the probability under the actions we actually did take
     true_probs = trajectory[COUNTERFACTUAL_ACTIONS]
-    traj_index = list(range(len(trajectory['obs'])))
-    true_probs = true_probs[traj_index, :, trajectory['actions'], :]
-    true_probs = np.reshape(true_probs, [true_probs.shape[0], policy.num_other_agents, -1])
+    traj_index = list(range(len(trajectory["obs"])))
+    true_probs = true_probs[traj_index, :, trajectory["actions"], :]
+    true_probs = np.reshape(
+        true_probs, [true_probs.shape[0], policy.num_other_agents, -1]
+    )
     true_probs = scipy.special.softmax(true_probs, axis=-1)
-    true_probs = true_probs / true_probs.sum(axis=-1, keepdims=1)  # reduce numerical inaccuracies
+    true_probs = true_probs / true_probs.sum(
+        axis=-1, keepdims=1
+    )  # reduce numerical inaccuracies
 
     # Get marginal predictions where effect of self is marginalized out
-    marginal_probs = marginalize_predictions_over_own_actions(policy, trajectory)  # [B, Num agents, Num actions]
+    marginal_probs = marginalize_predictions_over_own_actions(
+        policy, trajectory
+    )  # [B, Num agents, Num actions]
 
     # Compute influence per agent/step ([B, N]) using different metrics
-    if policy.influence_divergence_measure == 'kl':
+    if policy.influence_divergence_measure == "kl":
         influence_per_agent_step = kl_div(true_probs, marginal_probs)
-    elif policy.influence_divergence_measure == 'jsd':
+    elif policy.influence_divergence_measure == "jsd":
         mean_probs = 0.5 * (true_probs + marginal_probs)
-        influence_per_agent_step = (0.5 * kl_div(true_probs, mean_probs) +
-                                    0.5 * kl_div(marginal_probs, mean_probs))
+        influence_per_agent_step = 0.5 * kl_div(true_probs, mean_probs) + 0.5 * kl_div(
+            marginal_probs, mean_probs
+        )
     else:
         sys.exit("Please specify an influence divergence measure from [kl, jsd]")
 
@@ -150,9 +164,9 @@ def compute_influence_reward(policy, trajectory):
     influence = influence * cur_aux_reward_weight
 
     # Add to trajectory
-    trajectory['total_aux_reward'] = influence
-    trajectory['reward_without_aux'] = trajectory['rewards']
-    trajectory['rewards'] = trajectory['rewards'] + influence
+    trajectory["total_aux_reward"] = influence
+    trajectory["reward_without_aux"] = trajectory["rewards"]
+    trajectory["rewards"] = trajectory["rewards"] + influence
 
     return trajectory
 
@@ -167,7 +181,7 @@ def agent_name_to_idx(agent_num, self_id):
 
 
 def get_agent_visibility_multiplier(trajectory, num_other_agents, agent_ids):
-    traj_len = len(trajectory['obs'])
+    traj_len = len(trajectory["obs"])
     visibility = np.zeros((traj_len, num_other_agents))
     for i, v in enumerate(trajectory[VISIBILITY]):
         vis_agents = [agent_name_to_idx(a, agent_ids[i]) for a in v]
@@ -184,7 +198,10 @@ def marginalize_predictions_over_own_actions(policy, trajectory):
 
     # Indexing of this is [B, Num agents, Agent actions, other agent logits] before we marginalize
     counter_probs = trajectory[COUNTERFACTUAL_ACTIONS]
-    counter_probs = np.reshape(counter_probs, [counter_probs.shape[0], policy.num_other_agents, -1, action_probs.shape[-1]])
+    counter_probs = np.reshape(
+        counter_probs,
+        [counter_probs.shape[0], policy.num_other_agents, -1, action_probs.shape[-1]],
+    )
     counter_probs = scipy.special.softmax(counter_probs, axis=-1)
     marginal_probs = np.sum(counter_probs, axis=-2)
 
@@ -198,8 +215,7 @@ def marginalize_predictions_over_own_actions(policy, trajectory):
     return marginal_probs
 
 
-def extract_last_actions_from_episodes(episodes, batch_type=False,
-                                       own_actions=None):
+def extract_last_actions_from_episodes(episodes, batch_type=False, own_actions=None):
     """Pulls every other agent's previous actions out of structured data.
     Args:
         episodes: the structured data type. Typically a dict of episode
@@ -214,7 +230,8 @@ def extract_last_actions_from_episodes(episodes, batch_type=False,
     """
     if episodes is None:
         print("Why are there no episodes?")
-        import ipdb;
+        import ipdb
+
         ipdb.set_trace()
 
     # Need to sort agent IDs so same agent is consistently in
@@ -224,10 +241,9 @@ def extract_last_actions_from_episodes(episodes, batch_type=False,
 
     for agent_id in agent_ids:
         if batch_type:
-            prev_actions.append(episodes[agent_id][1]['actions'])
+            prev_actions.append(episodes[agent_id][1]["actions"])
         else:
-            prev_actions.append(
-                [e.prev_action for e in episodes[agent_id]])
+            prev_actions.append([e.prev_action for e in episodes[agent_id]])
 
     all_actions = np.transpose(np.array(prev_actions))
 
@@ -244,30 +260,29 @@ def causal_fetches(policy):
         # Be aware that this is frozen here so that we don't propagate agent actions through the reward
         ACTION_LOGITS: policy.model.action_logits(),
         COUNTERFACTUAL_ACTIONS: policy.model.counterfactual_actions(),
-
         # TODO(@evinitsky) remove this once we figure out how to split the obs
         OTHERS_ACTIONS: policy.model.other_agent_actions(),
-        VISIBILITY: policy.model.visibility()
+        VISIBILITY: policy.model.visibility(),
     }
 
 
 class ConfigInitializerMixIn(object):
     def __init__(self, config):
-        config = config['model']['custom_options']
-        self.num_other_agents = config['num_other_agents']
-        self.aux_loss_weight = config['aux_loss_weight']
-        self.aux_reward_clip = config['aux_reward_clip']
-        self.train_moa_only_when_visible = config['train_moa_only_when_visible']
-        self.train_moa_only_when_visible = config['train_moa_only_when_visible']
-        self.influence_divergence_measure = config['influence_divergence_measure']
-        self.influence_only_when_visible = config['influence_only_when_visible']
+        config = config["model"]["custom_options"]
+        self.num_other_agents = config["num_other_agents"]
+        self.aux_loss_weight = config["aux_loss_weight"]
+        self.aux_reward_clip = config["aux_reward_clip"]
+        self.train_moa_only_when_visible = config["train_moa_only_when_visible"]
+        self.train_moa_only_when_visible = config["train_moa_only_when_visible"]
+        self.influence_divergence_measure = config["influence_divergence_measure"]
+        self.influence_only_when_visible = config["influence_only_when_visible"]
 
 
 def extra_stats(policy, train_batch):
     base_stats = kl_and_loss_stats(policy, train_batch)
     base_stats["total_influence"] = train_batch["total_aux_reward"]
-    base_stats['reward_without_influence'] = train_batch['reward_without_aux']
-    base_stats['aux_loss'] = policy.moa_loss / policy.moa_weight
+    base_stats["reward_without_influence"] = train_batch["reward_without_aux"]
+    base_stats["aux_loss"] = policy.moa_loss / policy.moa_weight
     return base_stats
 
 
@@ -280,7 +295,8 @@ def build_model(policy, obs_space, action_space, config):
         logit_dim,
         config["model"],
         name=POLICY_SCOPE,
-        framework="tf")
+        framework="tf",
+    )
 
     return policy.model
 

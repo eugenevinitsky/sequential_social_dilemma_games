@@ -25,12 +25,8 @@ class ConvToFCNet(Model):
         hiddens = [32, 32]
         with tf.name_scope("custom_net"):
             inputs = slim.conv2d(
-                inputs,
-                6,
-                [3, 3],
-                1,
-                activation_fn=tf.nn.relu,
-                scope="conv")
+                inputs, 6, [3, 3], 1, activation_fn=tf.nn.relu, scope="conv"
+            )
             last_layer = flatten(inputs)
             i = 1
             for size in hiddens:
@@ -40,12 +36,14 @@ class ConvToFCNet(Model):
                     size,
                     weights_initializer=normc_initializer(1.0),
                     activation_fn=tf.nn.relu,
-                    scope=label)
+                    scope=label,
+                )
                 i += 1
             output = slim.fully_connected(
                 last_layer,
                 num_outputs,
                 weights_initializer=normc_initializer(0.01),
                 activation_fn=None,
-                scope="fc_out")
+                scope="fc_out",
+            )
             return output, last_layer

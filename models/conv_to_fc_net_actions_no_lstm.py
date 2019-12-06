@@ -19,7 +19,9 @@ class ConvToFCNetActions(Model):
         actions_batch = input_dict["other_actions"]
         num_other_agents = options["custom_options"]["num_other_agents"]
         one_hot_actions = tf.one_hot(actions_batch, num_outputs)
-        others_actions = tf.reshape(one_hot_actions, [-1, num_outputs * num_other_agents])
+        others_actions = tf.reshape(
+            one_hot_actions, [-1, num_outputs * num_other_agents]
+        )
         others_actions = tf.cast(others_actions, tf.float32)
 
         inputs = input_dict["obs"]
@@ -27,12 +29,8 @@ class ConvToFCNetActions(Model):
         hiddens = [128, 128]
         with tf.name_scope("custom_net"):
             inputs = slim.conv2d(
-                inputs,
-                32,
-                [3, 3],
-                1,
-                activation_fn=tf.nn.relu,
-                scope="conv")
+                inputs, 32, [3, 3], 1, activation_fn=tf.nn.relu, scope="conv"
+            )
             last_layer = flatten(inputs)
             i = 1
             for size in hiddens:
@@ -42,7 +40,8 @@ class ConvToFCNetActions(Model):
                     size,
                     weights_initializer=normc_initializer(1.0),
                     activation_fn=tf.nn.relu,
-                    scope=label)
+                    scope=label,
+                )
                 i += 1
 
             # Add the others_actions in as input directly to the LSTM
@@ -52,7 +51,7 @@ class ConvToFCNetActions(Model):
             output = slim.fully_connected(
                 last_layer,
                 num_outputs,
-                weights_initializer=normc_initializer(.01),
+                weights_initializer=normc_initializer(0.01),
                 activation_fn=None,
                 scope="output_layer",
             )

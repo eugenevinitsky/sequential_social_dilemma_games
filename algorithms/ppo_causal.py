@@ -6,22 +6,43 @@ import scipy
 
 # TODO(@evinitsky) put this in alphabetical order
 
-from ray.rllib.agents.ppo.ppo_policy import PPOLoss, BEHAVIOUR_LOGITS, \
-    KLCoeffMixin, setup_config, clip_gradients, \
-    kl_and_loss_stats, ValueNetworkMixin, vf_preds_and_logits_fetches, postprocess_ppo_gae
-from ray.rllib.agents.ppo.ppo import DEFAULT_CONFIG, choose_policy_optimizer, \
-    validate_config, update_kl, warn_about_bad_reward_scales
+from ray.rllib.agents.ppo.ppo_policy import (
+    PPOLoss,
+    BEHAVIOUR_LOGITS,
+    KLCoeffMixin,
+    setup_config,
+    clip_gradients,
+    kl_and_loss_stats,
+    ValueNetworkMixin,
+    vf_preds_and_logits_fetches,
+    postprocess_ppo_gae,
+)
+from ray.rllib.agents.ppo.ppo import (
+    DEFAULT_CONFIG,
+    choose_policy_optimizer,
+    validate_config,
+    update_kl,
+    warn_about_bad_reward_scales,
+)
 from ray.rllib.evaluation.postprocessing import Postprocessing
 from ray.rllib.models import ModelCatalog
 from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.policy.tf_policy import LearningRateSchedule, \
-    EntropyCoeffSchedule, ACTION_LOGP
+from ray.rllib.policy.tf_policy import (
+    LearningRateSchedule,
+    EntropyCoeffSchedule,
+    ACTION_LOGP,
+)
 from ray.rllib.utils import try_import_tf
 from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.agents.trainer_template import build_trainer
 
-from algorithms.common_funcs_causal import setup_moa_loss, causal_fetches, setup_causal_mixins, get_causal_mixins, \
-    causal_postprocess_trajectory
+from algorithms.common_funcs_causal import (
+    setup_moa_loss,
+    causal_fetches,
+    setup_causal_mixins,
+    get_causal_mixins,
+    causal_postprocess_trajectory,
+)
 
 tf = try_import_tf()
 
@@ -43,8 +64,7 @@ def loss_with_moa(policy, model, dist_class, train_batch):
         mask = tf.sequence_mask(train_batch["seq_lens"], max_seq_len)
         mask = tf.reshape(mask, [-1])
     else:
-        mask = tf.ones_like(
-            train_batch[Postprocessing.ADVANTAGES], dtype=tf.bool)
+        mask = tf.ones_like(train_batch[Postprocessing.ADVANTAGES], dtype=tf.bool)
 
     policy.loss_obj = PPOLoss(
         policy.action_space,
@@ -65,7 +85,8 @@ def loss_with_moa(policy, model, dist_class, train_batch):
         vf_clip_param=policy.config["vf_clip_param"],
         vf_loss_coeff=policy.config["vf_loss_coeff"],
         use_gae=policy.config["use_gae"],
-        model_config=policy.config["model"])
+        model_config=policy.config["model"],
+    )
 
     policy.loss_obj.loss += moa_loss.total_loss
     return policy.loss_obj.loss
@@ -81,15 +102,14 @@ def extra_fetches(policy):
 def extra_stats(policy, train_batch):
     base_stats = kl_and_loss_stats(policy, train_batch)
     base_stats["total_influence"] = train_batch["total_influence"]
-    base_stats['reward_without_influence'] = train_batch['reward_without_influence']
-    base_stats['moa_loss'] = policy.moa_loss / policy.moa_weight
+    base_stats["reward_without_influence"] = train_batch["reward_without_influence"]
+    base_stats["moa_loss"] = policy.moa_loss / policy.moa_weight
     return base_stats
 
 
-def postprocess_ppo_causal(policy,
-                        sample_batch,
-                        other_agent_batches=None,
-                        episode=None):
+def postprocess_ppo_causal(
+    policy, sample_batch, other_agent_batches=None, episode=None
+):
     """Adds the policy logits, VF preds, and advantages to the trajectory."""
 
     batch = causal_postprocess_trajectory(policy, sample_batch)
@@ -106,7 +126,8 @@ def build_model(policy, obs_space, action_space, config):
         logit_dim,
         config["model"],
         name=POLICY_SCOPE,
-        framework="tf")
+        framework="tf",
+    )
 
     return policy.model
 
@@ -114,8 +135,9 @@ def build_model(policy, obs_space, action_space, config):
 def setup_mixins(policy, obs_space, action_space, config):
     ValueNetworkMixin.__init__(policy, obs_space, action_space, config)
     KLCoeffMixin.__init__(policy, config)
-    EntropyCoeffSchedule.__init__(policy, config["entropy_coeff"],
-                                  config["entropy_coeff_schedule"])
+    EntropyCoeffSchedule.__init__(
+        policy, config["entropy_coeff"], config["entropy_coeff_schedule"]
+    )
     LearningRateSchedule.__init__(policy, config["lr"], config["lr_schedule"])
     setup_causal_mixins(policy, obs_space, action_space, config)
 
@@ -131,10 +153,9 @@ CausalMOA_PPOPolicy = build_tf_policy(
     gradients_fn=clip_gradients,
     before_init=setup_config,
     before_loss_init=setup_mixins,
-    mixins=[
-        LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin,
-        ValueNetworkMixin
-    ] + get_causal_mixins())
+    mixins=[LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin, ValueNetworkMixin]
+    + get_causal_mixins(),
+)
 
 CausalPPOMOATrainer = build_trainer(
     name="CausalMOAPPO",
@@ -143,4 +164,5 @@ CausalPPOMOATrainer = build_trainer(
     default_config=CAUSAL_CONFIG,
     validate_config=validate_config,
     after_optimizer_step=update_kl,
-    after_train_result=warn_about_bad_reward_scales)
+    after_train_result=warn_about_bad_reward_scales,
+)

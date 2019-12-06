@@ -7,13 +7,15 @@ from social_dilemmas.maps import SwitchMapElements
 from social_dilemmas.envs.map_env import MapEnv, ACTIONS
 
 # Add custom actions to the agent
-ACTIONS['TOGGLE_SWITCH'] = 1  # length of firing range
+ACTIONS["TOGGLE_SWITCH"] = 1  # length of firing range
 
 # Custom colour dictionary
-SWITCH_COLORS = {'D': [180, 180, 180],  # Grey closed door - same color as walls
-                 'd': [255, 255, 255],  # White opened door
-                 'S': [0, 255, 0],  # Green turned-on switch
-                 's': [255, 0, 0]}  # Red turned-off switch
+SWITCH_COLORS = {
+    "D": [180, 180, 180],  # Grey closed door - same color as walls
+    "d": [255, 255, 255],  # White opened door
+    "S": [0, 255, 0],  # Green turned-on switch
+    "s": [255, 0, 0],
+}  # Red turned-off switch
 
 GIVE_EXTERNAL_SWITCH_REWARD = int(False)
 
@@ -44,13 +46,13 @@ class SwitchEnv(MapEnv):
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
                 current_char = self.base_map[row, col]
-                if current_char in ['s', 'S', 'd', 'D']:
+                if current_char in ["s", "S", "d", "D"]:
                     self.initial_map_state[row, col] = current_char
                 # Remember switch/door locations for faster access
-                if current_char in ['s', 'S']:
+                if current_char in ["s", "S"]:
                     self.switch_locations.append((row, col))
                     self.switch_count += 1
-                if current_char in ['d', 'D']:
+                if current_char in ["d", "D"]:
                     self.door_locations.append((row, col))
 
         self.color_map.update(SWITCH_COLORS)
@@ -71,21 +73,25 @@ class SwitchEnv(MapEnv):
                 num_switches -= 2
         partial_map.append(SwitchMapElements.bottom_row)
         middle_row = int(math.ceil(num_rows / 2))
-        partial_map[middle_row] = partial_map[middle_row][:3] + 'P' + partial_map[middle_row][4:]
+        partial_map[middle_row] = (
+            partial_map[middle_row][:3] + "P" + partial_map[middle_row][4:]
+        )
         return partial_map
 
     def create_extra_info_dict(self):
-        return {"switches_on_at_termination": self.switches_on_at_termination,
-                "total_pulled_on": self.total_pulled_on,
-                "total_pulled_off": self.total_pulled_off,
-                "timestep_first_switch_pull": self.timestep_first_switch_pull,
-                "timestep_last_switch_pull": self.timestep_last_switch_pull,
-                "total_successes": self.total_successes}
+        return {
+            "switches_on_at_termination": self.switches_on_at_termination,
+            "total_pulled_on": self.total_pulled_on,
+            "total_pulled_off": self.total_pulled_off,
+            "timestep_first_switch_pull": self.timestep_first_switch_pull,
+            "timestep_last_switch_pull": self.timestep_last_switch_pull,
+            "total_successes": self.total_successes,
+        }
 
     def step(self, actions):
         observations, rewards, dones, info = super().step(actions)
         first_agent = next(iter(actions.keys()))
-        if rewards[first_agent] > .1:
+        if rewards[first_agent] > 0.1:
             self.total_successes += 1
 
         extra_info = {first_agent: self.create_extra_info_dict()}
@@ -100,23 +106,45 @@ class SwitchEnv(MapEnv):
     def observation_space(self):
         if self.return_agent_actions:
             # We will append on some extra values to represent the actions of other agents
-            return Dict({"curr_obs": Box(low=-np.infty, high=np.infty, shape=(2 * self.view_len + 1,
-                                                                              2 * self.view_len + 1, 3),
-                                         dtype=np.float32),
-                         "other_agent_actions": Box(low=0, high=len(ACTIONS), shape=(self.num_agents - 1,),
-                                                    dtype=np.int32, ),
-                         "visible_agents": Box(low=0, high=self.num_agents, shape=(self.num_agents - 1,),
-                                               dtype=np.int32)})
+            return Dict(
+                {
+                    "curr_obs": Box(
+                        low=-np.infty,
+                        high=np.infty,
+                        shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
+                        dtype=np.float32,
+                    ),
+                    "other_agent_actions": Box(
+                        low=0,
+                        high=len(ACTIONS),
+                        shape=(self.num_agents - 1,),
+                        dtype=np.int32,
+                    ),
+                    "visible_agents": Box(
+                        low=0,
+                        high=self.num_agents,
+                        shape=(self.num_agents - 1,),
+                        dtype=np.int32,
+                    ),
+                }
+            )
         else:
-            return Dict({"curr_obs": Box(low=-np.infty, high=np.infty, shape=(2 * self.view_len + 1,
-                                                                              2 * self.view_len + 1, 3),
-                                         dtype=np.float32)})
+            return Dict(
+                {
+                    "curr_obs": Box(
+                        low=-np.infty,
+                        high=np.infty,
+                        shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
+                        dtype=np.float32,
+                    )
+                }
+            )
 
     def setup_agents(self):
         map_with_agents = self.get_map_with_agents()
 
         for i in range(self.num_agents):
-            agent_id = 'agent-' + str(i)
+            agent_id = "agent-" + str(i)
             spawn_point = self.spawn_point()
             rotation = self.spawn_rotation()
             grid = map_with_agents
@@ -139,20 +167,22 @@ class SwitchEnv(MapEnv):
         self.total_successes = 0
 
     def custom_action(self, agent, action):
-        agent.fire_beam('F')
-        updates = self.update_map_fire(agent.get_pos().tolist(),
-                                       agent.get_orientation(),
-                                       fire_len=ACTIONS['TOGGLE_SWITCH'],
-                                       fire_char='F',
-                                       cell_types=['s', 'S'],
-                                       update_char=['S', 's'],
-                                       beam_width=1)
+        agent.fire_beam("F")
+        updates = self.update_map_fire(
+            agent.get_pos().tolist(),
+            agent.get_orientation(),
+            fire_len=ACTIONS["TOGGLE_SWITCH"],
+            fire_char="F",
+            cell_types=["s", "S"],
+            update_char=["S", "s"],
+            beam_width=1,
+        )
         return updates
 
     def custom_map_update(self):
         activated_switch_count = 0
         for row, col in self.switch_locations:
-            if self.world_map[row, col] == 'S':
+            if self.world_map[row, col] == "S":
                 activated_switch_count += 1
 
         switch_difference = activated_switch_count - self.prev_activated_switch_count
@@ -164,7 +194,7 @@ class SwitchEnv(MapEnv):
 
         # Open doors if all switches have been activated
         open_doors = activated_switch_count == self.switch_count
-        door_char = 'd' if open_doors else 'D'
+        door_char = "d" if open_doors else "D"
         updates = []
         for row, col in self.door_locations:
             updates.append((row, col, door_char))
@@ -185,19 +215,21 @@ class SwitchEnv(MapEnv):
         # Testing function
         unique, counts = np.unique(window, return_counts=True)
         counts_dict = dict(zip(unique, counts))
-        num_switches = counts_dict.get('S', 0)
+        num_switches = counts_dict.get("S", 0)
         return num_switches
 
     @staticmethod
     def on_episode_end(info):
         episode = info["episode"]
-        last_info = episode.last_info_for('agent-0')
-        extra_info_keys = ["switches_on_at_termination",
-                           "total_pulled_on",
-                           "total_pulled_off",
-                           "timestep_first_switch_pull",
-                           "timestep_last_switch_pull",
-                           "total_successes"]
+        last_info = episode.last_info_for("agent-0")
+        extra_info_keys = [
+            "switches_on_at_termination",
+            "total_pulled_on",
+            "total_pulled_off",
+            "timestep_first_switch_pull",
+            "timestep_last_switch_pull",
+            "total_successes",
+        ]
         for key in extra_info_keys:
             episode.custom_metrics[key] = last_info[key]
 

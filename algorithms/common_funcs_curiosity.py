@@ -66,14 +66,15 @@ def setup_curiosity_loss(logits, model, policy, train_batch):
     # Instantiate the prediction loss
     aux_preds = model.predicted_encoded_observations()
     true_states = model.true_encoded_observations()
-    curiosity_loss = CuriosityLoss(aux_preds, true_states, loss_weight=policy.aux_loss_weight)
+    curiosity_loss = CuriosityLoss(
+        aux_preds, true_states, loss_weight=policy.aux_loss_weight
+    )
     return curiosity_loss
 
 
-def curiosity_postprocess_trajectory(policy,
-                                     sample_batch,
-                                     other_agent_batches=None,
-                                     episode=None):
+def curiosity_postprocess_trajectory(
+    policy, sample_batch, other_agent_batches=None, episode=None
+):
     # Compute curiosity reward and add to batch.
     sample_batch = compute_curiosity_reward(policy, sample_batch)
     return sample_batch
@@ -88,17 +89,21 @@ def compute_curiosity_reward(policy, trajectory):
     true_obs = trajectory[ENCODED_OBSERVATIONS]
     pred_obs = trajectory[PREDICTED_OBSERVATIONS]
 
-    aux_reward_per_agent_step = [calculate_surprisal(pred, truth) for pred, truth in zip(pred_obs, true_obs)]
+    aux_reward_per_agent_step = [
+        calculate_surprisal(pred, truth) for pred, truth in zip(pred_obs, true_obs)
+    ]
     cur_aux_reward_weight = policy.compute_weight()
 
     # Clip curiosity reward
-    reward = np.clip(aux_reward_per_agent_step, -policy.aux_reward_clip, policy.aux_reward_clip)
+    reward = np.clip(
+        aux_reward_per_agent_step, -policy.aux_reward_clip, policy.aux_reward_clip
+    )
     reward = reward * cur_aux_reward_weight
 
     # Add to trajectory
-    trajectory['total_aux_reward'] = reward
-    trajectory['reward_without_aux'] = trajectory['rewards']
-    trajectory['rewards'] = trajectory['rewards'] + reward
+    trajectory["total_aux_reward"] = reward
+    trajectory["reward_without_aux"] = trajectory["rewards"]
+    trajectory["rewards"] = trajectory["rewards"] + reward
 
     return trajectory
 
@@ -114,10 +119,10 @@ def curiosity_fetches(policy):
 
 class ConfigInitializerMixIn(object):
     def __init__(self, config):
-        config = config['model']['custom_options']
-        self.num_other_agents = config['num_other_agents']
-        self.aux_loss_weight = config['aux_loss_weight']
-        self.aux_reward_clip = config['aux_reward_clip']
+        config = config["model"]["custom_options"]
+        self.num_other_agents = config["num_other_agents"]
+        self.aux_loss_weight = config["aux_loss_weight"]
+        self.aux_reward_clip = config["aux_reward_clip"]
 
 
 def setup_curiosity_mixins(policy, obs_space, action_space, config):

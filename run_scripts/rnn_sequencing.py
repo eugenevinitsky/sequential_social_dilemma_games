@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
+
 """RNN utils for RLlib.
 
 The main trick here is that we add the time dimension at the last moment.
@@ -47,21 +48,22 @@ def add_time_dimension(padded_inputs, seq_lens):
 
     # Dynamically reshape the padded batch to introduce a time dimension.
     new_batch_size = padded_batch_size // max_seq_len
-    new_shape = ([new_batch_size, max_seq_len] +
-                 padded_inputs.get_shape().as_list()[1:])
+    new_shape = [new_batch_size, max_seq_len] + padded_inputs.get_shape().as_list()[1:]
     return tf.reshape(padded_inputs, new_shape)
 
 
 @DeveloperAPI
-def chop_into_sequences(episode_ids,
-                        unroll_ids,
-                        agent_indices,
-                        feature_columns,
-                        state_columns,
-                        max_seq_len,
-                        dynamic_max=True,
-                        shuffle=False,
-                        _extra_padding=0):
+def chop_into_sequences(
+    episode_ids,
+    unroll_ids,
+    agent_indices,
+    feature_columns,
+    state_columns,
+    max_seq_len,
+    dynamic_max=True,
+    shuffle=False,
+    _extra_padding=0,
+):
     """Truncate and pad experiences into fixed-length sequences.
 
     Arguments:
@@ -107,12 +109,9 @@ def chop_into_sequences(episode_ids,
     prev_id = None
     seq_lens = []
     seq_len = 0
-    unique_ids = np.add(
-        np.add(episode_ids, agent_indices),
-        np.array(unroll_ids) << 32)
+    unique_ids = np.add(np.add(episode_ids, agent_indices), np.array(unroll_ids) << 32)
     for uid in unique_ids:
-        if (prev_id is not None and uid != prev_id) or \
-                seq_len >= max_seq_len:
+        if (prev_id is not None and uid != prev_id) or seq_len >= max_seq_len:
             seq_lens.append(seq_len)
             seq_len = 0
         seq_len += 1
@@ -129,7 +128,7 @@ def chop_into_sequences(episode_ids,
     feature_sequences = []
     for f in feature_columns:
         f = np.array(f)
-        f_pad = np.zeros((len(seq_lens) * max_seq_len, ) + np.shape(f)[1:])
+        f_pad = np.zeros((len(seq_lens) * max_seq_len,) + np.shape(f)[1:])
         seq_base = 0
         i = 0
         for l in seq_lens:
