@@ -816,7 +816,7 @@ class TestHarvestEnv(unittest.TestCase):
         self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=1)
         self.env.reset()
         agents = list(self.env.agents.values())
-        action_dim = agents[0].action_space.n
+        action_dim = self.env.action_space.n
         for i in range(action_dim):
             self.env.step({"agent-0": i})
 
