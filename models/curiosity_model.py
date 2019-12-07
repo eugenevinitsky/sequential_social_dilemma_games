@@ -114,7 +114,6 @@ class CuriosityLSTM(RecurrentTFModelV2):
         self.num_outputs = num_outputs
         self.num_other_agents = model_config["custom_options"]["num_other_agents"]
 
-
         original_obs_dims = obs_space.original_space.spaces['curr_obs'].shape
         # Determine vision network input shape: add an extra none for the time dimension
         inputs = tf.keras.layers.Input(
