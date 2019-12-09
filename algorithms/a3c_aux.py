@@ -157,7 +157,7 @@ def get_a3c_trainer(aux_model_type, aux_config):
             causal_postprocess_trajectory as aux_postprocess_trajectory,
         )
 
-        model_name = "CausalMOAA3C"
+        trainer_name = "CausalMOAA3CTrainer"
     elif aux_model_type == "curiosity":
         from algorithms.common_funcs_curiosity import (
             setup_curiosity_loss as setup_aux_loss,
@@ -167,7 +167,7 @@ def get_a3c_trainer(aux_model_type, aux_config):
             curiosity_postprocess_trajectory as aux_postprocess_trajectory,
         )
 
-        model_name = "CuriosityA3C"
+        trainer_name = "CuriosityA3CTrainer"
 
     aux_config["use_gae"] = False
 
@@ -185,7 +185,7 @@ def get_a3c_trainer(aux_model_type, aux_config):
     )
 
     trainer = build_trainer(
-        name=model_name,
+        name=trainer_name,
         default_policy=a3c_tf_policy,
         default_config=aux_config,
         validate_config=validate_config,
