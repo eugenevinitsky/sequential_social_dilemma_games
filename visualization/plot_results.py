@@ -72,6 +72,8 @@ def extract_stats(dfs, keys):
         all_df_lists[key] = []
 
     # Per file, extract the mean trajectory for each key.
+    # The mean is taken over all distinct agents, per metric,
+    # to create a mean value per metric.
     for df in dfs:
         df_list = {}
         for key in keys:
