@@ -1,11 +1,11 @@
-from gym.spaces import Box, Dict
-from gym.spaces import Discrete
-import numpy as np
 import random
 
-from social_dilemmas.maps import CLEANUP_MAP
-from social_dilemmas.envs.map_env import MapEnv, ACTIONS
+import numpy as np
+from gym.spaces import Box, Dict, Discrete
+
 from social_dilemmas.envs.agent import CleanupAgent  # CLEANUP_VIEW_SIZE
+from social_dilemmas.envs.map_env import ACTIONS, MapEnv
+from social_dilemmas.maps import CLEANUP_MAP
 
 # Add custom actions to the agent
 ACTIONS["FIRE"] = 5  # length of firing beam

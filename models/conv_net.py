@@ -7,10 +7,9 @@
 # and options['conv_filters'] output channels.
 
 import tensorflow as tf
-
+import tensorflow.contrib.slim as slim
 from ray.rllib.models.misc import flatten
 from ray.rllib.models.model import Model
-import tensorflow.contrib.slim as slim
 
 
 class ConvNet(Model):

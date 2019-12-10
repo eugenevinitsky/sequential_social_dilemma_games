@@ -2,47 +2,45 @@
 
 Keep in sync with changes to A3CTFPolicy and VtraceSurrogatePolicy."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
-import numpy as np
 import logging
-import gym
 
+import gym
+import numpy as np
 from ray.rllib.agents.impala import DEFAULT_CONFIG
 from ray.rllib.agents.impala.impala import (
+    OverrideDefaultResourceRequest,
     defer_make_workers,
     make_aggregators_and_optimizer,
-    OverrideDefaultResourceRequest,
     validate_config,
-)
-from ray.rllib.agents.impala.vtrace_policy import (
-    validate_config as validate_config_policy,
 )
 from ray.rllib.agents.impala.vtrace_policy import (
     VTraceLoss,
     choose_optimizer,
     clip_gradients,
 )
+from ray.rllib.agents.impala.vtrace_policy import (
+    validate_config as validate_config_policy,
+)
+from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.models.tf.tf_action_dist import Categorical
 from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.policy.tf_policy import (
-    LearningRateSchedule,
-    EntropyCoeffSchedule,
     ACTION_LOGP,
+    EntropyCoeffSchedule,
+    LearningRateSchedule,
 )
-from ray.rllib.utils.explained_variance import explained_variance
+from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.utils import try_import_tf
-from ray.rllib.agents.trainer_template import build_trainer
+from ray.rllib.utils.explained_variance import explained_variance
 
 from algorithms.common_funcs_causal import (
-    setup_moa_loss,
     causal_fetches,
-    setup_causal_mixins,
-    get_causal_mixins,
     causal_postprocess_trajectory,
+    get_causal_mixins,
+    setup_causal_mixins,
+    setup_moa_loss,
 )
 
 CAUSAL_CONFIG = DEFAULT_CONFIG

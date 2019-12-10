@@ -1,10 +1,11 @@
-from gym.spaces import Box, Dict, Discrete
-import numpy as np
 import math
 
+import numpy as np
+from gym.spaces import Box, Dict, Discrete
+
 from social_dilemmas.envs.agent import SwitchAgent
+from social_dilemmas.envs.map_env import ACTIONS, MapEnv
 from social_dilemmas.maps import SwitchMapElements
-from social_dilemmas.envs.map_env import MapEnv, ACTIONS
 
 # Add custom actions to the agent
 ACTIONS["TOGGLE_SWITCH"] = 1  # length of firing range

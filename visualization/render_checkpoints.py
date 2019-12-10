@@ -1,8 +1,8 @@
 import ray
 
-from visualization.visualizer_rllib import visualize
 from config.config_parser import get_ray_results_path, get_video_path
 from utility_funcs import get_all_subdirs
+from visualization.visualizer_rllib import visualize
 
 
 def create_args(result_dir, checkpoint_num, video_path, video_filename):

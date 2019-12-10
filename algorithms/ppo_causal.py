@@ -1,39 +1,39 @@
-from ray.rllib.agents.ppo.ppo_policy import (
-    PPOLoss,
-    BEHAVIOUR_LOGITS,
-    KLCoeffMixin,
-    setup_config,
-    clip_gradients,
-    kl_and_loss_stats,
-    ValueNetworkMixin,
-    vf_preds_and_logits_fetches,
-    postprocess_ppo_gae,
-)
 from ray.rllib.agents.ppo.ppo import (
     DEFAULT_CONFIG,
     choose_policy_optimizer,
-    validate_config,
     update_kl,
+    validate_config,
     warn_about_bad_reward_scales,
 )
+from ray.rllib.agents.ppo.ppo_policy import (
+    BEHAVIOUR_LOGITS,
+    KLCoeffMixin,
+    PPOLoss,
+    ValueNetworkMixin,
+    clip_gradients,
+    kl_and_loss_stats,
+    postprocess_ppo_gae,
+    setup_config,
+    vf_preds_and_logits_fetches,
+)
+from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.evaluation.postprocessing import Postprocessing
 from ray.rllib.models import ModelCatalog
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.policy.tf_policy import (
-    LearningRateSchedule,
-    EntropyCoeffSchedule,
     ACTION_LOGP,
+    EntropyCoeffSchedule,
+    LearningRateSchedule,
 )
-from ray.rllib.utils import try_import_tf
 from ray.rllib.policy.tf_policy_template import build_tf_policy
-from ray.rllib.agents.trainer_template import build_trainer
+from ray.rllib.utils import try_import_tf
 
 from algorithms.common_funcs_causal import (
-    setup_moa_loss,
     causal_fetches,
-    setup_causal_mixins,
-    get_causal_mixins,
     causal_postprocess_trajectory,
+    get_causal_mixins,
+    setup_causal_mixins,
+    setup_moa_loss,
 )
 
 tf = try_import_tf()

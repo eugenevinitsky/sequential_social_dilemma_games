@@ -1,21 +1,19 @@
 """Note: Keep in sync with changes to VTraceTFPolicy."""
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 from functools import partial
 
-from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.utils.explained_variance import explained_variance
-from ray.rllib.evaluation.postprocessing import Postprocessing
-from ray.rllib.policy.tf_policy_template import build_tf_policy
-from ray.rllib.policy.tf_policy import LearningRateSchedule
-from ray.rllib.utils.tf_ops import make_tf_callable
-from ray.rllib.utils import try_import_tf
-from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.agents.a3c.a3c import validate_config
 from ray.rllib.agents.a3c.a3c_tf_policy import postprocess_advantages
+from ray.rllib.agents.trainer_template import build_trainer
+from ray.rllib.evaluation.postprocessing import Postprocessing
+from ray.rllib.policy.sample_batch import SampleBatch
+from ray.rllib.policy.tf_policy import LearningRateSchedule
+from ray.rllib.policy.tf_policy_template import build_tf_policy
+from ray.rllib.utils import try_import_tf
+from ray.rllib.utils.explained_variance import explained_variance
+from ray.rllib.utils.tf_ops import make_tf_callable
 
 tf = try_import_tf()
 

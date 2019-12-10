@@ -2,16 +2,16 @@ import argparse
 import sys
 
 import ray
+import tensorflow as tf
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
-import tensorflow as tf
 
 from config.default_args import add_default_args
-from social_dilemmas.envs.harvest import HarvestEnv
-from social_dilemmas.envs.cleanup import CleanupEnv
 from models.conv_to_fcnet_v2 import ConvToFCNetv2
+from social_dilemmas.envs.cleanup import CleanupEnv
+from social_dilemmas.envs.harvest import HarvestEnv
 
 parser = argparse.ArgumentParser()
 add_default_args(parser)

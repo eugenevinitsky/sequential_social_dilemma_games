@@ -7,10 +7,9 @@
 # channels. This is connected to two fully connected layers of size 32 each
 
 import tensorflow as tf
-
-from ray.rllib.models.misc import normc_initializer, flatten
-from ray.rllib.models.model import Model
 import tensorflow.contrib.slim as slim
+from ray.rllib.models.misc import flatten, normc_initializer
+from ray.rllib.models.model import Model
 
 
 class ConvToFCNet(Model):

@@ -1,17 +1,19 @@
 """Unit tests for all of the envs"""
 
+import random
 import unittest
 
 import numpy as np
-import random
-
 from gym.spaces import Discrete
-from social_dilemmas.envs.agent import Agent
-from social_dilemmas.envs.agent import CleanupAgent
-from social_dilemmas.envs.agent import HarvestAgent
-from social_dilemmas.envs.agent import BASE_ACTIONS
-from social_dilemmas.envs.agent import HARVEST_ACTIONS
-from social_dilemmas.envs.agent import CLEANUP_ACTIONS
+
+from social_dilemmas.envs.agent import (
+    BASE_ACTIONS,
+    CLEANUP_ACTIONS,
+    HARVEST_ACTIONS,
+    Agent,
+    CleanupAgent,
+    HarvestAgent,
+)
 from social_dilemmas.envs.cleanup import CleanupEnv
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.map_env import MapEnv

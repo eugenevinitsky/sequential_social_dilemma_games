@@ -1,8 +1,8 @@
 """Base map class that defines the rendering process
 """
 
-from collections import defaultdict
 import random
+from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np

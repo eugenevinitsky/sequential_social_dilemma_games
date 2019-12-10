@@ -1,5 +1,5 @@
-from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.cleanup import CleanupEnv
+from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.switch import SwitchEnv
 
 

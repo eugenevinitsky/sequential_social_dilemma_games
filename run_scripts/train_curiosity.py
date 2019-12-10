@@ -1,7 +1,7 @@
 import argparse
 import copy
-from datetime import datetime
 import sys
+from datetime import datetime
 
 import pytz
 import ray
@@ -15,7 +15,6 @@ from config.default_args import add_default_args
 from models.curiosity_model import CuriosityLSTM
 from social_dilemmas.envs.env_creator import get_env_creator
 from utility_funcs import update_nested_dict
-
 
 parser = argparse.ArgumentParser()
 add_default_args(parser)

@@ -4,11 +4,11 @@
 import argparse
 import collections
 import json
-import numpy as np
 import os
 import shutil
 import sys
 
+import numpy as np
 import ray
 from ray.cloudpickle import cloudpickle
 from ray.rllib.agents.registry import get_agent_class
@@ -17,10 +17,10 @@ from ray.rllib.env.base_env import _DUMMY_AGENT_ID
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 
+import utility_funcs
+from models.conv_net import ConvNet
 from models.conv_to_fc_net import ConvToFCNet
 from models.conv_to_fc_net_actions import ConvToFCNetActions
-from models.conv_net import ConvNet
-import utility_funcs
 
 
 def get_rllib_config(path):

@@ -1,11 +1,8 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
-
-from ray.rllib.utils.annotations import DeveloperAPI
 from ray.rllib.utils import try_import_tf
+from ray.rllib.utils.annotations import DeveloperAPI
 
 """This file temporarily replaces the rnn_sequencing file of ray/rllib/policy/rnn_sequencing.py
  until it the fix is merged in"""

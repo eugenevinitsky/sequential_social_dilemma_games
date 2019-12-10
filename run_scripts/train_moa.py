@@ -1,7 +1,7 @@
 import argparse
 import copy
-from datetime import datetime
 import sys
+from datetime import datetime
 
 import pytz
 import ray
@@ -11,8 +11,8 @@ from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 
 from algorithms.a3c_aux import get_a3c_trainer
-from algorithms.ppo_causal import CausalPPOMOATrainer
 from algorithms.impala_causal import CausalImpalaTrainer
+from algorithms.ppo_causal import CausalPPOMOATrainer
 from config.default_args import add_default_args
 from models.moa_model import MOA_LSTM
 from social_dilemmas.envs.env_creator import get_env_creator

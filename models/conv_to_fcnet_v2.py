@@ -1,16 +1,12 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
+from __future__ import absolute_import, division, print_function
 
 import numpy as np
-
+from ray.rllib.models.modelv2 import ModelV2
+from ray.rllib.models.tf.misc import flatten, get_activation_fn, normc_initializer
 from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
 from ray.rllib.models.tf.visionnet_v1 import _get_filter_config
-from ray.rllib.models.tf.misc import normc_initializer, get_activation_fn, flatten
 from ray.rllib.utils import try_import_tf
-from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.utils.annotations import override
-
 
 tf = try_import_tf()
 
@@ -73,9 +69,6 @@ class ConvToFCNetv2(RecurrentTFModelV2):
         state_in_c = tf.keras.layers.Input(shape=(cell_size,), name="c")
         seq_in = tf.keras.layers.Input(shape=(), name="seq_in")
 
-        import ipdb
-
-        ipdb.set_trace()
         lstm_out, state_h, state_c = tf.keras.layers.LSTM(
             cell_size, return_sequences=True, return_state=True, name="lstm"
         )(

@@ -2,12 +2,13 @@
    agent policies."""
 
 import argparse
-import utility_funcs
-import numpy as np
 import os
-import sys
 import shutil
+import sys
 
+import numpy as np
+
+import utility_funcs
 from config.default_args import add_default_args
 from social_dilemmas.envs.cleanup import CleanupEnv
 from social_dilemmas.envs.harvest import HarvestEnv

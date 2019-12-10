@@ -1,13 +1,13 @@
-from gym.spaces import Box
 import numpy as np
-from ray.rllib.policy.rnn_sequencing import add_time_dimension
-from ray.rllib.models.tf.misc import normc_initializer, get_activation_fn
+from gym.spaces import Box
 from ray.rllib.models.model import restore_original_dimensions
 from ray.rllib.models.modelv2 import ModelV2
+from ray.rllib.models.tf.misc import get_activation_fn, normc_initializer
 from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
-from ray.rllib.utils.annotations import override
-from ray.rllib.utils import try_import_tf
+from ray.rllib.policy.rnn_sequencing import add_time_dimension
 from ray.rllib.policy.sample_batch import SampleBatch
+from ray.rllib.utils import try_import_tf
+from ray.rllib.utils.annotations import override
 
 tf = try_import_tf()
 

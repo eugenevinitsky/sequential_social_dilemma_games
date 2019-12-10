@@ -1,7 +1,9 @@
 import os.path
-import pandas as pd
+
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
+
 from utility_funcs import get_all_subdirs
 
 ray_results_path = os.path.expanduser("~/ray_results")

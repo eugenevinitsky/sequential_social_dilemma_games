@@ -1,9 +1,9 @@
-from gym.spaces import Box, Dict, Discrete
 import numpy as np
+from gym.spaces import Box, Dict, Discrete
 
 from social_dilemmas.envs.agent import HarvestAgent  # HARVEST_VIEW_SIZE
+from social_dilemmas.envs.map_env import ACTIONS, MapEnv
 from social_dilemmas.maps import HARVEST_MAP
-from social_dilemmas.envs.map_env import MapEnv, ACTIONS
 
 APPLE_RADIUS = 2
 

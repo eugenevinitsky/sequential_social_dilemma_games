@@ -1,6 +1,7 @@
 """Base class for an agent that defines the possible actions. """
 
 import numpy as np
+
 import utility_funcs as util
 
 # basic moves every agent should do
