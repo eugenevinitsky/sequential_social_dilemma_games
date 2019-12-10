@@ -199,8 +199,8 @@ class MapEnv(MultiAgentEnv):
         dones = {}
         info = {}
         for agent in self.agents.values():
-            agent.grid = map_with_agents
-            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
+            agent.full_map = map_with_agents
+            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map, agent.rgb_arr)
             rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
             rgb_arr = (rgb_arr - 128.00) / 128.0
             # concatenate on the prev_actions to the observations
@@ -247,10 +247,8 @@ class MapEnv(MultiAgentEnv):
 
         observations = {}
         for agent in self.agents.values():
-            agent.grid = map_with_agents
-            # agent.grid = util.return_view(map_with_agents, agent.pos,
-            #                               agent.row_size, agent.col_size)
-            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
+            agent.full_map = map_with_agents
+            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map, agent.rgb_arr)
             rgb_arr = (rgb_arr - 128.0) / 128.0
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
@@ -341,28 +339,30 @@ class MapEnv(MultiAgentEnv):
                 return False
         return True
 
-    def map_to_colors(self, map=None, color_map=None):
+    def full_map_to_colors(self):
+        map_with_agents = self.get_map_with_agents()
+        rgb_arr = np.zeros((map_with_agents.shape[0], map_with_agents.shape[1], 3), dtype=int)
+        return self.map_to_colors(map_with_agents, self.color_map, rgb_arr)
+
+    def map_to_colors(self, mmap, color_map, rgb_arr):
         """Converts a map to an array of RGB values.
         Parameters
         ----------
-        map: np.ndarray
+        mmap: np.ndarray
             map to convert to colors
+            Double m to avoid shadowing map.
         color_map: dict
             mapping between array elements and desired colors
+        rgb_arr: np.array
+            Variable to store the mapping in
         Returns
         -------
         arr: np.ndarray
             3-dim numpy array consisting of color map
         """
-        if map is None:
-            map = self.get_map_with_agents()
-        if color_map is None:
-            color_map = self.color_map
-
-        rgb_arr = np.zeros((map.shape[0], map.shape[1], 3), dtype=int)
-        for row_elem in range(map.shape[0]):
-            for col_elem in range(map.shape[1]):
-                rgb_arr[row_elem, col_elem, :] = color_map[map[row_elem, col_elem]]
+        for row_elem in range(mmap.shape[0]):
+            for col_elem in range(mmap.shape[1]):
+                rgb_arr[row_elem, col_elem, :] = color_map[mmap[row_elem, col_elem]]
 
         return rgb_arr
 
@@ -373,9 +373,7 @@ class MapEnv(MultiAgentEnv):
             filename: If a string is passed, will save the image
                       to disk at this location.
         """
-        map_with_agents = self.get_map_with_agents()
-
-        rgb_arr = self.map_to_colors(map_with_agents)
+        rgb_arr = self.full_map_to_colors()
         plt.cla()
         plt.imshow(rgb_arr, interpolation="nearest")
         if filename is None:

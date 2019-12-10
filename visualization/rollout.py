@@ -65,7 +65,7 @@ class Controller(object):
                 if i % 10 == 0:
                     print("Saved frame " + str(i) + "/" + str(horizon))
 
-            rgb_arr = self.env.map_to_colors()
+            rgb_arr = self.env.full_map_to_colors()
             full_obs[i] = rgb_arr.astype(np.uint8)
             observations.append(obs["agent-0"])
             rewards.append(rew["agent-0"])

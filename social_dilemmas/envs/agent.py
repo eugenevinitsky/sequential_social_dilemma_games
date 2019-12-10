@@ -17,7 +17,7 @@ BASE_ACTIONS = {
 
 class Agent(object):
     def __init__(
-        self, agent_id, start_pos, start_orientation, grid, row_size, col_size
+        self, agent_id, start_pos, start_orientation, full_map, row_size, col_size
     ):
         """Superclass for all agents.
 
@@ -29,7 +29,7 @@ class Agent(object):
             a 2d array indicating the x-y position of the agents
         start_orientation: (np.ndarray)
             a 2d array containing a unit vector indicating the agent direction
-        grid: (2d array)
+        full_map: (2d array)
             a reference to this agent's view of the environment
         row_size: (int)
             how many rows up and down the agent can look
@@ -39,11 +39,12 @@ class Agent(object):
         self.agent_id = agent_id
         self.pos = np.array(start_pos)
         self.orientation = start_orientation
-        # TODO(ev) change grid to env, this name is not very informative
-        self.grid = grid
+        self.full_map = full_map
         self.row_size = row_size
         self.col_size = col_size
         self.reward_this_turn = 0
+        # Store this variable here so that it doesn't have to be re-initialized every step
+        self.rgb_arr = np.zeros((row_size * 2 + 1, col_size * 2 + 1, 3,), dtype=int)
 
     @property
     def action_space(self):
@@ -77,7 +78,7 @@ class Agent(object):
         raise NotImplementedError
 
     def get_state(self):
-        return util.return_view(self.grid, self.get_pos(), self.row_size, self.col_size)
+        return util.return_view(self.full_map, self.get_pos(), self.row_size, self.col_size)
 
     def compute_reward(self):
         reward = self.reward_this_turn
@@ -102,7 +103,7 @@ class Agent(object):
         return self.orientation
 
     def get_map(self):
-        return self.grid
+        return self.full_map
 
     def return_valid_pos(self, new_pos):
         """Checks that the next pos is legal, if not return current pos"""
@@ -110,7 +111,7 @@ class Agent(object):
         new_row, new_col = ego_new_pos
         # You can't walk through walls, closed doors or switches
         temp_pos = new_pos.copy()
-        if self.grid[new_row, new_col] in ["@", "D", "s", "S"]:
+        if self.full_map[new_row, new_col] in ["@", "D", "s", "S"]:
             temp_pos = self.get_pos()
         return temp_pos
 
@@ -129,7 +130,7 @@ class Agent(object):
         new_row, new_col = ego_new_pos
         # You can't walk through walls, closed doors or switches
         temp_pos = new_pos.copy()
-        if self.grid[new_row, new_col] in ["@", "D", "s", "S"]:
+        if self.full_map[new_row, new_col] in ["@", "D", "s", "S"]:
             temp_pos = self.get_pos()
         self.set_pos(temp_pos)
         # TODO(ev) list array consistency
@@ -152,10 +153,10 @@ HARVEST_ACTIONS.update({7: "FIRE"})  # Fire a penalty beam
 
 
 class HarvestAgent(Agent):
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
+    def __init__(self, agent_id, start_pos, start_orientation, full_map, view_len):
         self.view_len = view_len
         super().__init__(
-            agent_id, start_pos, start_orientation, grid, view_len, view_len
+            agent_id, start_pos, start_orientation, full_map, view_len, view_len
         )
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
@@ -193,10 +194,10 @@ CLEANUP_ACTIONS.update(
 
 
 class CleanupAgent(Agent):
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
+    def __init__(self, agent_id, start_pos, start_orientation, full_map, view_len):
         self.view_len = view_len
         super().__init__(
-            agent_id, start_pos, start_orientation, grid, view_len, view_len
+            agent_id, start_pos, start_orientation, full_map, view_len, view_len
         )
         # remember what you've stepped on
         self.update_agent_pos(start_pos)
@@ -233,10 +234,10 @@ SWITCH_ACTIONS.update({7: "TOGGLE_SWITCH"})  # Fire a switch beam
 
 
 class SwitchAgent(Agent):
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len):
+    def __init__(self, agent_id, start_pos, start_orientation, full_map, view_len):
         self.view_len = view_len
         super().__init__(
-            agent_id, start_pos, start_orientation, grid, view_len, view_len
+            agent_id, start_pos, start_orientation, full_map, view_len, view_len
         )
         # remember what you've stepped on
         self.update_agent_pos(start_pos)

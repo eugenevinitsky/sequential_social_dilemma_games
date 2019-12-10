@@ -775,9 +775,7 @@ class TestMapEnv(unittest.TestCase):
         self.env.agents[agent_id].set_pos(new_pos)
         map_with_agents = self.env.get_map_with_agents()
         agent = self.env.agents[agent_id]
-        agent.grid = map_with_agents
-        # agent.grid = util.return_view(map_with_agents, agent.pos,
-        #                               agent.row_size, agent.col_size)
+        agent.full_map = map_with_agents
         self.env.agents[agent_id].update_agent_pos(new_pos)
 
     def rotate_agent(self, agent_id, new_rot):
@@ -800,9 +798,7 @@ class TestMapEnv(unittest.TestCase):
 
         for agent in env.agents.values():
             # Update each agent's view of the world
-            agent.grid = map_with_agents
-            # agent.grid = util.return_view(map_with_agents, agent.pos,
-            #                               agent.row_size, agent.col_size)
+            agent.full_map = map_with_agents
         self.env.agent_pos.append(start_pos)
 
 
@@ -1099,18 +1095,14 @@ class TestHarvestEnv(unittest.TestCase):
 
         for agent in env.agents.values():
             # Update each agent's view of the world
-            agent.grid = map_with_agents
-            # agent.grid = util.return_view(map_with_agents, agent.pos,
-            #                               agent.row_size, agent.col_size)
+            agent.full_map = map_with_agents
         self.env.agent_pos.append(start_pos)
 
     def move_agent(self, agent_id, new_pos):
         self.env.agents[agent_id].update_agent_pos(new_pos)
         map_with_agents = self.env.get_map_with_agents()
         agent = self.env.agents[agent_id]
-        agent.grid = map_with_agents
-        # agent.grid = util.return_view(map_with_agents, agent.pos,
-        #                               agent.row_size, agent.col_size)
+        agent.full_map = map_with_agents
 
     def rotate_agent(self, agent_id, new_rot):
         self.env.agents[agent_id].update_agent_rot(new_rot)
@@ -1457,18 +1449,14 @@ class TestCleanupEnv(unittest.TestCase):
 
         for agent in env.agents.values():
             # Update each agent's view of the world
-            agent.grid = map_with_agents
-            # agent.grid = util.return_view(map_with_agents, agent.pos,
-            #                               agent.row_size, agent.col_size)
+            agent.full_map = map_with_agents
         self.env.agent_pos.append(start_pos)
 
     def move_agent(self, agent_id, new_pos):
         self.env.agents[agent_id].update_agent_pos(new_pos)
         map_with_agents = self.env.get_map_with_agents()
         agent = self.env.agents[agent_id]
-        agent.grid = map_with_agents
-        # agent.grid = util.return_view(map_with_agents, agent.pos,
-        #                               agent.row_size, agent.col_size)
+        agent.full_map = map_with_agents
 
     def rotate_agent(self, agent_id, new_rot):
         self.env.agents[agent_id].update_agent_rot(new_rot)

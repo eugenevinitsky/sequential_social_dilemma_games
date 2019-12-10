@@ -194,7 +194,7 @@ def visualizer_rllib(args):
                 reward_total += reward
 
             if args.save_video:
-                rgb_arr = env.map_to_colors()
+                rgb_arr = env.full_map_to_colors()
                 full_obs[steps] = rgb_arr.astype(np.uint8)
             steps += 1
             obs = next_obs
