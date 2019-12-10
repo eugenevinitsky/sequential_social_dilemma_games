@@ -119,8 +119,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     c = Controller(env_name=args.env)
     c.render_rollout(
-        path="rollout.mp4",
-        horizon=1000,
-        render_type="pretty",
-        fps=60,
+        path="rollout.mp4", horizon=1000, render_type="pretty", fps=60,
     )

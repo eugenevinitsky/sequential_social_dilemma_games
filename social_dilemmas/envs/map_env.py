@@ -200,7 +200,9 @@ class MapEnv(MultiAgentEnv):
         info = {}
         for agent in self.agents.values():
             agent.full_map = map_with_agents
-            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map, agent.rgb_arr)
+            rgb_arr = self.map_to_colors(
+                agent.get_state(), self.color_map, agent.rgb_arr
+            )
             rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
             rgb_arr = (rgb_arr - 128.00) / 128.0
             # concatenate on the prev_actions to the observations
@@ -248,7 +250,9 @@ class MapEnv(MultiAgentEnv):
         observations = {}
         for agent in self.agents.values():
             agent.full_map = map_with_agents
-            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map, agent.rgb_arr)
+            rgb_arr = self.map_to_colors(
+                agent.get_state(), self.color_map, agent.rgb_arr
+            )
             rgb_arr = (rgb_arr - 128.0) / 128.0
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
@@ -341,7 +345,9 @@ class MapEnv(MultiAgentEnv):
 
     def full_map_to_colors(self):
         map_with_agents = self.get_map_with_agents()
-        rgb_arr = np.zeros((map_with_agents.shape[0], map_with_agents.shape[1], 3), dtype=int)
+        rgb_arr = np.zeros(
+            (map_with_agents.shape[0], map_with_agents.shape[1], 3), dtype=int
+        )
         return self.map_to_colors(map_with_agents, self.color_map, rgb_arr)
 
     def map_to_colors(self, mmap, color_map, rgb_arr):

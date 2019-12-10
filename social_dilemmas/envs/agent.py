@@ -78,7 +78,9 @@ class Agent(object):
         raise NotImplementedError
 
     def get_state(self):
-        return util.return_view(self.full_map, self.get_pos(), self.row_size, self.col_size)
+        return util.return_view(
+            self.full_map, self.get_pos(), self.row_size, self.col_size
+        )
 
     def compute_reward(self):
         reward = self.reward_this_turn
