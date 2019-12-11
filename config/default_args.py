@@ -125,6 +125,12 @@ def add_default_args(parser):
     )
 
     parser.add_argument(
+        "--lr",
+        type=float,
+        default=0.0001,
+        help="Default learning rate. Not used due to lr_curriculum, only exists for debugging.",
+    )
+    parser.add_argument(
         "--lr_curriculum_steps",
         nargs="+",
         type=int,

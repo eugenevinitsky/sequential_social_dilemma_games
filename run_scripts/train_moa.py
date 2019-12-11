@@ -74,6 +74,7 @@ def setup(args):
         {
             "horizon": 1000,
             "gamma": 0.99,
+            "lr": args.lr,
             "lr_schedule": list(zip(args.lr_curriculum_steps, args.lr_curriculum_weights)),
             "sample_batch_size": args.sample_batch_size,
             "train_batch_size": args.train_batch_size,
