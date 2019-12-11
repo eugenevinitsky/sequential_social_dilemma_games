@@ -59,12 +59,7 @@ DEFAULT_COLOURS = {
 
 class MapEnv(MultiAgentEnv):
     def __init__(
-        self,
-        ascii_map,
-        num_agents=1,
-        render=True,
-        color_map=None,
-        return_agent_actions=False,
+        self, ascii_map, num_agents=1, render=True, color_map=None, return_agent_actions=False,
     ):
         """
 
@@ -200,19 +195,13 @@ class MapEnv(MultiAgentEnv):
         info = {}
         for agent in self.agents.values():
             agent.full_map = map_with_agents
-            rgb_arr = self.map_to_colors(
-                agent.get_state(), self.color_map, agent.rgb_arr
-            )
+            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map, agent.rgb_arr)
             rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
             rgb_arr = (rgb_arr - 128.00) / 128.0
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 prev_actions = np.array(
-                    [
-                        actions[key]
-                        for key in sorted(actions.keys())
-                        if key != agent.agent_id
-                    ]
+                    [actions[key] for key in sorted(actions.keys()) if key != agent.agent_id]
                 ).astype(np.int64)
                 observations[agent.agent_id] = {
                     "curr_obs": rgb_arr,
@@ -250,16 +239,12 @@ class MapEnv(MultiAgentEnv):
         observations = {}
         for agent in self.agents.values():
             agent.full_map = map_with_agents
-            rgb_arr = self.map_to_colors(
-                agent.get_state(), self.color_map, agent.rgb_arr
-            )
+            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map, agent.rgb_arr)
             rgb_arr = (rgb_arr - 128.0) / 128.0
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 # No previous actions so just pass in zeros
-                prev_actions = np.array([0 for _ in range(self.num_agents - 1)]).astype(
-                    np.int64
-                )
+                prev_actions = np.array([0 for _ in range(self.num_agents - 1)]).astype(np.int64)
                 observations[agent.agent_id] = {
                     "curr_obs": rgb_arr,
                     "other_agent_actions": prev_actions,
@@ -345,9 +330,7 @@ class MapEnv(MultiAgentEnv):
 
     def full_map_to_colors(self):
         map_with_agents = self.get_map_with_agents()
-        rgb_arr = np.zeros(
-            (map_with_agents.shape[0], map_with_agents.shape[1], 3), dtype=int
-        )
+        rgb_arr = np.zeros((map_with_agents.shape[0], map_with_agents.shape[1], 3), dtype=int)
         return self.map_to_colors(map_with_agents, self.color_map, rgb_arr)
 
     def map_to_colors(self, mmap, color_map, rgb_arr):
@@ -415,9 +398,7 @@ class MapEnv(MultiAgentEnv):
             # TODO(ev) these two parts of the actions
             if "MOVE" in action or "STAY" in action:
                 # rotate the selected action appropriately
-                rot_action = self.rotate_action(
-                    selected_action, agent.get_orientation()
-                )
+                rot_action = self.rotate_action(selected_action, agent.get_orientation())
                 new_pos = agent.get_pos() + rot_action
                 # allow the agents to confirm what position they can move to
                 new_pos = agent.return_valid_pos(new_pos)
@@ -429,9 +410,7 @@ class MapEnv(MultiAgentEnv):
         # now do the conflict resolution part of the process
 
         # helpful for finding the agent in the conflicting slot
-        agent_by_pos = {
-            tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()
-        }
+        agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
 
         # agent moves keyed by ids
         agent_moves = {}
@@ -476,9 +455,7 @@ class MapEnv(MultiAgentEnv):
                         # contain an agent that isn't going to move for one of the agents
                         # If it does, all the agents commands should become STAY
                         # since no moving will be possible
-                        conflict_indices = np.where((search_list == move).all(axis=1))[
-                            0
-                        ]
+                        conflict_indices = np.where((search_list == move).all(axis=1))[0]
                         all_agents_id = [agent_to_slot[i] for i in conflict_indices]
                         # all other agents now stay in place so update their moves
                         # to reflect this
@@ -517,9 +494,7 @@ class MapEnv(MultiAgentEnv):
                                     if (
                                         agent_moves[conflicting_agent_id] == curr_pos
                                         and move.tolist()
-                                        == self.agents[conflicting_agent_id]
-                                        .get_pos()
-                                        .tolist()
+                                        == self.agents[conflicting_agent_id].get_pos().tolist()
                                     ):
                                         conflict_cell_free = False
 
@@ -538,15 +513,12 @@ class MapEnv(MultiAgentEnv):
                         # all other agents now stay in place so update their moves
                         # to stay in place
                         for agent_id in all_agents_id:
-                            agent_moves[agent_id] = (
-                                self.agents[agent_id].get_pos().tolist()
-                            )
+                            agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
 
             # make the remaining un-conflicted moves
             while len(agent_moves.items()) > 0:
                 agent_by_pos = {
-                    tuple(agent.get_pos()): agent.agent_id
-                    for agent in self.agents.values()
+                    tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()
                 }
                 num_moves = len(agent_moves.items())
                 moves_copy = agent_moves.copy()
@@ -559,12 +531,8 @@ class MapEnv(MultiAgentEnv):
                         # that the move is possible. If it won't be, remove it.
                         conflicting_agent_id = agent_by_pos[tuple(move)]
                         curr_pos = self.agents[agent_id].get_pos().tolist()
-                        curr_conflict_pos = (
-                            self.agents[conflicting_agent_id].get_pos().tolist()
-                        )
-                        conflict_move = agent_moves.get(
-                            conflicting_agent_id, curr_conflict_pos
-                        )
+                        curr_conflict_pos = self.agents[conflicting_agent_id].get_pos().tolist()
+                        conflict_move = agent_moves.get(conflicting_agent_id, curr_conflict_pos)
                         # Condition (1):
                         # a STAY command has been issued
                         if agent_id == conflicting_agent_id:
@@ -584,8 +552,7 @@ class MapEnv(MultiAgentEnv):
                         elif conflicting_agent_id in moves_copy.keys():
                             if (
                                 agent_moves[conflicting_agent_id] == curr_pos
-                                and move
-                                == self.agents[conflicting_agent_id].get_pos().tolist()
+                                and move == self.agents[conflicting_agent_id].get_pos().tolist()
                             ):
                                 del agent_moves[conflicting_agent_id]
                                 del agent_moves[agent_id]
@@ -672,9 +639,7 @@ class MapEnv(MultiAgentEnv):
         updates: (tuple (row, col, char))
             the cells that have been hit by the beam and what char will be placed there
         """
-        agent_by_pos = {
-            tuple(agent.get_pos()): agent_id for agent_id, agent in self.agents.items()
-        }
+        agent_by_pos = {tuple(agent.get_pos()): agent_id for agent_id, agent in self.agents.items()}
         start_pos = np.asarray(firing_pos)
         firing_direction = ORIENTATIONS[firing_orientation]
         # compute the other two starting positions
@@ -707,22 +672,14 @@ class MapEnv(MultiAgentEnv):
                         self.agents[agent_id].hit(fire_char)
                         firing_points.append((next_cell[0], next_cell[1], fire_char))
                         if self.world_map[next_cell[0], next_cell[1]] in cell_types:
-                            type_index = cell_types.index(
-                                self.world_map[next_cell[0], next_cell[1]]
-                            )
-                            updates.append(
-                                (next_cell[0], next_cell[1], update_char[type_index])
-                            )
+                            type_index = cell_types.index(self.world_map[next_cell[0], next_cell[1]])
+                            updates.append((next_cell[0], next_cell[1], update_char[type_index]))
                         break
 
                     # update the cell if needed
                     if self.world_map[next_cell[0], next_cell[1]] in cell_types:
-                        type_index = cell_types.index(
-                            self.world_map[next_cell[0], next_cell[1]]
-                        )
-                        updates.append(
-                            (next_cell[0], next_cell[1], update_char[type_index])
-                        )
+                        type_index = cell_types.index(self.world_map[next_cell[0], next_cell[1]])
+                        updates.append((next_cell[0], next_cell[1], update_char[type_index]))
 
                     firing_points.append((next_cell[0], next_cell[1], fire_char))
 
@@ -863,10 +820,7 @@ class MapEnv(MultiAgentEnv):
         return np.array(
             [
                 1
-                if (
-                    lower_lim <= agent_tup[0] <= upper_lim
-                    and left_lim <= agent_tup[1] <= right_lim
-                )
+                if (lower_lim <= agent_tup[0] <= upper_lim and left_lim <= agent_tup[1] <= right_lim)
                 else 0
                 for agent_tup in other_agent_pos
             ]

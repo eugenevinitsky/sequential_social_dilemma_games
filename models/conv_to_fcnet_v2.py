@@ -15,9 +15,7 @@ class ConvToFCNetv2(RecurrentTFModelV2):
     """Implementation of the model in the causal influence paper."""
 
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
-        super(ConvToFCNetv2, self).__init__(
-            obs_space, action_space, num_outputs, model_config, name
-        )
+        super(ConvToFCNetv2, self).__init__(obs_space, action_space, num_outputs, model_config, name)
 
         self.model_config = model_config
         activation = get_activation_fn(model_config.get("conv_activation"))
@@ -71,11 +69,7 @@ class ConvToFCNetv2(RecurrentTFModelV2):
 
         lstm_out, state_h, state_c = tf.keras.layers.LSTM(
             cell_size, return_sequences=True, return_state=True, name="lstm"
-        )(
-            inputs=last_layer,
-            mask=tf.sequence_mask(seq_in),
-            initial_state=[state_in_h, state_in_c],
-        )
+        )(inputs=last_layer, mask=tf.sequence_mask(seq_in), initial_state=[state_in_h, state_in_c],)
 
         # Postprocess LSTM output with another hidden layer and compute values
         logits = tf.keras.layers.Dense(

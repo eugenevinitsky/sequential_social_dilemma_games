@@ -17,9 +17,7 @@ BASE_ACTIONS = {
 
 
 class Agent(object):
-    def __init__(
-        self, agent_id, start_pos, start_orientation, full_map, row_size, col_size
-    ):
+    def __init__(self, agent_id, start_pos, start_orientation, full_map, row_size, col_size):
         """Superclass for all agents.
 
         Parameters
@@ -79,9 +77,7 @@ class Agent(object):
         raise NotImplementedError
 
     def get_state(self):
-        return util.return_view(
-            self.full_map, self.get_pos(), self.row_size, self.col_size
-        )
+        return util.return_view(self.full_map, self.get_pos(), self.row_size, self.col_size)
 
     def compute_reward(self):
         reward = self.reward_this_turn
@@ -158,9 +154,7 @@ HARVEST_ACTIONS.update({7: "FIRE"})  # Fire a penalty beam
 class HarvestAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, full_map, view_len):
         self.view_len = view_len
-        super().__init__(
-            agent_id, start_pos, start_orientation, full_map, view_len, view_len
-        )
+        super().__init__(agent_id, start_pos, start_orientation, full_map, view_len, view_len)
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
 
@@ -191,17 +185,13 @@ class HarvestAgent(Agent):
 
 
 CLEANUP_ACTIONS = BASE_ACTIONS.copy()
-CLEANUP_ACTIONS.update(
-    {7: "FIRE", 8: "CLEAN"}  # Fire a penalty beam
-)  # Fire a cleaning beam
+CLEANUP_ACTIONS.update({7: "FIRE", 8: "CLEAN"})  # Fire a penalty beam  # Fire a cleaning beam
 
 
 class CleanupAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, full_map, view_len):
         self.view_len = view_len
-        super().__init__(
-            agent_id, start_pos, start_orientation, full_map, view_len, view_len
-        )
+        super().__init__(agent_id, start_pos, start_orientation, full_map, view_len, view_len)
         # remember what you've stepped on
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
@@ -239,9 +229,7 @@ SWITCH_ACTIONS.update({7: "TOGGLE_SWITCH"})  # Fire a switch beam
 class SwitchAgent(Agent):
     def __init__(self, agent_id, start_pos, start_orientation, full_map, view_len):
         self.view_len = view_len
-        super().__init__(
-            agent_id, start_pos, start_orientation, full_map, view_len, view_len
-        )
+        super().__init__(agent_id, start_pos, start_orientation, full_map, view_len, view_len)
         # remember what you've stepped on
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)

@@ -79,9 +79,7 @@ def extract_stats(dfs, keys):
     for df in dfs:
         df_list = {}
         for key in keys:
-            key_column_names = [
-                name for name in column_names if key == name.split("/")[-1]
-            ]
+            key_column_names = [name for name in column_names if key == name.split("/")[-1]]
             key_columns = df[key_column_names]
             mean_trajectory = list(key_columns.mean(axis=1))
             df_list[key] = mean_trajectory
@@ -107,27 +105,21 @@ def plot_csvs_results(paths):
     # Convert environment steps to 1e8 representation
     timesteps_totals = [df.timesteps_total for df in dfs]
     timesteps_totals = [
-        [timestep / 1e8 for timestep in timesteps_total]
-        for timesteps_total in timesteps_totals
+        [timestep / 1e8 for timestep in timesteps_total] for timesteps_total in timesteps_totals
     ]
 
     reward_means = [df.episode_reward_mean for df in dfs]
-    plots.append(
-        PlotData(timesteps_totals, reward_means, "reward", "Mean episode reward", "g")
-    )
+    plots.append(PlotData(timesteps_totals, reward_means, "reward", "Mean episode reward", "g"))
 
     episode_len_means = [df.episode_len_mean for df in dfs]
     plots.append(
         PlotData(
-            timesteps_totals,
-            episode_len_means,
-            "episode_length",
-            "Mean episode length",
-            "pink",
+            timesteps_totals, episode_len_means, "episode_length", "Mean episode length", "pink",
         )
     )
 
     metric_details = [
+        PlotDetails("cur_lr", "Learning rate", "purple"),
         PlotDetails("policy_entropy", "Policy Entropy", "b"),
         PlotDetails("policy_loss", "Policy loss", "r"),
         PlotDetails("vf_loss", "Value function loss", "orange"),
@@ -135,22 +127,14 @@ def plot_csvs_results(paths):
         PlotDetails("aux_loss", "Auxiliary task loss", "black"),
         PlotDetails("total_aux_reward", "Auxiliary task reward", "black"),
         PlotDetails("total_successes_mean", "Total successes", "black"),
-        PlotDetails(
-            "switches_on_at_termination_mean", "Switches on at termination", "black"
-        ),
+        PlotDetails("switches_on_at_termination_mean", "Switches on at termination", "black"),
         PlotDetails("total_pulled_on_mean", "Total switched on", "black"),
         PlotDetails("total_pulled_off_mean", "Total switched off", "black"),
-        PlotDetails(
-            "timestep_first_switch_pull_mean", "Time at first switch pull", "black"
-        ),
-        PlotDetails(
-            "timestep_last_switch_pull_mean", "Time at last switch pull", "black"
-        ),
+        PlotDetails("timestep_first_switch_pull_mean", "Time at first switch pull", "black"),
+        PlotDetails("timestep_last_switch_pull_mean", "Time at last switch pull", "black"),
     ]
 
-    extracted_data = extract_stats(
-        dfs, [detail.column_name for detail in metric_details]
-    )
+    extracted_data = extract_stats(dfs, [detail.column_name for detail in metric_details])
     for metric in metric_details:
         if metric.column_name in extracted_data:
             plots.append(
@@ -168,10 +152,7 @@ def plot_csvs_results(paths):
 
         def plot_fn():
             plot_with_mean(
-                plot.x_data,
-                plot.y_data,
-                plot.plot_details.color,
-                plot.plot_details.legend_name,
+                plot.x_data, plot.y_data, plot.plot_details.color, plot.plot_details.legend_name,
             )
 
         try:
@@ -181,10 +162,7 @@ def plot_csvs_results(paths):
 
     def plot_losses():
         for plot in plots:
-            if (
-                "loss" in plot.plot_details.column_name
-                or "reward" == plot.plot_details.column_name
-            ):
+            if "loss" in plot.plot_details.column_name or "reward" == plot.plot_details.column_name:
                 if len(plot.y_data) > 0:
                     plot_with_mean(
                         plot.x_data,
@@ -193,13 +171,11 @@ def plot_csvs_results(paths):
                         plot.plot_details.legend_name,
                     )
 
-    plot_and_save(plot_losses, path, "all_losses")
+    # plot_and_save(plot_losses, path, "all_losses")
 
 
 category_folders = get_all_subdirs(ray_results_path)
-experiment_folders = [
-    get_all_subdirs(category_folder) for category_folder in category_folders
-]
+experiment_folders = [get_all_subdirs(category_folder) for category_folder in category_folders]
 
 for experiment_folder in experiment_folders:
     csvs = []

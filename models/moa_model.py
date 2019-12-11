@@ -26,9 +26,7 @@ class KerasRNN(RecurrentTFModelV2):
         use_value_fn=False,
         append_others_actions=False,
     ):
-        super(KerasRNN, self).__init__(
-            obs_space, action_space, num_outputs, model_config, name
-        )
+        super(KerasRNN, self).__init__(obs_space, action_space, num_outputs, model_config, name)
 
         self.cell_size = cell_size
         self.use_value_fn = use_value_fn
@@ -38,12 +36,8 @@ class KerasRNN(RecurrentTFModelV2):
         # TODO(@evinitsky) add in an option for prev_action_reward
 
         # TODO(@evinitsky) make this time distributed only at the last moment
-        input_layer = tf.keras.layers.Input(
-            shape=(None,) + obs_space.shape, name="inputs"
-        )
-        flat_layer = tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten())(
-            input_layer
-        )
+        input_layer = tf.keras.layers.Input(shape=(None,) + obs_space.shape, name="inputs")
+        flat_layer = tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten())(input_layer)
 
         if self.append_others_actions:
             name = "pred_logits"
@@ -79,11 +73,7 @@ class KerasRNN(RecurrentTFModelV2):
 
         lstm_out, state_h, state_c = tf.keras.layers.LSTM(
             cell_size, return_sequences=True, return_state=True, name="lstm"
-        )(
-            inputs=last_layer,
-            mask=tf.sequence_mask(seq_in),
-            initial_state=[state_in_h, state_in_c],
-        )
+        )(inputs=last_layer, mask=tf.sequence_mask(seq_in), initial_state=[state_in_h, state_in_c],)
 
         # Postprocess LSTM output with another hidden layer and compute values
         logits = tf.keras.layers.Dense(
@@ -95,18 +85,13 @@ class KerasRNN(RecurrentTFModelV2):
             inputs.insert(1, actions_layer)
         if use_value_fn:
             value_out = tf.keras.layers.Dense(
-                1,
-                name="value_out",
-                activation=None,
-                kernel_initializer=normc_initializer(0.01),
+                1, name="value_out", activation=None, kernel_initializer=normc_initializer(0.01),
             )(lstm_out)
             self.rnn_model = tf.keras.Model(
                 inputs=inputs, outputs=[logits, value_out, state_h, state_c]
             )
         else:
-            self.rnn_model = tf.keras.Model(
-                inputs=inputs, outputs=[logits, state_h, state_c]
-            )
+            self.rnn_model = tf.keras.Model(inputs=inputs, outputs=[logits, state_h, state_c])
 
     @override(RecurrentTFModelV2)
     def forward_rnn(self, input_dict, state, seq_lens):
@@ -133,9 +118,7 @@ class MOA_LSTM(RecurrentTFModelV2):
     """An LSTM with two heads, one for taking actions and one for predicting actions."""
 
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
-        super(MOA_LSTM, self).__init__(
-            obs_space, action_space, num_outputs, model_config, name
-        )
+        super(MOA_LSTM, self).__init__(obs_space, action_space, num_outputs, model_config, name)
 
         self.obs_space = obs_space
 
@@ -150,13 +133,9 @@ class MOA_LSTM(RecurrentTFModelV2):
         total_obs = obs_space.shape[0]
         vision_obs = total_obs - 2 * self.num_other_agents
         vision_width = int(np.sqrt(vision_obs / 3))
-        vision_box = Box(
-            low=-1.0, high=1.0, shape=(vision_width, vision_width, 3), dtype=np.float32
-        )
+        vision_box = Box(low=-1.0, high=1.0, shape=(vision_width, vision_width, 3), dtype=np.float32)
         # an extra none for the time dimension
-        inputs = tf.keras.layers.Input(
-            shape=(None,) + vision_box.shape, name="observations"
-        )
+        inputs = tf.keras.layers.Input(shape=(None,) + vision_box.shape, name="observations")
 
         # A temp config with custom_model false so that we can get a basic vision model
         # with the desired filters
@@ -197,9 +176,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         self.base_model.summary()
 
         # now output two heads, one for action selection and one for the prediction of other agents
-        inner_obs_space = Box(
-            low=-1, high=1, shape=conv_out.shape[2:], dtype=np.float32
-        )
+        inner_obs_space = Box(low=-1, high=1, shape=conv_out.shape[2:], dtype=np.float32)
 
         cell_size = model_config["custom_options"].get("cell_size")
         self.actions_model = KerasRNN(
@@ -239,13 +216,9 @@ class MOA_LSTM(RecurrentTFModelV2):
         """Adds time dimension to batch before sending inputs to forward_rnn()"""
         # first we add the time dimension for each object
         new_dict = {
-            "obs": {
-                k: add_time_dimension(v, seq_lens) for k, v in input_dict["obs"].items()
-            }
+            "obs": {k: add_time_dimension(v, seq_lens) for k, v in input_dict["obs"].items()}
         }
-        new_dict.update(
-            {"prev_action": add_time_dimension(input_dict["prev_actions"], seq_lens)}
-        )
+        new_dict.update({"prev_action": add_time_dimension(input_dict["prev_actions"], seq_lens)})
         # new_dict.update({k: add_time_dimension(v, seq_lens)
         # for k, v in input_dict.items() if k != "obs"})
 
@@ -263,12 +236,9 @@ class MOA_LSTM(RecurrentTFModelV2):
 
         h1, c1, h2, c2 = state
         # TODO(@evinitsky) what's the right way to pass in the prev actions and such?
-        (
-            self._model_out,
-            self._value_out,
-            output_h1,
-            output_c1,
-        ) = self.actions_model.forward_rnn(pass_dict, [h1, c1], seq_lens)
+        (self._model_out, self._value_out, output_h1, output_c1,) = self.actions_model.forward_rnn(
+            pass_dict, [h1, c1], seq_lens
+        )
 
         # Cycle through all possible actions and get predictions for what other
         # agents would do if this action was taken at each trajectory step.
@@ -276,17 +246,13 @@ class MOA_LSTM(RecurrentTFModelV2):
         # First we have to compute it over the trajectory to give us the hidden state
         # that we will actually use
         other_actions = input_dict["obs"]["other_agent_actions"]
-        agent_action = tf.cast(
-            tf.expand_dims(input_dict["prev_action"], axis=-1), tf.float32
-        )
+        agent_action = tf.cast(tf.expand_dims(input_dict["prev_action"], axis=-1), tf.float32)
         stacked_actions = tf.concat([agent_action, other_actions], axis=-1)
         pass_dict = {"curr_obs": trunk, "prev_total_actions": stacked_actions}
 
         # Compute the action prediction. This is unused in the actual rollout and is only to generate
         # a series of hidden states for the counterfactuals
-        action_pred, output_h2, output_c2 = self.moa_model.forward_rnn(
-            pass_dict, [h2, c2], seq_lens
-        )
+        action_pred, output_h2, output_c2 = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
 
         # Now we can use that cell state to do the counterfactual predictions
         counterfactual_preds = []
@@ -294,9 +260,7 @@ class MOA_LSTM(RecurrentTFModelV2):
             possible_actions = np.array([i])[np.newaxis, np.newaxis, :]
             stacked_actions = tf.concat([possible_actions, other_actions], axis=-1)
             pass_dict = {"curr_obs": trunk, "prev_total_actions": stacked_actions}
-            counterfactual_pred, _, _ = self.moa_model.forward_rnn(
-                pass_dict, [h2, c2], seq_lens
-            )
+            counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
             counterfactual_preds.append(tf.expand_dims(counterfactual_pred, axis=-2))
         self._counterfactual_preds = tf.concat(counterfactual_preds, axis=-2)
 
@@ -331,9 +295,7 @@ class MOA_LSTM(RecurrentTFModelV2):
 
         # Now we add the appropriate time dimension
         curr_obs = add_time_dimension(curr_obs, train_batch.get("seq_lens"))
-        prev_total_actions = add_time_dimension(
-            prev_total_actions, train_batch.get("seq_lens")
-        )
+        prev_total_actions = add_time_dimension(prev_total_actions, train_batch.get("seq_lens"))
 
         trunk = self.base_model(curr_obs)
         input_dict = {
@@ -353,9 +315,7 @@ class MOA_LSTM(RecurrentTFModelV2):
             states.append(train_batch["state_in_{}".format(i)])
             i += 1
 
-        moa_preds, _, _ = self.moa_model.forward_rnn(
-            input_dict, states, train_batch.get("seq_lens")
-        )
+        moa_preds, _, _ = self.moa_model.forward_rnn(input_dict, states, train_batch.get("seq_lens"))
         return moa_preds
 
     def action_logits(self):
@@ -370,6 +330,4 @@ class MOA_LSTM(RecurrentTFModelV2):
 
     @override(ModelV2)
     def get_initial_state(self):
-        return (
-            self.actions_model.get_initial_state() + self.moa_model.get_initial_state()
-        )
+        return self.actions_model.get_initial_state() + self.moa_model.get_initial_state()

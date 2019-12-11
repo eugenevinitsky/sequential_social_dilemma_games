@@ -44,9 +44,7 @@ def kl_div(p, q):
 
 
 class MOALoss(object):
-    def __init__(
-        self, pred_logits, true_actions, loss_weight=1.0, others_visibility=None
-    ):
+    def __init__(self, pred_logits, true_actions, loss_weight=1.0, others_visibility=None):
         """Train MOA model with supervised cross entropy loss on a trajectory.
         The model is trying to predict others' actions at timestep t+1 given all
         actions at timestep t.
@@ -79,9 +77,7 @@ class MOALoss(object):
 def setup_moa_loss(logits, model, policy, train_batch):
     # Instantiate the prediction loss
     moa_preds = model.moa_preds_from_batch(train_batch)
-    moa_preds = tf.reshape(
-        moa_preds, [-1, policy.model.num_other_agents, logits.shape[-1]]
-    )
+    moa_preds = tf.reshape(moa_preds, [-1, policy.model.num_other_agents, logits.shape[-1]])
     true_actions = train_batch[ALL_ACTIONS]
     # 0/1 multiplier array representing whether each agent is visible to
     # the current agent.
@@ -99,9 +95,7 @@ def setup_moa_loss(logits, model, policy, train_batch):
     return moa_loss
 
 
-def causal_postprocess_trajectory(
-    policy, sample_batch, other_agent_batches=None, episode=None
-):
+def causal_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, episode=None):
     # Extract matrix of self and other agents' actions.
     own_actions = np.atleast_2d(np.array(sample_batch["actions"]))
     own_actions = np.reshape(own_actions, [-1, 1])
@@ -123,13 +117,9 @@ def compute_influence_reward(policy, trajectory):
     true_probs = trajectory[COUNTERFACTUAL_ACTIONS]
     traj_index = list(range(len(trajectory["obs"])))
     true_probs = true_probs[traj_index, :, trajectory["actions"], :]
-    true_probs = np.reshape(
-        true_probs, [true_probs.shape[0], policy.num_other_agents, -1]
-    )
+    true_probs = np.reshape(true_probs, [true_probs.shape[0], policy.num_other_agents, -1])
     true_probs = scipy.special.softmax(true_probs, axis=-1)
-    true_probs = true_probs / true_probs.sum(
-        axis=-1, keepdims=1
-    )  # reduce numerical inaccuracies
+    true_probs = true_probs / true_probs.sum(axis=-1, keepdims=1)  # reduce numerical inaccuracies
 
     # Get marginal predictions where effect of self is marginalized out
     marginal_probs = marginalize_predictions_over_own_actions(
@@ -199,8 +189,7 @@ def marginalize_predictions_over_own_actions(policy, trajectory):
     # Indexing of this is [B, Num agents, Agent actions, other agent logits] before we marginalize
     counter_probs = trajectory[COUNTERFACTUAL_ACTIONS]
     counter_probs = np.reshape(
-        counter_probs,
-        [counter_probs.shape[0], policy.num_other_agents, -1, action_probs.shape[-1]],
+        counter_probs, [counter_probs.shape[0], policy.num_other_agents, -1, action_probs.shape[-1]],
     )
     counter_probs = scipy.special.softmax(counter_probs, axis=-1)
     marginal_probs = np.sum(counter_probs, axis=-2)
@@ -292,12 +281,7 @@ def build_model(policy, obs_space, action_space, config):
     _, logit_dim = ModelCatalog.get_action_dist(action_space, config["model"])
 
     policy.model = ModelCatalog.get_model_v2(
-        obs_space,
-        action_space,
-        logit_dim,
-        config["model"],
-        name=POLICY_SCOPE,
-        framework="tf",
+        obs_space, action_space, logit_dim, config["model"], name=POLICY_SCOPE, framework="tf",
     )
 
     return policy.model

@@ -20,14 +20,7 @@ tf = try_import_tf()
 
 class A3CLoss(object):
     def __init__(
-        self,
-        action_dist,
-        actions,
-        advantages,
-        v_target,
-        vf,
-        vf_loss_coeff=0.5,
-        entropy_coeff=0.01,
+        self, action_dist, actions, advantages, v_target, vf, vf_loss_coeff=0.5, entropy_coeff=0.01,
     ):
         log_prob = action_dist.logp(actions)
 
@@ -37,17 +30,11 @@ class A3CLoss(object):
         delta = vf - v_target
         self.vf_loss = 0.5 * tf.reduce_sum(tf.square(delta))
         self.entropy = tf.reduce_sum(action_dist.entropy())
-        self.total_loss = (
-            self.pi_loss + self.vf_loss * vf_loss_coeff - self.entropy * entropy_coeff
-        )
+        self.total_loss = self.pi_loss + self.vf_loss * vf_loss_coeff - self.entropy * entropy_coeff
 
 
 def postprocess_a3c_aux(
-    aux_postprocess_trajectory_fn,
-    policy,
-    sample_batch,
-    other_agent_batches=None,
-    episode=None,
+    aux_postprocess_trajectory_fn, policy, sample_batch, other_agent_batches=None, episode=None,
 ):
     """Adds the policy logits, VF preds, and advantages to the trajectory."""
 
@@ -110,9 +97,7 @@ def stats(policy, train_batch):
         "policy_entropy": policy.loss.entropy,
         "var_gnorm": tf.global_norm([x for x in policy.model.trainable_variables()]),
         "vf_loss": policy.loss.vf_loss,
-        "cur_aux_reward_weight": tf.cast(
-            policy.cur_aux_reward_weight_tensor, tf.float64
-        ),
+        "cur_aux_reward_weight": tf.cast(policy.cur_aux_reward_weight_tensor, tf.float64),
         "total_aux_reward": train_batch["total_aux_reward"],
         "reward_without_aux": train_batch["reward_without_aux"],
         "aux_loss": policy.aux_loss * policy.aux_loss_weight,
@@ -130,9 +115,7 @@ def grad_stats(policy, train_batch, grads):
 
 
 def clip_gradients(policy, optimizer, loss):
-    grads_and_vars = optimizer.compute_gradients(
-        loss, policy.model.trainable_variables()
-    )
+    grads_and_vars = optimizer.compute_gradients(loss, policy.model.trainable_variables())
     grads = [g for (g, v) in grads_and_vars]
     grads, _ = tf.clip_by_global_norm(grads, policy.config["grad_clip"])
     clipped_grads = list(zip(grads, policy.model.trainable_variables()))

@@ -68,15 +68,11 @@ def setup_curiosity_loss(logits, model, policy, train_batch):
     # Instantiate the prediction loss
     aux_preds = model.predicted_encoded_observations()
     true_states = model.true_encoded_observations()
-    curiosity_loss = CuriosityLoss(
-        aux_preds, true_states, loss_weight=policy.aux_loss_weight
-    )
+    curiosity_loss = CuriosityLoss(aux_preds, true_states, loss_weight=policy.aux_loss_weight)
     return curiosity_loss
 
 
-def curiosity_postprocess_trajectory(
-    policy, sample_batch, other_agent_batches=None, episode=None
-):
+def curiosity_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, episode=None):
     # Compute curiosity reward and add to batch.
     sample_batch = compute_curiosity_reward(policy, sample_batch)
     return sample_batch
@@ -98,9 +94,7 @@ def compute_curiosity_reward(policy, trajectory):
     cur_aux_reward_weight = policy.compute_weight()
 
     # Clip curiosity reward
-    reward = np.clip(
-        aux_reward_per_agent_step, -policy.aux_reward_clip, policy.aux_reward_clip
-    )
+    reward = np.clip(aux_reward_per_agent_step, -policy.aux_reward_clip, policy.aux_reward_clip)
     reward = reward * cur_aux_reward_weight
 
     # Add to trajectory

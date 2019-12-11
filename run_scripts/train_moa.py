@@ -74,9 +74,7 @@ def setup(args):
         {
             "horizon": 1000,
             "gamma": 0.99,
-            "lr_schedule": list(
-                zip(args.lr_curriculum_steps, args.lr_curriculum_weights)
-            ),
+            "lr_schedule": list(zip(args.lr_curriculum_steps, args.lr_curriculum_weights)),
             "sample_batch_size": args.sample_batch_size,
             "train_batch_size": args.train_batch_size,
             "num_workers": num_workers,
@@ -87,10 +85,7 @@ def setup(args):
             "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
             "entropy_coeff": args.entropy_coeff,
             "grad_clip": args.grad_clip,
-            "multiagent": {
-                "policies": policy_graphs,
-                "policy_mapping_fn": policy_mapping_fn,
-            },
+            "multiagent": {"policies": policy_graphs, "policy_mapping_fn": policy_mapping_fn},
             "model": {
                 "custom_model": "moa_lstm",
                 "use_lstm": False,
@@ -113,9 +108,7 @@ def setup(args):
         },
     )
     if args.algorithm == "PPO":
-        config.update(
-            {"num_sgd_iter": 10, "sgd_minibatch_size": 500, "vf_loss_coeff": 1e-4}
-        )
+        config.update({"num_sgd_iter": 10, "sgd_minibatch_size": 500, "vf_loss_coeff": 1e-4})
     elif args.algorithm == "A3C" or args.algorithm == "IMPALA":
         config.update({"vf_loss_coeff": 0.1})
     else:

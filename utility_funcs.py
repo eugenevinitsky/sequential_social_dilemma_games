@@ -83,9 +83,7 @@ def return_view(grid, pos, row_size, col_size):
     right_edge = x + col_size
     top_edge = y - row_size
     bot_edge = y + row_size
-    pad_mat, left_pad, top_pad = pad_if_needed(
-        left_edge, right_edge, top_edge, bot_edge, grid
-    )
+    pad_mat, left_pad, top_pad = pad_if_needed(left_edge, right_edge, top_edge, bot_edge, grid)
     x += left_pad
     y += top_pad
     view = pad_mat[x - col_size : x + col_size + 1, y - row_size : y + row_size + 1]
@@ -128,9 +126,7 @@ def get_all_subdirs(path):
 
 
 def get_all_files(path):
-    return [
-        path + "/" + d for d in os.listdir(path) if not os.path.isdir(path + "/" + d)
-    ]
+    return [path + "/" + d for d in os.listdir(path) if not os.path.isdir(path + "/" + d)]
 
 
 def update_nested_dict(d0, d1):

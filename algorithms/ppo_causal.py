@@ -20,11 +20,7 @@ from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.evaluation.postprocessing import Postprocessing
 from ray.rllib.models import ModelCatalog
 from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.policy.tf_policy import (
-    ACTION_LOGP,
-    EntropyCoeffSchedule,
-    LearningRateSchedule,
-)
+from ray.rllib.policy.tf_policy import ACTION_LOGP, EntropyCoeffSchedule, LearningRateSchedule
 from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.utils import try_import_tf
 
@@ -100,9 +96,7 @@ def extra_stats(policy, train_batch):
     return base_stats
 
 
-def postprocess_ppo_causal(
-    policy, sample_batch, other_agent_batches=None, episode=None
-):
+def postprocess_ppo_causal(policy, sample_batch, other_agent_batches=None, episode=None):
     """Adds the policy logits, VF preds, and advantages to the trajectory."""
 
     batch = causal_postprocess_trajectory(policy, sample_batch)
@@ -114,12 +108,7 @@ def build_model(policy, obs_space, action_space, config):
     _, logit_dim = ModelCatalog.get_action_dist(action_space, config["model"])
 
     policy.model = ModelCatalog.get_model_v2(
-        obs_space,
-        action_space,
-        logit_dim,
-        config["model"],
-        name=POLICY_SCOPE,
-        framework="tf",
+        obs_space, action_space, logit_dim, config["model"], name=POLICY_SCOPE, framework="tf",
     )
 
     return policy.model
@@ -128,9 +117,7 @@ def build_model(policy, obs_space, action_space, config):
 def setup_mixins(policy, obs_space, action_space, config):
     ValueNetworkMixin.__init__(policy, obs_space, action_space, config)
     KLCoeffMixin.__init__(policy, config)
-    EntropyCoeffSchedule.__init__(
-        policy, config["entropy_coeff"], config["entropy_coeff_schedule"]
-    )
+    EntropyCoeffSchedule.__init__(policy, config["entropy_coeff"], config["entropy_coeff_schedule"])
     LearningRateSchedule.__init__(policy, config["lr"], config["lr_schedule"])
     setup_causal_mixins(policy, obs_space, action_space, config)
 

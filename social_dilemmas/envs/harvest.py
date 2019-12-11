@@ -17,15 +17,9 @@ HARVEST_VIEW_SIZE = 7
 
 class HarvestEnv(MapEnv):
     def __init__(
-        self,
-        ascii_map=HARVEST_MAP,
-        num_agents=1,
-        render=False,
-        return_agent_actions=False,
+        self, ascii_map=HARVEST_MAP, num_agents=1, render=False, return_agent_actions=False,
     ):
-        super().__init__(
-            ascii_map, num_agents, render, return_agent_actions=return_agent_actions
-        )
+        super().__init__(ascii_map, num_agents, render, return_agent_actions=return_agent_actions)
         self.apple_points = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
@@ -47,16 +41,10 @@ class HarvestEnv(MapEnv):
                         dtype=np.float32,
                     ),
                     "other_agent_actions": Box(
-                        low=0,
-                        high=len(ACTIONS),
-                        shape=(self.num_agents - 1,),
-                        dtype=np.int32,
+                        low=0, high=len(ACTIONS), shape=(self.num_agents - 1,), dtype=np.int32,
                     ),
                     "visible_agents": Box(
-                        low=0,
-                        high=self.num_agents,
-                        shape=(self.num_agents - 1,),
-                        dtype=np.int32,
+                        low=0, high=self.num_agents, shape=(self.num_agents - 1,), dtype=np.int32,
                     ),
                 }
             )
@@ -80,9 +68,7 @@ class HarvestEnv(MapEnv):
             spawn_point = self.spawn_point()
             rotation = self.spawn_rotation()
             grid = map_with_agents
-            agent = HarvestAgent(
-                agent_id, spawn_point, rotation, grid, view_len=HARVEST_VIEW_SIZE
-            )
+            agent = HarvestAgent(agent_id, spawn_point, rotation, grid, view_len=HARVEST_VIEW_SIZE)
             self.agents[agent_id] = agent
 
     def custom_reset(self):
@@ -93,10 +79,7 @@ class HarvestEnv(MapEnv):
     def custom_action(self, agent, action):
         agent.fire_beam("F")
         updates = self.update_map_fire(
-            agent.get_pos().tolist(),
-            agent.get_orientation(),
-            ACTIONS["FIRE"],
-            fire_char="F",
+            agent.get_pos().tolist(), agent.get_orientation(), ACTIONS["FIRE"], fire_char="F",
         )
         return updates
 

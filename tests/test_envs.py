@@ -445,9 +445,7 @@ class TestMapEnv(unittest.TestCase):
         np.testing.assert_array_equal(self.env.agents["agent-1"].get_pos(), [3, 4])
 
         # test that agents can't walk through each other if they move simultaneously
-        self.env.step(
-            {"agent-0": ACTION_MAP["MOVE_RIGHT"], "agent-1": ACTION_MAP["MOVE_LEFT"]}
-        )
+        self.env.step({"agent-0": ACTION_MAP["MOVE_RIGHT"], "agent-1": ACTION_MAP["MOVE_LEFT"]})
         np.testing.assert_array_equal(self.env.agents["agent-0"].get_pos(), [3, 3])
         np.testing.assert_array_equal(self.env.agents["agent-1"].get_pos(), [3, 4])
         # also check that the map looks correct, no agent has disappeared
@@ -467,9 +465,7 @@ class TestMapEnv(unittest.TestCase):
         # conflict only occurs stochastically so try it 50 times
         np.random.seed(1)
         for i in range(100):
-            self.env.step(
-                {"agent-0": ACTION_MAP["MOVE_RIGHT"], "agent-1": ACTION_MAP["MOVE_UP"]}
-            )
+            self.env.step({"agent-0": ACTION_MAP["MOVE_RIGHT"], "agent-1": ACTION_MAP["MOVE_UP"]})
             expected_map = np.array(
                 [
                     ["@", "@", "@", "@", "@", "@"],
@@ -481,9 +477,7 @@ class TestMapEnv(unittest.TestCase):
                 ]
             )
             np.testing.assert_array_equal(expected_map, self.env.test_map)
-            self.env.step(
-                {"agent-0": ACTION_MAP["MOVE_LEFT"], "agent-1": ACTION_MAP["MOVE_DOWN"]}
-            )
+            self.env.step({"agent-0": ACTION_MAP["MOVE_LEFT"], "agent-1": ACTION_MAP["MOVE_DOWN"]})
 
         # test that if two agents have a conflicting move then the tie is broken randomly
         num_agent_1 = 0.0
@@ -491,12 +485,7 @@ class TestMapEnv(unittest.TestCase):
         for i in range(100):
             self.move_agent("agent-0", [3, 2])
             self.move_agent("agent-1", [3, 4])
-            self.env.step(
-                {
-                    "agent-0": ACTION_MAP["MOVE_RIGHT"],
-                    "agent-1": ACTION_MAP["MOVE_LEFT"],
-                }
-            )
+            self.env.step({"agent-0": ACTION_MAP["MOVE_RIGHT"], "agent-1": ACTION_MAP["MOVE_LEFT"]})
             if self.env.agents["agent-0"].get_pos().tolist() == [3, 3]:
                 num_agent_1 += 1
             else:
@@ -768,9 +757,7 @@ class TestMapEnv(unittest.TestCase):
         self.move_agent("agent-2", [4, 4])
         self.move_agent("agent-3", [3, 3])
         curr_map = self.env.test_map.copy()
-        self.env.step(
-            {"agent-0": ACTION_MAP["MOVE_UP"], "agent-1": ACTION_MAP["MOVE_LEFT"]}
-        )
+        self.env.step({"agent-0": ACTION_MAP["MOVE_UP"], "agent-1": ACTION_MAP["MOVE_LEFT"]})
         np.testing.assert_array_equal(self.env.test_map, curr_map)
 
     def move_agent(self, agent_id, new_pos):
@@ -1006,12 +993,7 @@ class TestHarvestEnv(unittest.TestCase):
 
         # test that if two agents fire on each other than they're still there after
         self.env.agents["agent-0"].update_agent_rot("RIGHT")
-        self.env.step(
-            {
-                "agent-0": HARVEST_ACTION_MAP["FIRE"],
-                "agent-1": HARVEST_ACTION_MAP["FIRE"],
-            }
-        )
+        self.env.step({"agent-0": HARVEST_ACTION_MAP["FIRE"], "agent-1": HARVEST_ACTION_MAP["FIRE"]})
         self.env.step({})
         expected_map = np.array(
             [
@@ -1305,10 +1287,7 @@ class TestCleanupEnv(unittest.TestCase):
         self.rotate_agent("agent-0", "LEFT")
         self.rotate_agent("agent-1", "LEFT")
         self.env.step(
-            {
-                "agent-0": CLEANUP_ACTION_MAP["CLEAN"],
-                "agent-1": CLEANUP_ACTION_MAP["CLEAN"],
-            }
+            {"agent-0": CLEANUP_ACTION_MAP["CLEAN"], "agent-1": CLEANUP_ACTION_MAP["CLEAN"]}
         )
         self.assertTrue(self.env.world_map[3, 1] == "R")
 
@@ -1409,20 +1388,14 @@ class TestCleanupEnv(unittest.TestCase):
         self.rotate_agent("agent-0", "LEFT")
         self.rotate_agent("agent-1", "LEFT")
         self.env.step(
-            {
-                "agent-0": CLEANUP_ACTION_MAP["CLEAN"],
-                "agent-1": CLEANUP_ACTION_MAP["CLEAN"],
-            }
+            {"agent-0": CLEANUP_ACTION_MAP["CLEAN"], "agent-1": CLEANUP_ACTION_MAP["CLEAN"]}
         )
         self.assertTrue(np.isclose(self.env.current_waste_spawn_prob, 0.5))
 
         # check that the apple spawn probability is computed correctly
         while True:
             self.env.step(
-                {
-                    "agent-0": CLEANUP_ACTION_MAP["CLEAN"],
-                    "agent-1": CLEANUP_ACTION_MAP["CLEAN"],
-                }
+                {"agent-0": CLEANUP_ACTION_MAP["CLEAN"], "agent-1": CLEANUP_ACTION_MAP["CLEAN"]}
             )
             if self.env.compute_permitted_area() == 4:
                 break

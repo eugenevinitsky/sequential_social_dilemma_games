@@ -128,20 +128,15 @@ def visualizer_rllib(args):
     if args.save_video:
         shape = env.base_map.shape
         full_obs = [
-            np.zeros((shape[0], shape[1], 3), dtype=np.uint8)
-            for i in range(config["horizon"])
+            np.zeros((shape[0], shape[1], 3), dtype=np.uint8) for i in range(config["horizon"])
         ]
 
     steps = 0
     while steps < (config["horizon"] or steps + 1):
         mapping_cache = {}  # in case policy_agent_mapping is stochastic
         obs = env.reset()
-        agent_states = DefaultMapping(
-            lambda agent_id: state_init[mapping_cache[agent_id]]
-        )
-        prev_actions = DefaultMapping(
-            lambda agent_id: action_init[mapping_cache[agent_id]]
-        )
+        agent_states = DefaultMapping(lambda agent_id: state_init[mapping_cache[agent_id]])
+        prev_actions = DefaultMapping(lambda agent_id: action_init[mapping_cache[agent_id]])
         prev_rewards = collections.defaultdict(lambda: 0.0)
         done = False
         last_actions = [0] * len(obs.keys())  # Number of agents
@@ -151,9 +146,7 @@ def visualizer_rllib(args):
             action_dict = {}
             for agent_id, a_obs in multi_obs.items():
                 if a_obs is not None:
-                    policy_id = mapping_cache.setdefault(
-                        agent_id, policy_agent_mapping(agent_id)
-                    )
+                    policy_id = mapping_cache.setdefault(agent_id, policy_agent_mapping(agent_id))
                     p_use_lstm = use_lstm[policy_id]
                     if p_use_lstm:
                         a_action, p_state, _ = agent.compute_action(
@@ -245,26 +238,17 @@ def create_parser():
     )
     # optional input parameters
     parser.add_argument(
-        "--num-rollouts",
-        type=int,
-        default=1,
-        help="The number of rollouts to visualize.",
+        "--num-rollouts", type=int, default=1, help="The number of rollouts to visualize.",
     )
-    parser.add_argument(
-        "--save-video", action="store_true", help="whether to save a movie or not."
-    )
+    parser.add_argument("--save-video", action="store_true", help="whether to save a movie or not.")
     parser.add_argument(
         "--video-path", action="store", help="Path where the video should be stored."
     )
     parser.add_argument(
-        "--video-filename",
-        action="store",
-        help="Name of the video. No file extension needed.",
+        "--video-filename", action="store", help="Name of the video. No file extension needed.",
     )
     parser.add_argument(
-        "--render",
-        action="store_true",
-        help="Whether to watch the rollout while it happens.",
+        "--render", action="store_true", help="Whether to watch the rollout while it happens.",
     )
     return parser
 

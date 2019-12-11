@@ -74,9 +74,7 @@ class SwitchEnv(MapEnv):
                 num_switches -= 2
         partial_map.append(SwitchMapElements.bottom_row)
         middle_row = int(math.ceil(num_rows / 2))
-        partial_map[middle_row] = (
-            partial_map[middle_row][:3] + "P" + partial_map[middle_row][4:]
-        )
+        partial_map[middle_row] = partial_map[middle_row][:3] + "P" + partial_map[middle_row][4:]
         return partial_map
 
     def create_extra_info_dict(self):
@@ -116,16 +114,10 @@ class SwitchEnv(MapEnv):
                         dtype=np.float32,
                     ),
                     "other_agent_actions": Box(
-                        low=0,
-                        high=len(ACTIONS),
-                        shape=(self.num_agents - 1,),
-                        dtype=np.int32,
+                        low=0, high=len(ACTIONS), shape=(self.num_agents - 1,), dtype=np.int32,
                     ),
                     "visible_agents": Box(
-                        low=0,
-                        high=self.num_agents,
-                        shape=(self.num_agents - 1,),
-                        dtype=np.int32,
+                        low=0, high=self.num_agents, shape=(self.num_agents - 1,), dtype=np.int32,
                     ),
                 }
             )

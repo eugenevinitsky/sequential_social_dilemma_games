@@ -111,10 +111,7 @@ def setup(
             "model": {
                 "custom_model": "conv_to_fc_net",
                 "use_lstm": True,
-                "custom_options": {
-                    "return_agent_actions": return_agent_actions,
-                    "cell_size": 128,
-                },
+                "custom_options": {"return_agent_actions": return_agent_actions, "cell_size": 128},
                 "conv_filters": [[6, [3, 3], 1]],
             },
         }

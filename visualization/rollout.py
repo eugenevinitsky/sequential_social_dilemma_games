@@ -46,9 +46,7 @@ class Controller(object):
         rewards = []
         observations = []
         shape = self.env.world_map.shape
-        full_obs = [
-            np.zeros((shape[0], shape[1], 3), dtype=np.uint8) for i in range(horizon)
-        ]
+        full_obs = [np.zeros((shape[0], shape[1], 3), dtype=np.uint8) for i in range(horizon)]
 
         for i in range(horizon):
             agents = list(self.env.agents.values())
@@ -98,20 +96,14 @@ class Controller(object):
             if not os.path.exists(image_path):
                 os.makedirs(image_path)
 
-            rewards, observations, full_obs = self.rollout(
-                horizon=horizon, save_path=image_path
-            )
-            utility_funcs.make_video_from_image_dir(
-                path, image_path, fps=fps, video_name=video_name
-            )
+            rewards, observations, full_obs = self.rollout(horizon=horizon, save_path=image_path)
+            utility_funcs.make_video_from_image_dir(path, image_path, fps=fps, video_name=video_name)
 
             # Clean up images
             shutil.rmtree(image_path)
         else:
             rewards, observations, full_obs = self.rollout(horizon=horizon)
-            utility_funcs.make_video_from_rgb_imgs(
-                full_obs, path, fps=fps, video_name=video_name
-            )
+            utility_funcs.make_video_from_rgb_imgs(full_obs, path, fps=fps, video_name=video_name)
 
 
 if __name__ == "__main__":

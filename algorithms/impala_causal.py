@@ -15,22 +15,12 @@ from ray.rllib.agents.impala.impala import (
     make_aggregators_and_optimizer,
     validate_config,
 )
-from ray.rllib.agents.impala.vtrace_policy import (
-    VTraceLoss,
-    choose_optimizer,
-    clip_gradients,
-)
-from ray.rllib.agents.impala.vtrace_policy import (
-    validate_config as validate_config_policy,
-)
+from ray.rllib.agents.impala.vtrace_policy import VTraceLoss, choose_optimizer, clip_gradients
+from ray.rllib.agents.impala.vtrace_policy import validate_config as validate_config_policy
 from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.models.tf.tf_action_dist import Categorical
 from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.policy.tf_policy import (
-    ACTION_LOGP,
-    EntropyCoeffSchedule,
-    LearningRateSchedule,
-)
+from ray.rllib.policy.tf_policy import ACTION_LOGP, EntropyCoeffSchedule, LearningRateSchedule
 from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.explained_variance import explained_variance
@@ -172,8 +162,7 @@ def causal_stats(policy, train_batch):
         "var_gnorm": tf.global_norm(policy.model.trainable_variables()),
         "vf_loss": policy.loss.vf_loss,
         "vf_explained_var": explained_variance(
-            tf.reshape(policy.loss.value_targets, [-1]),
-            tf.reshape(values_batched, [-1]),
+            tf.reshape(policy.loss.value_targets, [-1]), tf.reshape(values_batched, [-1]),
         ),
     }
     base_stats["total_influence"] = train_batch["total_influence"]
@@ -188,9 +177,7 @@ def grad_stats(policy, train_batch, grads):
     }
 
 
-def postprocess_trajectory(
-    policy, sample_batch, other_agent_batches=None, episode=None
-):
+def postprocess_trajectory(policy, sample_batch, other_agent_batches=None, episode=None):
     sample_batch = causal_postprocess_trajectory(policy, sample_batch)
     del sample_batch.data[SampleBatch.NEXT_OBS]
     return sample_batch
@@ -204,9 +191,7 @@ def add_behaviour_logits(policy):
 
 def setup_mixins(policy, obs_space, action_space, config):
     LearningRateSchedule.__init__(policy, config["lr"], config["lr_schedule"])
-    EntropyCoeffSchedule.__init__(
-        policy, config["entropy_coeff"], config["entropy_coeff_schedule"]
-    )
+    EntropyCoeffSchedule.__init__(policy, config["entropy_coeff"], config["entropy_coeff_schedule"])
     setup_causal_mixins(policy, obs_space, action_space, config)
 
 

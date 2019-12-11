@@ -18,18 +18,14 @@ class ConvToFCNetActions(Model):
         actions_batch = input_dict["others_actions"]
         num_other_agents = options["custom_options"]["num_other_agents"]
         one_hot_actions = tf.one_hot(actions_batch, num_outputs)
-        others_actions = tf.reshape(
-            one_hot_actions, [-1, num_outputs * num_other_agents]
-        )
+        others_actions = tf.reshape(one_hot_actions, [-1, num_outputs * num_other_agents])
         others_actions = tf.cast(others_actions, tf.float32)
 
         inputs = input_dict["obs"]
 
         hiddens = [32, 32]
         with tf.name_scope("custom_net"):
-            inputs = slim.conv2d(
-                inputs, 6, [3, 3], 1, activation_fn=tf.nn.relu, scope="conv"
-            )
+            inputs = slim.conv2d(inputs, 6, [3, 3], 1, activation_fn=tf.nn.relu, scope="conv")
             last_layer = flatten(inputs)
             i = 1
             for size in hiddens:

@@ -23,20 +23,14 @@ class KerasRNN(RecurrentTFModelV2):
         cell_size=64,
         use_value_fn=False,
     ):
-        super(KerasRNN, self).__init__(
-            obs_space, action_space, num_outputs, model_config, name
-        )
+        super(KerasRNN, self).__init__(obs_space, action_space, num_outputs, model_config, name)
 
         self.cell_size = cell_size
         self.use_value_fn = use_value_fn
 
         # TODO(@internetcoffeephone) make this time distributed only at the last moment
-        input_layer = tf.keras.layers.Input(
-            shape=(None,) + obs_space.shape, name="inputs"
-        )
-        flat_layer = tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten())(
-            input_layer
-        )
+        input_layer = tf.keras.layers.Input(shape=(None,) + obs_space.shape, name="inputs")
+        flat_layer = tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten())(input_layer)
 
         # Add the fully connected layers
         hiddens = model_config.get("fcnet_hiddens")
@@ -58,11 +52,7 @@ class KerasRNN(RecurrentTFModelV2):
 
         lstm_out, state_h, state_c = tf.keras.layers.LSTM(
             cell_size, return_sequences=True, return_state=True, name="lstm"
-        )(
-            inputs=last_layer,
-            mask=tf.sequence_mask(seq_in),
-            initial_state=[state_in_h, state_in_c],
-        )
+        )(inputs=last_layer, mask=tf.sequence_mask(seq_in), initial_state=[state_in_h, state_in_c],)
 
         # Postprocess LSTM output with another hidden layer and compute values
         logits = tf.keras.layers.Dense(
@@ -72,10 +62,7 @@ class KerasRNN(RecurrentTFModelV2):
         inputs = [input_layer, seq_in, state_in_h, state_in_c]
         if use_value_fn:
             value_out = tf.keras.layers.Dense(
-                1,
-                name="value_out",
-                activation=None,
-                kernel_initializer=normc_initializer(0.01),
+                1, name="value_out", activation=None, kernel_initializer=normc_initializer(0.01),
             )(lstm_out)
             outputs = [logits, value_out, state_h, state_c]
         else:
@@ -106,9 +93,7 @@ class CuriosityLSTM(RecurrentTFModelV2):
     """An LSTM with two heads, one for taking actions and one for predicting future state."""
 
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
-        super(CuriosityLSTM, self).__init__(
-            obs_space, action_space, num_outputs, model_config, name
-        )
+        super(CuriosityLSTM, self).__init__(obs_space, action_space, num_outputs, model_config, name)
 
         self.obs_space = obs_space
         self.num_outputs = num_outputs
@@ -116,9 +101,7 @@ class CuriosityLSTM(RecurrentTFModelV2):
 
         original_obs_dims = obs_space.original_space.spaces["curr_obs"].shape
         # Determine vision network input shape: add an extra none for the time dimension
-        inputs = tf.keras.layers.Input(
-            shape=(None,) + original_obs_dims, name="observations"
-        )
+        inputs = tf.keras.layers.Input(shape=(None,) + original_obs_dims, name="observations")
 
         # A temp config with custom_model false so that we can get a basic vision model
         # with the desired filters
@@ -159,13 +142,9 @@ class CuriosityLSTM(RecurrentTFModelV2):
         self.base_model.summary()
 
         # now output two heads, one for action selection and one for the prediction the next state
-        inner_obs_space = Box(
-            low=-1, high=1, shape=conv_out.shape[2:], dtype=np.float32
-        )
+        inner_obs_space = Box(low=-1, high=1, shape=conv_out.shape[2:], dtype=np.float32)
         inner_obs_shape = inner_obs_space.shape
-        inner_obs_size = int(
-            inner_obs_shape[0] * inner_obs_shape[1] * inner_obs_shape[2]
-        )
+        inner_obs_size = int(inner_obs_shape[0] * inner_obs_shape[1] * inner_obs_shape[2])
 
         cell_size = model_config["custom_options"].get("cell_size")
         self.policy_model = KerasRNN(
@@ -201,13 +180,9 @@ class CuriosityLSTM(RecurrentTFModelV2):
         """Adds time dimension to batch before sending inputs to forward_rnn()"""
         # first we add the time dimension for each object
         new_dict = {
-            "obs": {
-                k: add_time_dimension(v, seq_lens) for k, v in input_dict["obs"].items()
-            }
+            "obs": {k: add_time_dimension(v, seq_lens) for k, v in input_dict["obs"].items()}
         }
-        new_dict.update(
-            {"prev_action": add_time_dimension(input_dict["prev_actions"], seq_lens)}
-        )
+        new_dict.update({"prev_action": add_time_dimension(input_dict["prev_actions"], seq_lens)})
 
         output, new_state = self.forward_rnn(new_dict, state, seq_lens)
         return tf.reshape(output, [-1, self.num_outputs]), new_state
@@ -222,12 +197,9 @@ class CuriosityLSTM(RecurrentTFModelV2):
         self._true_encoded_obs = tf.reshape(trunk, (-1, encoded_size))
 
         # Compute the next action
-        (
-            self._model_out,
-            self._value_out,
-            output_h1,
-            output_c1,
-        ) = self.policy_model.forward_rnn(pass_dict, [h1, c1], seq_lens)
+        (self._model_out, self._value_out, output_h1, output_c1,) = self.policy_model.forward_rnn(
+            pass_dict, [h1, c1], seq_lens
+        )
         # Compute the next state prediction
         self._pred_encoded_obs, output_h2, output_c2 = self.curiosity_model.forward_rnn(
             pass_dict, [h2, c2], seq_lens
@@ -250,7 +222,4 @@ class CuriosityLSTM(RecurrentTFModelV2):
 
     @override(ModelV2)
     def get_initial_state(self):
-        return (
-            self.policy_model.get_initial_state()
-            + self.curiosity_model.get_initial_state()
-        )
+        return self.policy_model.get_initial_state() + self.curiosity_model.get_initial_state()

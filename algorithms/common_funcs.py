@@ -16,9 +16,7 @@ class AuxScheduleMixIn(object):
         self.cur_aux_reward_weight = self.compute_weight()
         # This tensor is for logging the weight to progress.csv
         self.cur_aux_reward_weight_tensor = tf.get_variable(
-            "cur_aux_reward_weight",
-            initializer=self.cur_aux_reward_weight,
-            trainable=False,
+            "cur_aux_reward_weight", initializer=self.cur_aux_reward_weight, trainable=False,
         )
 
     @override(Policy)
@@ -26,17 +24,13 @@ class AuxScheduleMixIn(object):
         super(AuxScheduleMixIn, self).on_global_var_update(global_vars)
         self.timestep = global_vars["timestep"]
         self.cur_aux_reward_weight = self.compute_weight()
-        self.cur_aux_reward_weight_tensor.load(
-            self.cur_aux_reward_weight, session=self._sess
-        )
+        self.cur_aux_reward_weight_tensor.load(self.cur_aux_reward_weight, session=self._sess)
 
     def compute_weight(self):
         """ Computes multiplier for aux reward based on training steps
         taken and curriculum parameters.
         """
         weight = np.interp(
-            self.timestep,
-            self.aux_reward_curriculum_steps,
-            self.aux_reward_curriculum_weights,
+            self.timestep, self.aux_reward_curriculum_steps, self.aux_reward_curriculum_weights,
         )
         return weight * self.baseline_aux_reward_weight
