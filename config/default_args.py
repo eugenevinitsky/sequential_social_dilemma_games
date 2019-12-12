@@ -71,7 +71,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--use_gpu_for_driver",
         action="store_true",
-        default=True,
+        default=False,
         help="Set to true to run driver on GPU rather than CPU.",
     )
     parser.add_argument(
