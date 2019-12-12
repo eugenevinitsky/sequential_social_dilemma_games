@@ -83,7 +83,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--num_envs_per_worker",
         type=float,
-        default=1,
+        default=16,
         help="Number of envs to place on a single worker",
     )
     parser.add_argument(
