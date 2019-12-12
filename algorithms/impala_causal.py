@@ -155,10 +155,10 @@ def causal_stats(policy, train_batch):
     )
 
     base_stats = {
-        "cur_lr": tf.cast(policy.cur_lr, tf.float64),
+        "cur_lr": tf.cast(policy.cur_lr, tf.float32),
         "policy_loss": policy.loss.pi_loss,
         "entropy": policy.loss.entropy,
-        "entropy_coeff": tf.cast(policy.entropy_coeff, tf.float64),
+        "entropy_coeff": tf.cast(policy.entropy_coeff, tf.float32),
         "var_gnorm": tf.global_norm(policy.model.trainable_variables()),
         "vf_loss": policy.loss.vf_loss,
         "vf_explained_var": explained_variance(

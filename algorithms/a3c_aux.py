@@ -92,12 +92,12 @@ class ValueNetworkMixin(object):
 
 def stats(policy, train_batch):
     base_stats = {
-        "cur_lr": tf.cast(policy.cur_lr, tf.float64),
+        "cur_lr": policy.cur_lr,
         "policy_loss": policy.loss.pi_loss,
         "policy_entropy": policy.loss.entropy,
         "var_gnorm": tf.global_norm([x for x in policy.model.trainable_variables()]),
         "vf_loss": policy.loss.vf_loss,
-        "cur_aux_reward_weight": tf.cast(policy.cur_aux_reward_weight_tensor, tf.float64),
+        "cur_aux_reward_weight": tf.cast(policy.cur_aux_reward_weight_tensor, tf.float32),
         "total_aux_reward": train_batch["total_aux_reward"],
         "reward_without_aux": train_batch["reward_without_aux"],
         "aux_loss": policy.aux_loss * policy.aux_loss_weight,
@@ -129,6 +129,8 @@ def setup_mixins(setup_fn, policy, obs_space, action_space, config):
 
 
 def get_a3c_trainer(aux_model_type, aux_config):
+    tf.keras.backend.set_floatx("float32")
+
     if aux_model_type == "causal":
         from algorithms.common_funcs_causal import (
             setup_moa_loss as setup_aux_loss,
@@ -153,7 +155,7 @@ def get_a3c_trainer(aux_model_type, aux_config):
     aux_config["use_gae"] = False
 
     a3c_tf_policy = build_tf_policy(
-        name="A3CTFPolicy",
+        name="A3CAuxTFPolicy",
         get_default_config=lambda: aux_config,
         loss_fn=partial(actor_critic_loss, setup_aux_loss),
         stats_fn=stats,
