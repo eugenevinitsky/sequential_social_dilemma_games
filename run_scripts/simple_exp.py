@@ -1,7 +1,8 @@
 import ray
 from ray import tune
-from social_dilemmas.envs.env_creator import get_env_creator
 from ray.tune.registry import register_env
+
+from social_dilemmas.envs.env_creator import get_env_creator
 
 
 class Args(object):

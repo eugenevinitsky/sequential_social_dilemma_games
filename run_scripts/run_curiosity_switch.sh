@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-python train_curiosity.py \
+python train.py \
 --exp_name curiosity_switch \
 --env switch \
+--model curiosity \
 --algorithm A3C \
 --sample_batch_size 1000 \
 --train_batch_size 30000 \

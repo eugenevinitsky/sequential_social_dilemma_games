@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-python train_moa.py \
+python train.py \
 --exp_name harvest_moa \
 --env harvest \
+--model moa \
 --algorithm A3C \
 --num_agents 5 \
 --sample_batch_size 1000 \

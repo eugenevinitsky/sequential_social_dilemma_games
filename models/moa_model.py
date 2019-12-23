@@ -45,7 +45,7 @@ class KerasRNN(RecurrentTFModelV2):
             name = "action_logits"
 
         # Add the fully connected layers
-        hiddens = model_config["custom_options"].get("fcnet_hiddens")
+        hiddens = model_config.get("fcnet_hiddens")
         last_layer = flat_layer
         i = 1
         activation = get_activation_fn(model_config.get("fcnet_activation"))

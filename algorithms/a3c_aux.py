@@ -131,7 +131,7 @@ def setup_mixins(setup_fn, policy, obs_space, action_space, config):
 def get_a3c_trainer(aux_model_type, aux_config):
     tf.keras.backend.set_floatx("float32")
 
-    if aux_model_type == "causal":
+    if aux_model_type == "moa":
         from algorithms.common_funcs_causal import (
             setup_moa_loss as setup_aux_loss,
             causal_fetches as aux_fetches,
@@ -149,6 +149,8 @@ def get_a3c_trainer(aux_model_type, aux_config):
             get_curiosity_mixins as get_aux_mixins,
             curiosity_postprocess_trajectory as aux_postprocess_trajectory,
         )
+    else:
+        raise NotImplementedError
 
         trainer_name = "CuriosityA3CTrainer"
 

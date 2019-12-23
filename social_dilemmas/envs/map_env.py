@@ -825,3 +825,7 @@ class MapEnv(MultiAgentEnv):
                 for agent_tup in other_agent_pos
             ]
         )
+
+    @staticmethod
+    def get_environment_callbacks():
+        return {}

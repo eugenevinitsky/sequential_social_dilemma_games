@@ -15,6 +15,18 @@ def add_default_args(parser):
     parser.add_argument(
         "--algorithm", type=str, default="A3C", help="Name of the rllib algorithm to use.",
     )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default="curiosity",
+        help="Name of the model to use. Can be curiosity," "moa, moa_curiosity",
+    )
+    parser.add_argument(
+        "--small_model",
+        action="store_true",
+        default=False,
+        help="Set to true to use a neural network with smaller layers.",
+    )
     parser.add_argument("--num_agents", type=int, default=1, help="Number of agent policies")
     parser.add_argument(
         "--sample_batch_size",

@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
-python train_moa.py \
+python train.py \
 --exp_name cleanup_moa \
 --env cleanup \
+--model moa \
 --algorithm A3C \
 --num_agents 5 \
 --sample_batch_size 1000 \

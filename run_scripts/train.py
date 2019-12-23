@@ -11,8 +11,11 @@ from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 
 from algorithms.a3c_aux import get_a3c_trainer
+from algorithms.impala_causal import CausalImpalaTrainer
+from algorithms.ppo_causal import CausalPPOMOATrainer
 from config.default_args import add_default_args
 from models.curiosity_model import CuriosityLSTM
+from models.moa_model import MOA_LSTM
 from social_dilemmas.envs.env_creator import get_env_creator
 from utility_funcs import update_nested_dict
 
@@ -29,14 +32,17 @@ def setup(args):
     obs_space = single_env.observation_space
     act_space = single_env.action_space
 
-    model_name = "curiosity_lstm"
-    ModelCatalog.register_custom_model(model_name, CuriosityLSTM)
+    model_name = args.model + "_lstm"
+    if args.model == "curiosity":
+        ModelCatalog.register_custom_model(model_name, CuriosityLSTM)
+    elif args.model == "moa":
+        ModelCatalog.register_custom_model(model_name, MOA_LSTM)
 
     # Each policy can have a different configuration (including custom model)
     def gen_policy():
-        return None, obs_space, act_space, {"custom_model": "curiosity_lstm"}
+        return None, obs_space, act_space, {"custom_model": model_name}
 
-    # Setup A3C with an ensemble of `num_policies` different policy graphs
+    # Create 1 distinct policy per agent
     policy_graphs = {}
     for i in range(args.num_agents):
         policy_graphs["agent-" + str(i)] = gen_policy()
@@ -67,12 +73,14 @@ def setup(args):
         num_gpus_per_worker = 0
         num_cpus_per_worker = spare_cpus / num_workers
 
-    # conv_filters = [[6, [3, 3], 1]]
-    # fcnet_hiddens = [32, 32]
-    # lstm_cell_size = 128
-    conv_filters = [[3, [3, 3], 1]]
-    fcnet_hiddens = [8, 8]
-    lstm_cell_size = 16
+    if args.small_model:
+        conv_filters = [[3, [3, 3], 1]]
+        fcnet_hiddens = [8, 8]
+        lstm_cell_size = 16
+    else:
+        conv_filters = [[6, [3, 3], 1]]
+        fcnet_hiddens = [32, 32]
+        lstm_cell_size = 128
 
     # hyperparams
     update_nested_dict(
@@ -93,8 +101,9 @@ def setup(args):
             "entropy_coeff": args.entropy_coeff,
             "grad_clip": args.grad_clip,
             "multiagent": {"policies": policy_graphs, "policy_mapping_fn": policy_mapping_fn},
+            "callbacks": single_env.get_environment_callbacks(),
             "model": {
-                "custom_model": "curiosity_lstm",
+                "custom_model": model_name,
                 "use_lstm": False,
                 "conv_filters": conv_filters,
                 "fcnet_hiddens": fcnet_hiddens,
@@ -108,9 +117,18 @@ def setup(args):
                     "num_other_agents": args.num_agents - 1,
                 },
             },
-            "callbacks": single_env.get_environment_callbacks(),
         },
     )
+
+    if args.model == "moa":
+        config["model"]["custom_options"].update(
+            {
+                "return_agent_actions": True,
+                "influence_divergence_measure": "kl",
+                "train_moa_only_when_visible": tune.grid_search([True]),
+                "influence_only_when_visible": tune.grid_search([True]),
+            }
+        )
 
     if args.grid_search:
         config["entropy_coeff"] = tune.grid_search(args.entropy_tune)
@@ -120,6 +138,13 @@ def setup(args):
         config["model"]["custom_options"]["aux_reward_weight"] = tune.grid_search(
             args.aux_reward_weight_tune
         )
+
+    if args.algorithm == "PPO":
+        config.update({"num_sgd_iter": 10, "sgd_minibatch_size": 500, "vf_loss_coeff": 1e-4})
+    elif args.algorithm == "A3C" or args.algorithm == "IMPALA":
+        config.update({"vf_loss_coeff": 0.1})
+    else:
+        sys.exit("The only available algorithms are A3C, PPO and IMPALA")
 
     return env_name, config
 
@@ -146,7 +171,12 @@ if __name__ == "__main__":
     config["env"] = env_name
     config["eager"] = args.eager_mode
 
-    trainer = get_a3c_trainer("curiosity", config)
+    if args.algorithm == "A3C":
+        trainer = get_a3c_trainer(args.model, config)
+    if args.algorithm == "PPO":
+        trainer = CausalPPOMOATrainer
+    if args.algorithm == "IMPALA":
+        trainer = CausalImpalaTrainer
 
     exp_dict = {
         "name": exp_name,
