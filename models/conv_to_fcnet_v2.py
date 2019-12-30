@@ -12,7 +12,7 @@ tf = try_import_tf()
 
 
 class ConvToFCNetv2(RecurrentTFModelV2):
-    """Implementation of the model in the causal influence paper."""
+    """Implementation of the baseline model in the causal influence paper."""
 
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
         super(ConvToFCNetv2, self).__init__(obs_space, action_space, num_outputs, model_config, name)
@@ -50,7 +50,7 @@ class ConvToFCNetv2(RecurrentTFModelV2):
         )(last_layer)
         last_layer = flatten(last_layer)
         # Now apply the Dense layers
-        hiddens = [32, 32]
+        hiddens = model_config.get("fcnet_hiddens")
         for size in hiddens:
             last_layer = tf.keras.layers.Dense(
                 size,
@@ -60,7 +60,7 @@ class ConvToFCNetv2(RecurrentTFModelV2):
             )(last_layer)
         i += 1
 
-        # Now lets construct the LSTM
+        # Construct the LSTM
         # Preprocess observation with a hidden layer and send to LSTM cell
         cell_size = model_config["custom_options"]["cell_size"]
         state_in_h = tf.keras.layers.Input(shape=(cell_size,), name="h")
