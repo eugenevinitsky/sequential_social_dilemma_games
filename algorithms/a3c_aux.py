@@ -149,10 +149,10 @@ def get_a3c_trainer(aux_model_type, aux_config):
             get_curiosity_mixins as get_aux_mixins,
             curiosity_postprocess_trajectory as aux_postprocess_trajectory,
         )
-    else:
-        raise NotImplementedError
 
         trainer_name = "CuriosityA3CTrainer"
+    else:
+        raise NotImplementedError
 
     aux_config["use_gae"] = False
 
