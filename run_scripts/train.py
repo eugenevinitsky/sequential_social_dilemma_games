@@ -6,14 +6,18 @@ from datetime import datetime
 import pytz
 import ray
 from ray import tune
+from ray.rllib.agents.a3c import A3CTrainer
+from ray.rllib.agents.impala import ImpalaTrainer
 from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 
 from algorithms.a3c_aux import get_a3c_trainer
 from algorithms.impala_causal import CausalImpalaTrainer
+from algorithms.ppo_baseline import build_ppo_baseline_trainer_with_config
 from algorithms.ppo_causal import CausalPPOMOATrainer
 from config.default_args import add_default_args
+from models.baseline_model import Baseline_LSTM
 from models.curiosity_model import CuriosityLSTM
 from models.moa_model import MOA_LSTM
 from social_dilemmas.envs.env_creator import get_env_creator
@@ -37,6 +41,8 @@ def setup(args):
         ModelCatalog.register_custom_model(model_name, CuriosityLSTM)
     elif args.model == "moa":
         ModelCatalog.register_custom_model(model_name, MOA_LSTM)
+    elif args.model == "baseline":
+        ModelCatalog.register_custom_model(model_name, Baseline_LSTM)
 
     # Each policy can have a different configuration (including custom model)
     def gen_policy():
@@ -108,17 +114,23 @@ def setup(args):
                 "conv_filters": conv_filters,
                 "fcnet_hiddens": fcnet_hiddens,
                 "custom_options": {
-                    "aux_loss_weight": args.aux_loss_weight,
-                    "aux_reward_clip": 10,
-                    "aux_reward_weight": args.aux_reward_weight,
-                    "aux_reward_curriculum_steps": args.aux_reward_curriculum_steps,
-                    "aux_reward_curriculum_weights": args.aux_reward_curriculum_weights,
                     "cell_size": lstm_cell_size,
                     "num_other_agents": args.num_agents - 1,
                 },
             },
         },
     )
+
+    if args.model != "baseline":
+        config["model"]["custom_options"].update(
+            {
+                "aux_loss_weight": args.aux_loss_weight,
+                "aux_reward_clip": 10,
+                "aux_reward_weight": args.aux_reward_weight,
+                "aux_reward_curriculum_steps": args.aux_reward_curriculum_steps,
+                "aux_reward_curriculum_weights": args.aux_reward_curriculum_weights,
+            }
+        )
 
     if args.model == "moa":
         config["model"]["custom_options"].update(
@@ -171,12 +183,20 @@ if __name__ == "__main__":
     config["env"] = env_name
     config["eager"] = args.eager_mode
 
-    if args.algorithm == "A3C":
-        trainer = get_a3c_trainer(args.model, config)
-    if args.algorithm == "PPO":
-        trainer = CausalPPOMOATrainer
-    if args.algorithm == "IMPALA":
-        trainer = CausalImpalaTrainer
+    if args.model == "baseline":
+        if args.algorithm == "A3C":
+            trainer = A3CTrainer(default_config=config)
+        if args.algorithm == "PPO":
+            trainer = build_ppo_baseline_trainer_with_config(config)
+        if args.algorithm == "IMPALA":
+            trainer = ImpalaTrainer(default_config=config)
+    else:
+        if args.algorithm == "A3C":
+            trainer = get_a3c_trainer(args.model, config)
+        if args.algorithm == "PPO":
+            trainer = CausalPPOMOATrainer
+        if args.algorithm == "IMPALA":
+            trainer = CausalImpalaTrainer
 
     exp_dict = {
         "name": exp_name,

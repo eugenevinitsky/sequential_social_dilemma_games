@@ -9,8 +9,7 @@ def add_default_args(parser):
         "--env",
         type=str,
         default="switch",
-        help="Name of the environment to use. Can be\
-                                                                   cleanup or harvest.",
+        help="Name of the environment to use. Can be switch, cleanup or harvest.",
     )
     parser.add_argument(
         "--algorithm", type=str, default="A3C", help="Name of the rllib algorithm to use.",
@@ -19,7 +18,7 @@ def add_default_args(parser):
         "--model",
         type=str,
         default="curiosity",
-        help="Name of the model to use. Can be curiosity," "moa, moa_curiosity",
+        help="Name of the model to use. Can be baseline, curiosity, moa, moa_curiosity",
     )
     parser.add_argument(
         "--small_model",
