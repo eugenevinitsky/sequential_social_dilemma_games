@@ -6,13 +6,13 @@ from datetime import datetime
 import pytz
 import ray
 from ray import tune
-from ray.rllib.agents.a3c import A3CTrainer
 from ray.rllib.agents.impala import ImpalaTrainer
 from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 
 from algorithms.a3c_aux import get_a3c_trainer
+from algorithms.a3c_baseline import build_a3c_baseline_trainer_with_config
 from algorithms.impala_causal import CausalImpalaTrainer
 from algorithms.ppo_baseline import build_ppo_baseline_trainer_with_config
 from algorithms.ppo_causal import CausalPPOMOATrainer
@@ -185,7 +185,7 @@ if __name__ == "__main__":
 
     if args.model == "baseline":
         if args.algorithm == "A3C":
-            trainer = A3CTrainer(default_config=config)
+            trainer = build_a3c_baseline_trainer_with_config(config)
         if args.algorithm == "PPO":
             trainer = build_ppo_baseline_trainer_with_config(config)
         if args.algorithm == "IMPALA":
