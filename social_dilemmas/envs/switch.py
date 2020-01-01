@@ -2,7 +2,6 @@ import math
 
 import numpy as np
 from gym.spaces import Box, Dict, Discrete
-from ray.rllib.utils.annotations import override
 
 from social_dilemmas.envs.agent import SwitchAgent
 from social_dilemmas.envs.map_env import ACTIONS, MapEnv
@@ -228,7 +227,6 @@ class SwitchEnv(MapEnv):
             episode.custom_metrics[key] = last_info[key]
 
     @staticmethod
-    @override
     def get_environment_callbacks():
         callbacks = {"on_episode_end": SwitchEnv.on_episode_end}
         return callbacks
