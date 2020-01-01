@@ -103,8 +103,6 @@ class CuriosityLSTM(RecurrentTFModelV2):
         # Determine vision network input shape: add an extra none for the time dimension
         inputs = tf.keras.layers.Input(shape=(None,) + original_obs_dims, name="observations")
 
-        # A temp config with custom_model false so that we can get a basic vision model
-        # with the desired filters
         # Build the CNN layer
         last_layer = inputs
         activation = get_activation_fn(model_config.get("conv_activation"))
@@ -141,11 +139,12 @@ class CuriosityLSTM(RecurrentTFModelV2):
         self.register_variables(self.base_model.variables)
         self.base_model.summary()
 
-        # now output two heads, one for action selection and one for the prediction the next state
+        # Output two heads, one for action selection and one for predicting the next state.
         inner_obs_space = Box(low=-1, high=1, shape=conv_out.shape[2:], dtype=np.float32)
         inner_obs_shape = inner_obs_space.shape
         inner_obs_size = int(inner_obs_shape[0] * inner_obs_shape[1] * inner_obs_shape[2])
 
+        # Action selection/value function
         cell_size = model_config["custom_options"].get("cell_size")
         self.policy_model = KerasRNN(
             inner_obs_space,
@@ -157,8 +156,7 @@ class CuriosityLSTM(RecurrentTFModelV2):
             use_value_fn=True,
         )
 
-        # predicts the actions of all the agents besides itself
-        # create a new input reader per worker
+        # Predicts the next environment state.
         self.aux_loss_weight = model_config["custom_options"]["aux_loss_weight"]
 
         self.curiosity_model = KerasRNN(
