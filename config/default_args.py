@@ -12,12 +12,12 @@ def add_default_args(parser):
         help="Name of the environment to use. Can be switch, cleanup or harvest.",
     )
     parser.add_argument(
-        "--algorithm", type=str, default="A3C", help="Name of the rllib algorithm to use.",
+        "--algorithm", type=str, default="PPO", help="Name of the rllib algorithm to use.",
     )
     parser.add_argument(
         "--model",
         type=str,
-        default="curiosity",
+        default="baseline",
         help="Name of the model to use. Can be baseline, curiosity, moa, moa_curiosity",
     )
     parser.add_argument(
@@ -30,13 +30,13 @@ def add_default_args(parser):
     parser.add_argument(
         "--sample_batch_size",
         type=int,
-        default=2,
+        default=1000,
         help="Size of samples taken from single workers, concatenated to size train_batch_size.",
     )
     parser.add_argument(
         "--train_batch_size",
         type=int,
-        default=2,
+        default=1000,
         help="Size of the total dataset over which one epoch is computed.",
     )
     parser.add_argument(
