@@ -15,7 +15,7 @@ from algorithms.a3c_baseline import build_a3c_baseline_trainer_with_config
 from algorithms.impala_baseline import build_impala_baseline_trainer_with_config
 from algorithms.impala_causal import CausalImpalaTrainer
 from algorithms.ppo_baseline import build_ppo_baseline_trainer_with_config
-from algorithms.ppo_causal import CausalPPOMOATrainer
+from algorithms.ppo_causal import get_ppo_trainer
 from config.default_args import add_default_args
 from models.baseline_model import Baseline_LSTM
 from models.curiosity_model import CuriosityLSTM
@@ -194,7 +194,7 @@ if __name__ == "__main__":
         if args.algorithm == "A3C":
             trainer = get_a3c_trainer(args.model, config)
         if args.algorithm == "PPO":
-            trainer = CausalPPOMOATrainer
+            trainer = get_ppo_trainer(args.model, config)
         if args.algorithm == "IMPALA":
             trainer = CausalImpalaTrainer
 
