@@ -273,7 +273,7 @@ def extra_stats(policy, train_batch):
     base_stats = kl_and_loss_stats(policy, train_batch)
     base_stats["total_influence"] = train_batch["total_aux_reward"]
     base_stats["reward_without_influence"] = train_batch["reward_without_aux"]
-    base_stats["aux_loss"] = policy.moa_loss / policy.moa_weight
+    base_stats["aux_loss"] = policy.aux_loss * policy.aux_loss_weight
     return base_stats
 
 
