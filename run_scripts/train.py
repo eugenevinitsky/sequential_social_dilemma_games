@@ -14,8 +14,8 @@ from algorithms.a3c_aux import get_a3c_trainer
 from algorithms.a3c_baseline import build_a3c_baseline_trainer_with_config
 from algorithms.impala_baseline import build_impala_baseline_trainer_with_config
 from algorithms.impala_causal import CausalImpalaTrainer
+from algorithms.ppo_aux import get_ppo_trainer
 from algorithms.ppo_baseline import build_ppo_baseline_trainer_with_config
-from algorithms.ppo_causal import get_ppo_trainer
 from config.default_args import add_default_args
 from models.baseline_model import Baseline_LSTM
 from models.curiosity_model import CuriosityLSTM
