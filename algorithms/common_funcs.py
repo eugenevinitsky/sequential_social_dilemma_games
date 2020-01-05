@@ -13,7 +13,7 @@ class AuxScheduleMixIn(object):
         self.aux_reward_curriculum_steps = config["aux_reward_curriculum_steps"]
         self.aux_reward_curriculum_weights = config["aux_reward_curriculum_weights"]
         self.timestep = 0
-        self.cur_aux_reward_weight = self.compute_weight()
+        self.cur_aux_reward_weight = np.float32(self.compute_weight())
         # This tensor is for logging the weight to progress.csv
         self.cur_aux_reward_weight_tensor = tf.get_variable(
             "cur_aux_reward_weight", initializer=self.cur_aux_reward_weight, trainable=False,
