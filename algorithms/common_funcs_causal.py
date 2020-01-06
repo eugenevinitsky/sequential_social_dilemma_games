@@ -2,7 +2,6 @@ import sys
 
 import numpy as np
 import scipy
-from ray.rllib.agents.ppo.ppo_policy import kl_and_loss_stats
 from ray.rllib.models import ModelCatalog
 from ray.rllib.utils import try_import_tf
 
@@ -267,14 +266,6 @@ class ConfigInitializerMixIn(object):
         self.train_moa_only_when_visible = config["train_moa_only_when_visible"]
         self.influence_divergence_measure = config["influence_divergence_measure"]
         self.influence_only_when_visible = config["influence_only_when_visible"]
-
-
-def extra_stats(policy, train_batch):
-    base_stats = kl_and_loss_stats(policy, train_batch)
-    base_stats["total_influence"] = train_batch["total_aux_reward"]
-    base_stats["reward_without_influence"] = train_batch["reward_without_aux"]
-    base_stats["aux_loss"] = policy.aux_loss * policy.aux_loss_weight
-    return base_stats
 
 
 def build_model(policy, obs_space, action_space, config):
