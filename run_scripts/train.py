@@ -137,8 +137,8 @@ def setup(args):
             {
                 "return_agent_actions": True,
                 "influence_divergence_measure": "kl",
-                "train_moa_only_when_visible": tune.grid_search([True]),
-                "influence_only_when_visible": tune.grid_search([True]),
+                "train_moa_only_when_visible": True,
+                "influence_only_when_visible": True,
             }
         )
 
