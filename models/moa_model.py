@@ -87,11 +87,10 @@ class KerasRNN(RecurrentTFModelV2):
             value_out = tf.keras.layers.Dense(
                 1, name="value_out", activation=None, kernel_initializer=normc_initializer(0.01),
             )(lstm_out)
-            self.rnn_model = tf.keras.Model(
-                inputs=inputs, outputs=[logits, value_out, state_h, state_c]
-            )
+            outputs = [logits, value_out, state_h, state_c]
         else:
-            self.rnn_model = tf.keras.Model(inputs=inputs, outputs=[logits, state_h, state_c])
+            outputs = [logits, state_h, state_c]
+        self.rnn_model = tf.keras.Model(inputs=inputs, outputs=outputs)
 
     @override(RecurrentTFModelV2)
     def forward_rnn(self, input_dict, state, seq_lens):
