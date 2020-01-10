@@ -60,7 +60,9 @@ def add_default_args(parser):
     parser.add_argument(
         "--num_samples", type=int, default=1, help="Amount of times to repeat all experiments",
     )
-    parser.add_argument("--memory", type=int, default=int(2e9), help="Amount of total usable memory")
+    parser.add_argument(
+        "--memory", type=int, default=int(None), help="Amount of total usable memory"
+    )
     parser.add_argument(
         "--object_store_memory",
         type=int,
