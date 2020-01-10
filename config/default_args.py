@@ -139,23 +139,23 @@ def add_default_args(parser):
         "--lr",
         type=float,
         default=0.0001,
-        help="Default learning rate. Not used due to lr_curriculum, only exists for debugging.",
+        help="Default learning rate. Not used due to lr_schedule, only exists for debugging.",
     )
     parser.add_argument(
-        "--lr_curriculum_steps",
+        "--lr_schedule_steps",
         nargs="+",
         type=int,
         default=[0, int(2e7)],
         help="Amounts of environment steps at which the learning rate has a value specified in"
-        "--lr_curriculum_weights",
+        "--lr_schedule_weights",
     )
     parser.add_argument(
-        "--lr_curriculum_weights",
+        "--lr_schedule_weights",
         nargs="+",
         type=float,
         default=[0.001, 0.0001],
-        help="Values for the learning rate curriculum. Linearly interpolates using "
-        "--lr_curriculum_steps",
+        help="Values for the learning rate schedule. Linearly interpolates using "
+        "--lr_schedule_steps",
     )
 
     parser.add_argument("--entropy_coeff", type=float, default=0.001, help="Entropy reward weight.")
@@ -167,20 +167,20 @@ def add_default_args(parser):
         "--aux_reward_weight", type=float, default=0.001, help="The auxiliary reward weight.",
     )
     parser.add_argument(
-        "--aux_reward_curriculum_steps",
+        "--aux_reward_schedule_steps",
         nargs="+",
         type=int,
         default=[0, int(1e7), int(1e8)],
         help="Amounts of environment steps at which the aux reward has a value specified in"
-        "--aux_reward_curriculum_weights",
+        "--aux_reward_schedule_weights",
     )
     parser.add_argument(
-        "--aux_reward_curriculum_weights",
+        "--aux_reward_schedule_weights",
         nargs="+",
         type=float,
         default=[0, 1.0, 0.5],
-        help="Values for the aux reward curriculum. Linearly interpolates using "
-        "--aux_reward_curriculum_steps. The final value is"
+        help="Values for the aux reward schedule. Linearly interpolates using "
+        "--aux_reward_schedule_steps. The final value is"
         " --aux_reward_weight * interpolated_value",
     )
 

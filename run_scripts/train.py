@@ -95,7 +95,7 @@ def setup(args):
             "horizon": 1000,
             "gamma": 0.99,
             "lr": args.lr,
-            "lr_schedule": list(zip(args.lr_curriculum_steps, args.lr_curriculum_weights)),
+            "lr_schedule": list(zip(args.lr_schedule_steps, args.lr_schedule_weights)),
             "sample_batch_size": args.sample_batch_size,
             "train_batch_size": args.train_batch_size,
             "num_workers": num_workers,
@@ -127,8 +127,8 @@ def setup(args):
                 "aux_loss_weight": args.aux_loss_weight,
                 "aux_reward_clip": 10,
                 "aux_reward_weight": args.aux_reward_weight,
-                "aux_reward_curriculum_steps": args.aux_reward_curriculum_steps,
-                "aux_reward_curriculum_weights": args.aux_reward_curriculum_weights,
+                "aux_reward_schedule_steps": args.aux_reward_schedule_steps,
+                "aux_reward_schedule_weights": args.aux_reward_schedule_weights,
             }
         )
 

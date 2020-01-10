@@ -10,8 +10,8 @@ class AuxScheduleMixIn(object):
     def __init__(self, config):
         config = config["model"]["custom_options"]
         self.baseline_aux_reward_weight = config["aux_reward_weight"]
-        self.aux_reward_curriculum_steps = config["aux_reward_curriculum_steps"]
-        self.aux_reward_curriculum_weights = config["aux_reward_curriculum_weights"]
+        self.aux_reward_schedule_steps = config["aux_reward_schedule_steps"]
+        self.aux_reward_schedule_weights = config["aux_reward_schedule_weights"]
         self.timestep = 0
         self.cur_aux_reward_weight = np.float32(self.compute_weight())
         # This tensor is for logging the weight to progress.csv
@@ -28,9 +28,9 @@ class AuxScheduleMixIn(object):
 
     def compute_weight(self):
         """ Computes multiplier for aux reward based on training steps
-        taken and curriculum parameters.
+        taken and schedule parameters.
         """
         weight = np.interp(
-            self.timestep, self.aux_reward_curriculum_steps, self.aux_reward_curriculum_weights,
+            self.timestep, self.aux_reward_schedule_steps, self.aux_reward_schedule_weights,
         )
         return weight * self.baseline_aux_reward_weight

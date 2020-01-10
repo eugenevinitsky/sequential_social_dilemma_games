@@ -14,10 +14,10 @@ python train.py \
 --num_gpus 4 \
 --use_gpu_for_driver \
 --num_samples 1 \
---lr_curriculum_steps 0 20000000 \
---lr_curriculum_weights 0.00126 0.000012 \
+--lr_schedule_steps 0 20000000 \
+--lr_schedule_weights 0.00126 0.000012 \
 --entropy_coeff 0.00176 \
 --aux_loss_weight 0.06663557 \
 --aux_reward_weight 1.0 \
---aux_reward_curriculum_steps 0 10000000 100000000 300000000 \
---aux_reward_curriculum_weights 0.0 0.0 1.0 0.5
+--aux_reward_schedule_steps 0 10000000 100000000 300000000 \
+--aux_reward_schedule_weights 0.0 0.0 1.0 0.5
