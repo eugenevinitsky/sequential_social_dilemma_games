@@ -12,7 +12,7 @@ python train.py \
 --num_cpus 12 \
 --num_gpus 4 \
 --use_gpu_for_driver \
---use_gpu_for_workers \
+--use_gpus_for_workers \
 --num_samples 1 \
 --num_envs_per_worker 2 \
 --lr_schedule_steps 0 \
