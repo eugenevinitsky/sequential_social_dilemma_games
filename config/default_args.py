@@ -71,26 +71,20 @@ def add_default_args(parser):
         "--redis_max_memory", type=int, default=None, help="Amount of memory for redis"
     )
 
-    parser.add_argument("--num_cpus", type=int, default=2, help="Number of available CPUs")
-    parser.add_argument("--num_gpus", type=int, default=0, help="Number of available GPUs")
+    parser.add_argument("--num_workers", type=int, default=2, help="Total number of workers")
     parser.add_argument(
-        "--use_gpus_for_workers",
-        action="store_true",
-        default=False,
-        help="Set to true to run workers on GPUs rather than CPUs",
+        "--cpus_for_driver", type=int, default=1, help="Number of CPUs used by the driver"
     )
     parser.add_argument(
-        "--use_gpu_for_driver",
-        action="store_true",
-        default=False,
-        help="Set to true to run driver on GPU rather than CPU.",
+        "--gpus_for_driver", type=int, default=0, help="Number of GPUs used by the driver"
     )
     parser.add_argument(
-        "--num_workers_per_device",
-        type=float,
-        default=1,
-        help="Number of workers to place on a single device (CPU or GPU)",
+        "--cpus_per_worker", type=int, default=1, help="Number of CPUs used by one worker"
     )
+    parser.add_argument(
+        "--gpus_per_worker", type=int, default=0, help="Number of GPUs used by one worker"
+    )
+
     parser.add_argument(
         "--num_envs_per_worker",
         type=float,

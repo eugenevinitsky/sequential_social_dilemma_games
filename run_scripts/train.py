@@ -65,20 +65,6 @@ def setup(args):
     if env_name == "switch_env":
         config["env_config"]["num_switches"] = args.num_switches
 
-    # Calculate device configurations
-    gpus_for_driver = int(args.use_gpu_for_driver)
-    cpus_for_driver = 1 - gpus_for_driver
-    if args.use_gpus_for_workers:
-        spare_gpus = args.num_gpus - gpus_for_driver
-        num_workers = int(spare_gpus * args.num_workers_per_device)
-        num_gpus_per_worker = spare_gpus / num_workers
-        num_cpus_per_worker = 0
-    else:
-        spare_cpus = args.num_cpus - cpus_for_driver
-        num_workers = int(spare_cpus * args.num_workers_per_device)
-        num_gpus_per_worker = 0
-        num_cpus_per_worker = spare_cpus / num_workers
-
     if args.small_model:
         conv_filters = [[3, [3, 3], 1]]
         fcnet_hiddens = [8, 8]
@@ -98,12 +84,12 @@ def setup(args):
             "lr_schedule": list(zip(args.lr_schedule_steps, args.lr_schedule_weights)),
             "sample_batch_size": args.sample_batch_size,
             "train_batch_size": args.train_batch_size,
-            "num_workers": num_workers,
+            "num_workers": args.num_workers,
             "num_envs_per_worker": args.num_envs_per_worker,
-            "num_gpus": gpus_for_driver,  # The number of GPUs for the driver
-            "num_cpus_for_driver": cpus_for_driver,
-            "num_gpus_per_worker": num_gpus_per_worker,  # Can be a fraction
-            "num_cpus_per_worker": num_cpus_per_worker,  # Can be a fraction
+            "num_gpus": args.gpus_for_driver,  # The number of GPUs for the driver
+            "num_cpus_for_driver": args.cpus_for_driver,
+            "num_gpus_per_worker": args.gpus_per_worker,  # Can be a fraction
+            "num_cpus_per_worker": args.cpus_per_worker,  # Can be a fraction
             "entropy_coeff": args.entropy_coeff,
             "grad_clip": args.grad_clip,
             "multiagent": {"policies": policy_graphs, "policy_mapping_fn": policy_mapping_fn},

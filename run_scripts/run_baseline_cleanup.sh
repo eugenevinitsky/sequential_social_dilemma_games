@@ -10,10 +10,11 @@ python train.py \
 --train_batch_size 12000 \
 --stop_at_timesteps_total $((500 * 10 ** 6)) \
 --memory $((50 * 10 ** 9)) \
---num_cpus 24 \
---num_gpus 4 \
---use_gpu_for_driver \
---use_gpus_for_workers \
+--num_workers 12 \
+--num_cpus_per_worker 1 \
+--num_gpus_per_worker 0.25 \
+--num_gpus_for_driver 1 \
+--num_cpus_for_driver 1 \
 --num_samples 1 \
 --num_envs_per_worker 4 \
 --lr_curriculum_steps 0 20000000 \
