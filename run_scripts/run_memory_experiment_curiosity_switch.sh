@@ -14,9 +14,9 @@ python train.py \
 --redis_max_memory $((1 * 10 ** 9)) \
 --num_envs_per_worker 8 \
 --num_workers 4 \
---num_cpus_per_worker 1 \
---num_gpus_per_worker 0.2 \
---num_gpus_for_driver 0.2 \
---num_cpus_for_driver 1 \
+--cpus_per_worker 1 \
+--gpus_per_worker 0.2 \
+--gpus_for_driver 0.2 \
+--cpus_for_driver 1 \
 --num_switches 6 \
 --num_samples 1
