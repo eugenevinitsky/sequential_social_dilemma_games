@@ -202,3 +202,11 @@ def add_default_args(parser):
         help="When --grid_search is provided, perform a grid search over these aux_reward_weight\
                                 parameters. Replaces --entropy_coeff.",
     )
+
+    # PPO parameters
+    parser.add_argument(
+        "--ppo_sgd_minibatch_size",
+        type=int,
+        default=4000,
+        help="Minibatch size for the stochastic gradient descent step in the PPO algorithm",
+    )

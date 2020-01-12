@@ -138,7 +138,13 @@ def setup(args):
         )
 
     if args.algorithm == "PPO":
-        config.update({"num_sgd_iter": 10, "sgd_minibatch_size": 500, "vf_loss_coeff": 1e-4})
+        config.update(
+            {
+                "num_sgd_iter": 10,
+                "sgd_minibatch_size": args.ppo_sgd_minibatch_size,
+                "vf_loss_coeff": 1e-4,
+            }
+        )
     elif args.algorithm == "A3C" or args.algorithm == "IMPALA":
         config.update({"vf_loss_coeff": 0.1})
     else:
