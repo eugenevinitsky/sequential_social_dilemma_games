@@ -175,7 +175,7 @@ class MapEnv(MultiAgentEnv):
             self.world_map[pos[0], pos[1]] = new_char
 
         # execute custom moves like firing
-        self.update_custom_moves(agent_actions)
+        n_cleaned_each_agent = self.update_custom_moves(agent_actions)
 
         # execute spawning events
         self.custom_map_update()
@@ -194,6 +194,7 @@ class MapEnv(MultiAgentEnv):
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
         dones["__all__"] = np.any(list(dones.values()))
+        info['n_cleaned_each_agent'] = n_cleaned_each_agent
         return observations, rewards, dones, info
 
     def reset(self):
@@ -520,13 +521,27 @@ class MapEnv(MultiAgentEnv):
                     break
 
     def update_custom_moves(self, agent_actions):
+        """Handles custom actions such as firing a beam.
+
+        Returns
+        -------
+        n_cleaned_each_agent: list(int)
+            number of waste cleaned by each agent
+        """
+        n_cleaned_each_agent = []
         for agent_id, action in agent_actions.items():
+            n_cleaned = 0
             # check its not a move based action
             if 'MOVE' not in action and 'STAY' not in action and 'TURN' not in action:
                 agent = self.agents[agent_id]
                 updates = self.custom_action(agent, action)
                 if len(updates) > 0:
                     self.update_map(updates)
+                    # count the number of cells that got replaced by 'R'
+                    for tup in updates:
+                        n_cleaned += 1 if tup[2] == 'R' else 0
+            n_cleaned_each_agent.append(n_cleaned)
+        return n_cleaned_each_agent
 
     def update_map(self, new_points):
         """For points in new_points, place desired char on the map"""
