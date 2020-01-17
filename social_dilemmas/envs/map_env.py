@@ -328,7 +328,8 @@ class MapEnv(MultiAgentEnv):
         rgb_arr = self.map_to_colors(map_with_agents)
         plt.imshow(rgb_arr, interpolation='nearest')
         if filename is None:
-            plt.show()
+            plt.draw()
+            plt.pause(0.1)
         else:
             plt.savefig(filename)
 
