@@ -1,7 +1,7 @@
 # Scheme heavily adapted from https://github.com/deepmind/pycolab/
 # '@' means "wall"
 # 'P' means "player" spawn point
-# 'A' means apply spawn point
+# 'A' means apple spawn point
 # ' ' is empty space
 
 HARVEST_MAP = [
