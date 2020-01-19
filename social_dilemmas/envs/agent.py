@@ -43,7 +43,7 @@ class Agent(object):
         self.col_size = col_size
         self.reward_this_turn = 0
         # Store this variable here so that it doesn't have to be re-initialized every step
-        self.rgb_arr = np.zeros((row_size * 2 + 1, col_size * 2 + 1, 3,), dtype=np.float32)
+        self.rgb_arr = np.zeros((row_size * 2 + 1, col_size * 2 + 1, 3,), dtype=np.uint8)
 
     @property
     def action_space(self):

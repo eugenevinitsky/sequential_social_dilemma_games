@@ -22,23 +22,23 @@ ACTIONS = {
 ORIENTATIONS = {"LEFT": [0, -1], "RIGHT": [0, 1], "UP": [-1, 0], "DOWN": [1, 0]}
 
 DEFAULT_COLOURS = {
-    " ": [0, 0, 0],  # Black background
-    "0": [0, 0, 0],  # Black background beyond map walls
-    "": [180, 180, 180],  # Grey board walls
-    "@": [180, 180, 180],  # Grey board walls
-    "A": [0, 255, 0],  # Green apples
-    "F": [255, 255, 0],  # Yellow fining beam
-    "P": [159, 67, 255],  # Purple player
+    " ": np.array([0, 0, 0], dtype=np.uint8),  # Black background
+    "0": np.array([0, 0, 0], dtype=np.uint8),  # Black background beyond map walls
+    "": np.array([180, 180, 180], dtype=np.uint8),  # Grey board walls
+    "@": np.array([180, 180, 180], dtype=np.uint8),  # Grey board walls
+    "A": np.array([0, 255, 0], dtype=np.uint8),  # Green apples
+    "F": np.array([255, 255, 0], dtype=np.uint8),  # Yellow fining beam
+    "P": np.array([159, 67, 255], dtype=np.uint8),  # Purple player
     # Colours for agents. R value is a unique identifier
-    "1": [0, 0, 255],  # Pure blue
-    "2": [2, 81, 154],  # Sky blue
-    "3": [204, 0, 204],  # Magenta
-    "4": [216, 30, 54],  # Red
-    "5": [254, 151, 0],  # Orange
-    "6": [100, 255, 255],  # Cyan
-    "7": [99, 99, 255],  # Lavender
-    "8": [250, 204, 255],  # Pink
-    "9": [238, 223, 16],
+    "1": np.array([0, 0, 255], dtype=np.uint8),  # Pure blue
+    "2": np.array([2, 81, 154], dtype=np.uint8),  # Sky blue
+    "3": np.array([204, 0, 204], dtype=np.uint8),  # Magenta
+    "4": np.array([216, 30, 54], dtype=np.uint8),  # Red
+    "5": np.array([254, 151, 0], dtype=np.uint8),  # Orange
+    "6": np.array([100, 255, 255], dtype=np.uint8),  # Cyan
+    "7": np.array([99, 99, 255], dtype=np.uint8),  # Lavender
+    "8": np.array([250, 204, 255], dtype=np.uint8),  # Pink
+    "9": np.array([238, 223, 16], dtype=np.uint8),
 }  # Yellow
 
 # the axes look like this when printed out
@@ -197,12 +197,11 @@ class MapEnv(MultiAgentEnv):
             agent.full_map = map_with_agents
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map, agent.rgb_arr)
             rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
-            rgb_arr = (rgb_arr - 128.00) / 128.0
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 prev_actions = np.array(
                     [actions[key] for key in sorted(actions.keys()) if key != agent.agent_id]
-                ).astype(np.int64)
+                ).astype(np.uint8)
                 observations[agent.agent_id] = {
                     "curr_obs": rgb_arr,
                     "other_agent_actions": prev_actions,
@@ -240,11 +239,10 @@ class MapEnv(MultiAgentEnv):
         for agent in self.agents.values():
             agent.full_map = map_with_agents
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map, agent.rgb_arr)
-            rgb_arr = (rgb_arr - 128.0) / 128.0
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 # No previous actions so just pass in zeros
-                prev_actions = np.array([0 for _ in range(self.num_agents - 1)]).astype(np.int64)
+                prev_actions = np.array([0 for _ in range(self.num_agents - 1)]).astype(np.uint8)
                 observations[agent.agent_id] = {
                     "curr_obs": rgb_arr,
                     "other_agent_actions": prev_actions,
@@ -622,7 +620,7 @@ class MapEnv(MultiAgentEnv):
         ----------
         firing_pos: (list)
             the row, col from which the beam is fired
-        firing_orientation: (list)
+        firing_orientation: (string)
             the direction the beam is to be fired in
         fire_len: (int)
             the number of cells forward to fire
@@ -823,7 +821,8 @@ class MapEnv(MultiAgentEnv):
                 if (lower_lim <= agent_tup[0] <= upper_lim and left_lim <= agent_tup[1] <= right_lim)
                 else 0
                 for agent_tup in other_agent_pos
-            ]
+            ],
+            dtype=np.uint8,
         )
 
     @staticmethod

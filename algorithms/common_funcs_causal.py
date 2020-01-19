@@ -56,7 +56,7 @@ class MOALoss(object):
 
         # # Remove first agent (self) and first action, because we want to predict
         # # the t+1 actions of other agents from all actions at t.
-        true_actions = tf.cast(true_actions[1:, 1:], tf.int32)  # [B, N]
+        true_actions = tf.cast(true_actions[1:, 1:], tf.uint8)  # [B, N]
 
         # Compute softmax cross entropy
         self.ce_per_entry = tf.nn.sparse_softmax_cross_entropy_with_logits(

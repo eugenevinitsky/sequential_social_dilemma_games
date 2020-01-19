@@ -35,25 +35,25 @@ class HarvestEnv(MapEnv):
             return Dict(
                 {
                     "curr_obs": Box(
-                        low=-np.infty,
-                        high=np.infty,
+                        low=0,
+                        high=255,
                         shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
-                        dtype=np.float32,
+                        dtype=np.uint8,
                     ),
                     "other_agent_actions": Box(
-                        low=0, high=len(ACTIONS), shape=(self.num_agents - 1,), dtype=np.int32,
+                        low=0, high=len(ACTIONS), shape=(self.num_agents - 1,), dtype=np.uint8,
                     ),
                     "visible_agents": Box(
-                        low=0, high=self.num_agents, shape=(self.num_agents - 1,), dtype=np.int32,
+                        low=0, high=self.num_agents, shape=(self.num_agents - 1,), dtype=np.uint8,
                     ),
                 }
             )
         else:
             return Box(
-                low=0.0,
-                high=0.0,
+                low=0,
+                high=255,
                 shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
-                dtype=np.float32,
+                dtype=np.uint8,
             )
 
     @property
