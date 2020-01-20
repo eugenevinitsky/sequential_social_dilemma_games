@@ -22,23 +22,23 @@ ACTIONS = {
 ORIENTATIONS = {"LEFT": [0, -1], "RIGHT": [0, 1], "UP": [-1, 0], "DOWN": [1, 0]}
 
 DEFAULT_COLOURS = {
-    " ": np.array([0, 0, 0], dtype=np.uint8),  # Black background
-    "0": np.array([0, 0, 0], dtype=np.uint8),  # Black background beyond map walls
-    "": np.array([180, 180, 180], dtype=np.uint8),  # Grey board walls
-    "@": np.array([180, 180, 180], dtype=np.uint8),  # Grey board walls
-    "A": np.array([0, 255, 0], dtype=np.uint8),  # Green apples
-    "F": np.array([255, 255, 0], dtype=np.uint8),  # Yellow fining beam
-    "P": np.array([159, 67, 255], dtype=np.uint8),  # Purple player
+    b" ": np.array([0, 0, 0], dtype=np.uint8),  # Black background
+    b"0": np.array([0, 0, 0], dtype=np.uint8),  # Black background beyond map walls
+    b"": np.array([180, 180, 180], dtype=np.uint8),  # Grey board walls
+    b"@": np.array([180, 180, 180], dtype=np.uint8),  # Grey board walls
+    b"A": np.array([0, 255, 0], dtype=np.uint8),  # Green apples
+    b"F": np.array([255, 255, 0], dtype=np.uint8),  # Yellow fining beam
+    b"P": np.array([159, 67, 255], dtype=np.uint8),  # Purple player
     # Colours for agents. R value is a unique identifier
-    "1": np.array([0, 0, 255], dtype=np.uint8),  # Pure blue
-    "2": np.array([2, 81, 154], dtype=np.uint8),  # Sky blue
-    "3": np.array([204, 0, 204], dtype=np.uint8),  # Magenta
-    "4": np.array([216, 30, 54], dtype=np.uint8),  # Red
-    "5": np.array([254, 151, 0], dtype=np.uint8),  # Orange
-    "6": np.array([100, 255, 255], dtype=np.uint8),  # Cyan
-    "7": np.array([99, 99, 255], dtype=np.uint8),  # Lavender
-    "8": np.array([250, 204, 255], dtype=np.uint8),  # Pink
-    "9": np.array([238, 223, 16], dtype=np.uint8),
+    b"1": np.array([0, 0, 255], dtype=np.uint8),  # Pure blue
+    b"2": np.array([2, 81, 154], dtype=np.uint8),  # Sky blue
+    b"3": np.array([204, 0, 204], dtype=np.uint8),  # Magenta
+    b"4": np.array([216, 30, 54], dtype=np.uint8),  # Red
+    b"5": np.array([254, 151, 0], dtype=np.uint8),  # Orange
+    b"6": np.array([100, 255, 255], dtype=np.uint8),  # Cyan
+    b"7": np.array([99, 99, 255], dtype=np.uint8),  # Lavender
+    b"8": np.array([250, 204, 255], dtype=np.uint8),  # Pink
+    b"9": np.array([238, 223, 16], dtype=np.uint8),
 }  # Yellow
 
 # the axes look like this when printed out
@@ -83,7 +83,9 @@ class MapEnv(MultiAgentEnv):
         if self.return_agent_actions:
             self.prev_actions = defaultdict(lambda: [0] * self.num_agents)
         # map without agents or beams
-        self.world_map = np.full((len(self.base_map), len(self.base_map[0])), " ")
+        self.world_map = np.full(
+            (len(self.base_map), len(self.base_map[0])), fill_value=b" ", dtype="c"
+        )
         self.beam_pos = []
 
         self.agents = {}
@@ -96,9 +98,9 @@ class MapEnv(MultiAgentEnv):
         self.wall_points = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
-                if self.base_map[row, col] == "P":
+                if self.base_map[row, col] == b"P":
                     self.spawn_points.append([row, col])
-                elif self.base_map[row, col] == "@":
+                elif self.base_map[row, col] == b"@":
                     self.wall_points.append([row, col])
         self.setup_agents()
 
@@ -144,7 +146,7 @@ class MapEnv(MultiAgentEnv):
             numpy array describing the map with ' ' indicating an empty space
         """
 
-        arr = np.full((len(ascii_list), len(ascii_list[0])), " ")
+        arr = np.full((len(ascii_list), len(ascii_list[0])), b" ", dtype="c")
         for row in range(arr.shape[0]):
             for col in range(arr.shape[1]):
                 arr[row, col] = ascii_list[row][col]
@@ -278,7 +280,7 @@ class MapEnv(MultiAgentEnv):
             ):
                 continue
 
-            grid[agent.pos[0], agent.pos[1]] = "P"
+            grid[agent.pos[0], agent.pos[1]] = b"P"
 
         for beam_pos in self.beam_pos:
             grid[beam_pos[0], beam_pos[1]] = beam_pos[2]
@@ -295,7 +297,7 @@ class MapEnv(MultiAgentEnv):
         grid = np.copy(self.world_map)
 
         for agent_id, agent in self.agents.items():
-            char_id = str(int(agent_id[-1]) + 1)
+            char_id = bytes(str(int(agent_id[-1]) + 1), encoding="ascii")
 
             # If agent is not within map, skip.
             if not (
@@ -321,7 +323,7 @@ class MapEnv(MultiAgentEnv):
 
         # check for multiple agents
         for i in range(self.num_agents):
-            if count_dict[str(i + 1)] != 1:
+            if count_dict[chr(i + 1)] != 1:
                 print("Error! Wrong number of agent", i, "in map!")
                 return False
         return True
@@ -400,7 +402,7 @@ class MapEnv(MultiAgentEnv):
                 new_pos = agent.get_pos() + rot_action
                 # allow the agents to confirm what position they can move to
                 new_pos = agent.return_valid_pos(new_pos)
-                reserved_slots.append((*new_pos, "P", agent_id))
+                reserved_slots.append((*new_pos, b"P", agent_id))
             elif "TURN" in action:
                 new_rot = self.update_rotation(action, agent.get_orientation())
                 agent.update_agent_rot(new_rot)
@@ -419,7 +421,7 @@ class MapEnv(MultiAgentEnv):
 
         for slot in reserved_slots:
             row, col = slot[0], slot[1]
-            if slot[2] == "P":
+            if slot[2] == b"P":
                 agent_id = slot[3]
                 agent_moves[agent_id] = [row, col]
                 move_slots.append([row, col])
@@ -587,7 +589,7 @@ class MapEnv(MultiAgentEnv):
 
     def reset_map(self):
         """Resets the map to be empty as well as a custom reset set by subclasses"""
-        self.world_map = np.full((len(self.base_map), len(self.base_map[0])), " ")
+        self.world_map = np.full((len(self.base_map), len(self.base_map[0])), b" ", dtype="c")
         self.build_walls()
         self.custom_reset()
 
@@ -599,7 +601,7 @@ class MapEnv(MultiAgentEnv):
         fire_char,
         cell_types=[],
         update_char=[],
-        blocking_cells="P",
+        blocking_cells=b"P",
         beam_width=3,
     ):
         """From a firing position, fire a beam that may clean or hit agents
@@ -659,7 +661,7 @@ class MapEnv(MultiAgentEnv):
             for i in range(fire_len):
                 if (
                     self.test_if_in_bounds(next_cell)
-                    and self.world_map[next_cell[0], next_cell[1]] != "@"
+                    and self.world_map[next_cell[0], next_cell[1]] != b"@"
                 ):
 
                     # FIXME(ev) code duplication
@@ -737,7 +739,7 @@ class MapEnv(MultiAgentEnv):
     def build_walls(self):
         for i in range(len(self.wall_points)):
             row, col = self.wall_points[i]
-            self.world_map[row, col] = "@"
+            self.world_map[row, col] = b"@"
 
     ########################################
     # Utility methods, move these eventually

@@ -23,7 +23,7 @@ class HarvestEnv(MapEnv):
         self.apple_points = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
-                if self.base_map[row, col] == "A":
+                if self.base_map[row, col] == b"A":
                     self.apple_points.append([row, col])
 
         self.view_len = HARVEST_VIEW_SIZE
@@ -74,12 +74,12 @@ class HarvestEnv(MapEnv):
     def custom_reset(self):
         """Initialize the walls and the apples"""
         for apple_point in self.apple_points:
-            self.world_map[apple_point[0], apple_point[1]] = "A"
+            self.world_map[apple_point[0], apple_point[1]] = b"A"
 
     def custom_action(self, agent, action):
-        agent.fire_beam("F")
+        agent.fire_beam(b"F")
         updates = self.update_map_fire(
-            agent.get_pos().tolist(), agent.get_orientation(), ACTIONS["FIRE"], fire_char="F",
+            agent.get_pos().tolist(), agent.get_orientation(), ACTIONS["FIRE"], fire_char=b"F",
         )
         return updates
 
@@ -102,7 +102,7 @@ class HarvestEnv(MapEnv):
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
             # apples can't spawn where agents are standing or where an apple already is
-            if [row, col] not in self.agent_pos and self.world_map[row, col] != "A":
+            if [row, col] not in self.agent_pos and self.world_map[row, col] != b"A":
                 num_apples = 0
                 for j in range(-APPLE_RADIUS, APPLE_RADIUS + 1):
                     for k in range(-APPLE_RADIUS, APPLE_RADIUS + 1):
@@ -113,18 +113,18 @@ class HarvestEnv(MapEnv):
                                 and self.world_map.shape[1] > y + k >= 0
                             ):
                                 symbol = self.world_map[x + j, y + k]
-                                if symbol == "A":
+                                if symbol == b"A":
                                     num_apples += 1
 
                 spawn_prob = SPAWN_PROB[min(num_apples, 3)]
                 rand_num = np.random.rand(1)[0]
                 if rand_num < spawn_prob:
-                    new_apple_points.append((row, col, "A"))
+                    new_apple_points.append((row, col, b"A"))
         return new_apple_points
 
     def count_apples(self, window):
         # compute how many apples are in window
         unique, counts = np.unique(window, return_counts=True)
         counts_dict = dict(zip(unique, counts))
-        num_apples = counts_dict.get("A", 0)
+        num_apples = counts_dict.get(b"A", 0)
         return num_apples

@@ -110,7 +110,7 @@ class Agent(object):
         new_row, new_col = ego_new_pos
         # You can't walk through walls, closed doors or switches
         temp_pos = new_pos.copy()
-        if self.full_map[new_row, new_col] in ["@", "D", "s", "S"]:
+        if self.full_map[new_row, new_col] in [b"@", b"D", b"s", b"S"]:
             temp_pos = self.get_pos()
         return temp_pos
 
@@ -129,7 +129,7 @@ class Agent(object):
         new_row, new_col = ego_new_pos
         # You can't walk through walls, closed doors or switches
         temp_pos = new_pos.copy()
-        if self.full_map[new_row, new_col] in ["@", "D", "s", "S"]:
+        if self.full_map[new_row, new_col] in [b"@", b"D", b"s", b"S"]:
             temp_pos = self.get_pos()
         self.set_pos(temp_pos)
         # TODO(ev) list array consistency

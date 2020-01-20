@@ -12,10 +12,10 @@ ACTIONS["TOGGLE_SWITCH"] = 1  # length of firing range
 
 # Custom colour dictionary
 SWITCH_COLORS = {
-    "D": [180, 180, 180],  # Grey closed door - same color as walls
-    "d": [255, 255, 255],  # White opened door
-    "S": [0, 255, 0],  # Green turned-on switch
-    "s": [255, 0, 0],
+    b"D": np.array([180, 180, 180], dtype=np.uint8),  # Grey closed door - same color as walls
+    b"d": np.array([255, 255, 255], dtype=np.uint8),  # White opened door
+    b"S": np.array([0, 255, 0], dtype=np.uint8),  # Green turned-on switch
+    b"s": np.array([255, 0, 0], dtype=np.uint8),
 }  # Red turned-off switch
 
 GIVE_EXTERNAL_SWITCH_REWARD = int(False)
@@ -47,13 +47,13 @@ class SwitchEnv(MapEnv):
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
                 current_char = self.base_map[row, col]
-                if current_char in ["s", "S", "d", "D"]:
+                if current_char in [b"s", b"S", b"d", b"D"]:
                     self.initial_map_state[row, col] = current_char
                 # Remember switch/door locations for faster access
-                if current_char in ["s", "S"]:
+                if current_char in [b"s", b"S"]:
                     self.switch_locations.append((row, col))
                     self.switch_count += 1
-                if current_char in ["d", "D"]:
+                if current_char in [b"d", b"D"]:
                     self.door_locations.append((row, col))
 
         self.color_map.update(SWITCH_COLORS)
@@ -160,14 +160,14 @@ class SwitchEnv(MapEnv):
         self.total_successes = 0
 
     def custom_action(self, agent, action):
-        agent.fire_beam("F")
+        agent.fire_beam(b"F")
         updates = self.update_map_fire(
             agent.get_pos().tolist(),
             agent.get_orientation(),
             fire_len=ACTIONS["TOGGLE_SWITCH"],
-            fire_char="F",
-            cell_types=["s", "S"],
-            update_char=["S", "s"],
+            fire_char=b"F",
+            cell_types=[b"s", b"S"],
+            update_char=[b"S", b"s"],
             beam_width=1,
         )
         return updates
@@ -175,7 +175,7 @@ class SwitchEnv(MapEnv):
     def custom_map_update(self):
         activated_switch_count = 0
         for row, col in self.switch_locations:
-            if self.world_map[row, col] == "S":
+            if self.world_map[row, col] == b"S":
                 activated_switch_count += 1
 
         switch_difference = activated_switch_count - self.prev_activated_switch_count
@@ -187,7 +187,7 @@ class SwitchEnv(MapEnv):
 
         # Open doors if all switches have been activated
         open_doors = activated_switch_count == self.switch_count
-        door_char = "d" if open_doors else "D"
+        door_char = b"d" if open_doors else b"D"
         updates = []
         for row, col in self.door_locations:
             updates.append((row, col, door_char))
@@ -208,7 +208,7 @@ class SwitchEnv(MapEnv):
         # Testing function
         unique, counts = np.unique(window, return_counts=True)
         counts_dict = dict(zip(unique, counts))
-        num_switches = counts_dict.get("S", 0)
+        num_switches = counts_dict.get(b"S", 0)
         return num_switches
 
     @staticmethod

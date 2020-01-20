@@ -13,10 +13,10 @@ ACTIONS["CLEAN"] = 5  # length of cleanup beam
 
 # Custom colour dictionary
 CLEANUP_COLORS = {
-    "C": [100, 255, 255],  # Cyan cleaning beam
-    "S": [113, 75, 24],  # Light grey-blue stream cell
-    "H": [99, 156, 194],  # brown waste cells
-    "R": [113, 75, 24],
+    b"C": np.array([100, 255, 255], dtype=np.uint8),  # Cyan cleaning beam
+    b"S": np.array([113, 75, 24], dtype=np.uint8),  # Light grey-blue stream cell
+    b"H": np.array([99, 156, 194], dtype=np.uint8),  # brown waste cells
+    b"R": np.array([113, 75, 24], dtype=np.uint8),
 }  # Light grey-blue river cell
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
@@ -38,7 +38,7 @@ class CleanupEnv(MapEnv):
         # compute potential waste area
         unique, counts = np.unique(self.base_map, return_counts=True)
         counts_dict = dict(zip(unique, counts))
-        self.potential_waste_area = counts_dict.get("H", 0) + counts_dict.get("R", 0)
+        self.potential_waste_area = counts_dict.get(b"H", 0) + counts_dict.get(b"R", 0)
         self.current_apple_spawn_prob = appleRespawnProbability
         self.current_waste_spawn_prob = wasteSpawnProbability
         self.compute_probabilities()
@@ -51,17 +51,17 @@ class CleanupEnv(MapEnv):
         self.stream_points = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
-                if self.base_map[row, col] == "P":
+                if self.base_map[row, col] == b"P":
                     self.spawn_points.append([row, col])
-                elif self.base_map[row, col] == "B":
+                elif self.base_map[row, col] == b"B":
                     self.apple_points.append([row, col])
-                elif self.base_map[row, col] == "S":
+                elif self.base_map[row, col] == b"S":
                     self.stream_points.append([row, col])
-                if self.base_map[row, col] == "H":
+                if self.base_map[row, col] == b"H":
                     self.waste_start_points.append([row, col])
-                if self.base_map[row, col] == "H" or self.base_map[row, col] == "R":
+                if self.base_map[row, col] in [b"H", b"R"]:
                     self.waste_points.append([row, col])
-                if self.base_map[row, col] == "R":
+                if self.base_map[row, col] == b"R":
                     self.river_points.append([row, col])
 
         self.color_map.update(CLEANUP_COLORS)
@@ -103,31 +103,31 @@ class CleanupEnv(MapEnv):
     def custom_reset(self):
         """Initialize the walls and the waste"""
         for waste_start_point in self.waste_start_points:
-            self.world_map[waste_start_point[0], waste_start_point[1]] = "H"
+            self.world_map[waste_start_point[0], waste_start_point[1]] = b"H"
         for river_point in self.river_points:
-            self.world_map[river_point[0], river_point[1]] = "R"
+            self.world_map[river_point[0], river_point[1]] = b"R"
         for stream_point in self.stream_points:
-            self.world_map[stream_point[0], stream_point[1]] = "S"
+            self.world_map[stream_point[0], stream_point[1]] = b"S"
         self.compute_probabilities()
 
     def custom_action(self, agent, action):
         """Allows agents to take actions that are not move or turn"""
         updates = []
         if action == "FIRE":
-            agent.fire_beam("F")
+            agent.fire_beam(b"F")
             updates = self.update_map_fire(
-                agent.get_pos().tolist(), agent.get_orientation(), ACTIONS["FIRE"], fire_char="F",
+                agent.get_pos().tolist(), agent.get_orientation(), ACTIONS["FIRE"], fire_char=b"F",
             )
         elif action == "CLEAN":
-            agent.fire_beam("C")
+            agent.fire_beam(b"C")
             updates = self.update_map_fire(
                 agent.get_pos().tolist(),
                 agent.get_orientation(),
                 ACTIONS["FIRE"],
-                fire_char="C",
-                cell_types=["H"],
-                update_char=["R"],
-                blocking_cells=["H"],
+                fire_char=b"C",
+                cell_types=[b"H"],
+                update_char=[b"R"],
+                blocking_cells=[b"H"],
             )
         return updates
 
