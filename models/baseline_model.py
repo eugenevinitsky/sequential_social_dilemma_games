@@ -7,7 +7,7 @@ from ray.rllib.policy.rnn_sequencing import add_time_dimension
 from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.annotations import override
 
-from models.curiosity_model import KerasRNN
+from models.lstm import KerasRNN
 
 tf = try_import_tf()
 
