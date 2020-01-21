@@ -16,17 +16,17 @@ from social_dilemmas.envs.switch import SwitchEnv
 
 
 class Controller(object):
-    def __init__(self, env_name="cleanup"):
-        self.env_name = env_name
-        if env_name == "harvest":
+    def __init__(self, args):
+        self.env_name = args.env
+        if self.env_name == "harvest":
             print("Initializing Harvest environment")
             self.env = HarvestEnv(num_agents=5, render=True)
-        elif env_name == "cleanup":
+        elif self.env_name == "cleanup":
             print("Initializing Cleanup environment")
             self.env = CleanupEnv(num_agents=5, render=True)
-        elif env_name == "switch":
+        elif self.env_name == "switch":
             print("Initializing Switch environment")
-            self.env = SwitchEnv(num_agents=1, render=True)
+            self.env = SwitchEnv(args, num_agents=1, render=True)
         else:
             print("Error! Not a valid environment type")
             return
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     add_default_args(parser)
     args = parser.parse_args()
-    c = Controller(env_name=args.env)
+    c = Controller(args)
     c.render_rollout(
-        path="rollout.mp4", horizon=1000, render_type="pretty", fps=60,
+        path="rollout", horizon=100, render_type="pretty", fps=60,
     )
