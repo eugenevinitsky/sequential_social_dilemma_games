@@ -54,7 +54,6 @@ def make_video_from_rgb_imgs(
         video.write(image)
 
     video.release()
-    cv2.destroyAllWindows()
 
 
 def return_view(grid, pos, row_size, col_size):
