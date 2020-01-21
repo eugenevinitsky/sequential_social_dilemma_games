@@ -158,10 +158,10 @@ class CleanupEnv(MapEnv):
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
             # don't spawn apples where agents already are
-            if [row, col] not in self.agent_pos and self.world_map[row, col] != "A":
+            if [row, col] not in self.agent_pos and self.world_map[row, col] != b"A":
                 rand_num = np.random.rand(1)[0]
                 if rand_num < self.current_apple_spawn_prob:
-                    spawn_points.append((row, col, "A"))
+                    spawn_points.append((row, col, b"A"))
 
         # spawn one waste point, only one can spawn per step
         if not np.isclose(self.current_waste_spawn_prob, 0):
@@ -169,10 +169,10 @@ class CleanupEnv(MapEnv):
             for i in range(len(self.waste_points)):
                 row, col = self.waste_points[i]
                 # don't spawn waste where it already is
-                if self.world_map[row, col] != "H":
+                if self.world_map[row, col] != b"H":
                     rand_num = np.random.rand(1)[0]
                     if rand_num < self.current_waste_spawn_prob:
-                        spawn_points.append((row, col, "H"))
+                        spawn_points.append((row, col, b"H"))
                         break
         return spawn_points
 
@@ -199,6 +199,6 @@ class CleanupEnv(MapEnv):
         """How many cells can we spawn waste on?"""
         unique, counts = np.unique(self.world_map, return_counts=True)
         counts_dict = dict(zip(unique, counts))
-        current_area = counts_dict.get("H", 0)
+        current_area = counts_dict.get(b"H", 0)
         free_area = self.potential_waste_area - current_area
         return free_area
