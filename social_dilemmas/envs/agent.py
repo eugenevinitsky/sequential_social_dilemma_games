@@ -165,11 +165,11 @@ class HarvestAgent(Agent):
         return HARVEST_ACTIONS[action_number]
 
     def hit(self, char):
-        if char == "F":
+        if char == b"F":
             self.reward_this_turn -= 50
 
     def fire_beam(self, char):
-        if char == "F":
+        if char == b"F":
             self.reward_this_turn -= 1
 
     def get_done(self):
@@ -177,9 +177,9 @@ class HarvestAgent(Agent):
 
     def consume(self, char):
         """Defines how an agent interacts with the char it is standing on"""
-        if char == "A":
+        if char == b"A":
             self.reward_this_turn += 1
-            return " "
+            return b" "
         else:
             return char
 
@@ -203,21 +203,21 @@ class CleanupAgent(Agent):
         return CLEANUP_ACTIONS[action_number]
 
     def fire_beam(self, char):
-        if char == "F":
+        if char == b"F":
             self.reward_this_turn -= 1
 
     def get_done(self):
         return False
 
     def hit(self, char):
-        if char == "F":
+        if char == b"F":
             self.reward_this_turn -= 50
 
     def consume(self, char):
         """Defines how an agent interacts with the char it is standing on"""
-        if char == "A":
+        if char == b"A":
             self.reward_this_turn += 1
-            return " "
+            return b" "
         else:
             return char
 
@@ -244,7 +244,7 @@ class SwitchAgent(Agent):
     def fire_beam(self, char):
         # Cost of firing a switch beam
         # Nothing for now.
-        if char == "F":
+        if char == b"F":
             self.reward_this_turn += 0
 
     def get_done(self):
@@ -252,9 +252,9 @@ class SwitchAgent(Agent):
 
     def consume(self, char):
         """Defines how an agent interacts with the char it is standing on"""
-        if char == "d":
+        if char == b"d":
             self.reward_this_turn += 1
             self.is_done = True
-            return " "
+            return b" "
         else:
             return char
