@@ -25,8 +25,11 @@ appleRespawnProbability = 0.05
 
 class CleanupEnv(MapEnv):
 
-    def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False):
-        super().__init__(ascii_map, num_agents, render)
+    def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False,
+                 shuffle_spawn=False, global_ref_point=None):
+        self.global_ref_point = global_ref_point
+        super().__init__(ascii_map, num_agents, render,
+                         shuffle_spawn=shuffle_spawn)
 
         # compute potential waste area
         unique, counts = np.unique(self.base_map, return_counts=True)
@@ -115,7 +118,8 @@ class CleanupEnv(MapEnv):
             # grid = util.return_view(map_with_agents, spawn_point,
             #                         CLEANUP_VIEW_SIZE, CLEANUP_VIEW_SIZE)
             # agent = CleanupAgent(agent_id, spawn_point, rotation, grid)
-            agent = CleanupAgent(agent_id, spawn_point, rotation, map_with_agents)
+            agent = CleanupAgent(agent_id, spawn_point, rotation, map_with_agents,
+                                 global_ref_point=self.global_ref_point)
             self.agents[agent_id] = agent
 
     def spawn_apples_and_waste(self):

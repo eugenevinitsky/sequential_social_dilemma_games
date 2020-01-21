@@ -58,7 +58,8 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
 
 class MapEnv(MultiAgentEnv):
 
-    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None):
+    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None,
+                 shuffle_spawn=False):
         """
 
         Parameters
@@ -78,6 +79,7 @@ class MapEnv(MultiAgentEnv):
         # map without agents or beams
         self.world_map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.beam_pos = []
+        self.shuffle_spawn = shuffle_spawn
 
         self.agents = {}
 
@@ -646,7 +648,8 @@ class MapEnv(MultiAgentEnv):
         spawn_index = 0
         is_free_cell = False
         curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
-        random.shuffle(self.spawn_points)
+        if self.shuffle_spawn:
+            random.shuffle(self.spawn_points)
         for i, spawn_point in enumerate(self.spawn_points):
             if [spawn_point[0], spawn_point[1]] not in curr_agent_pos:
                 spawn_index = i
