@@ -35,31 +35,31 @@ BASE_MAP_1 = [
 ]
 TEST_MAP_1 = np.array(
     [
-        ["@"] * 7,
-        ["@"] + [" "] * 5 + ["@"],
-        ["@"] + [" "] * 5 + ["@"],
-        ["@"] + [" "] * 5 + ["@"],
-        ["@"] + [" "] * 5 + ["@"],
-        ["@"] + [" "] * 5 + ["@"],
-        ["@"] * 7,
+        [b"@"] * 7,
+        [b"@"] + [b" "] * 5 + [b"@"],
+        [b"@"] + [b" "] * 5 + [b"@"],
+        [b"@"] + [b" "] * 5 + [b"@"],
+        [b"@"] + [b" "] * 5 + [b"@"],
+        [b"@"] + [b" "] * 5 + [b"@"],
+        [b"@"] * 7,
     ]
 )
 
 FIRE_RANGE_MAP = np.array(
     [
-        ["@"] * 13,
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] + [" "] * 11 + ["@"],
-        ["@"] * 13,
+        [b"@"] * 13,
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] + [b" "] * 11 + [b"@"],
+        [b"@"] * 13,
     ]
 )
 
@@ -67,12 +67,12 @@ FIRE_RANGE_MAP = np.array(
 BASE_MAP_2 = ["@@@@@@", "@ P  @", "@    @", "@    @", "@   P@", "@@@@@@"]
 TEST_MAP_2 = np.array(
     [
-        ["@"] * 6,
-        ["@"] + [" "] * 4 + ["@"],
-        ["@"] + [" "] * 4 + ["@"],
-        ["@"] + [" "] * 4 + ["@"],
-        ["@"] + [" "] * 2 + ["A"] + [" "] + ["@"],
-        ["@"] * 6,
+        [b"@"] * 6,
+        [b"@"] + [b" "] * 4 + [b"@"],
+        [b"@"] + [b" "] * 4 + [b"@"],
+        [b"@"] + [b" "] * 4 + [b"@"],
+        [b"@"] + [b" "] * 2 + [b"A"] + [b" "] + [b"@"],
+        [b"@"] * 6,
     ]
 )
 
@@ -187,15 +187,15 @@ class TestMapEnv(unittest.TestCase):
         """Check that the spawned map and base map have walls in the right place"""
         self.env = DummyMapEnv(BASE_MAP_1, num_agents=0)
         self.env.reset()
-        np.testing.assert_array_equal(self.env.base_map[0, :], np.array(["@"] * 7))
-        np.testing.assert_array_equal(self.env.base_map[-1, :], np.array(["@"] * 7))
-        np.testing.assert_array_equal(self.env.base_map[:, 0], np.array(["@"] * 7))
-        np.testing.assert_array_equal(self.env.base_map[:, -1], np.array(["@"] * 7))
+        np.testing.assert_array_equal(self.env.base_map[0, :], np.array([b"@"] * 7))
+        np.testing.assert_array_equal(self.env.base_map[-1, :], np.array([b"@"] * 7))
+        np.testing.assert_array_equal(self.env.base_map[:, 0], np.array([b"@"] * 7))
+        np.testing.assert_array_equal(self.env.base_map[:, -1], np.array([b"@"] * 7))
 
-        np.testing.assert_array_equal(self.env.world_map[0, :], np.array(["@"] * 7))
-        np.testing.assert_array_equal(self.env.world_map[-1, :], np.array(["@"] * 7))
-        np.testing.assert_array_equal(self.env.world_map[:, 0], np.array(["@"] * 7))
-        np.testing.assert_array_equal(self.env.world_map[:, -1], np.array(["@"] * 7))
+        np.testing.assert_array_equal(self.env.world_map[0, :], np.array([b"@"] * 7))
+        np.testing.assert_array_equal(self.env.world_map[-1, :], np.array([b"@"] * 7))
+        np.testing.assert_array_equal(self.env.world_map[:, 0], np.array([b"@"] * 7))
+        np.testing.assert_array_equal(self.env.world_map[:, -1], np.array([b"@"] * 7))
 
     def test_view(self):
         """Confirm that an agent placed at the right point returns the right view"""
@@ -204,13 +204,16 @@ class TestMapEnv(unittest.TestCase):
 
         def convert_empty_cells(view):
             """Change all empty cells marked with '0' to '' for consistency."""
-            view[view == "0"] = ""
+            # No mask because it doesn't work correctly on byte arrays
+            for x in range(len(view)):
+                for y in range(len(view[0])):
+                    view[x, y] = b"" if view[x, y] == b"0" else view[x, y]
             return view
 
         # check if the view is correct if there are no walls
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
-            [[" "] * 5, [" "] * 5, [" "] * 2 + ["1"] + [" "] * 2, [" "] * 5, [" "] * 5]
+            [[b" "] * 5, [b" "] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b" "] * 5, [b" "] * 5]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
@@ -218,7 +221,7 @@ class TestMapEnv(unittest.TestCase):
         self.move_agent(agent_id, [2, 3])
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
-            [["@"] * 5, [" "] * 5, [" "] * 2 + ["1"] + [" "] * 2, [" "] * 5, [" "] * 5]
+            [[b"@"] * 5, [b" "] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b" "] * 5, [b" "] * 5]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
@@ -227,7 +230,7 @@ class TestMapEnv(unittest.TestCase):
         agent_view = self.env.agents[agent_id].get_state()
         agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
-            [[""] * 5, ["@"] * 5, [" "] * 2 + ["1"] + [" "] * 2, [" "] * 5, [" "] * 5]
+            [[b""] * 5, [b"@"] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b" "] * 5, [b" "] * 5]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
@@ -236,11 +239,11 @@ class TestMapEnv(unittest.TestCase):
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [
-                ["@"] + [" "] * 4,
-                ["@"] + [" "] * 4,
-                ["@"] + [" "] + ["1"] + [" "] * 2,
-                ["@"] + [" "] * 4,
-                ["@"] + [" "] * 4,
+                [b"@"] + [b" "] * 4,
+                [b"@"] + [b" "] * 4,
+                [b"@"] + [b" "] + [b"1"] + [b" "] * 2,
+                [b"@"] + [b" "] * 4,
+                [b"@"] + [b" "] * 4,
             ]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
@@ -251,11 +254,11 @@ class TestMapEnv(unittest.TestCase):
         agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [
-                [""] + ["@"] + [" "] * 3,
-                [""] + ["@"] + [" "] * 3,
-                [""] + ["@"] + ["1"] + [" "] * 2,
-                [""] + ["@"] + [" "] * 3,
-                [""] + ["@"] + [" "] * 3,
+                [b""] + [b"@"] + [b" "] * 3,
+                [b""] + [b"@"] + [b" "] * 3,
+                [b""] + [b"@"] + [b"1"] + [b" "] * 2,
+                [b""] + [b"@"] + [b" "] * 3,
+                [b""] + [b"@"] + [b" "] * 3,
             ]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
@@ -264,7 +267,7 @@ class TestMapEnv(unittest.TestCase):
         self.move_agent(agent_id, [4, 3])
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
-            [[" "] * 5, [" "] * 5, [" "] * 2 + ["1"] + [" "] * 2, [" "] * 5, ["@"] * 5]
+            [[b" "] * 5, [b" "] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b" "] * 5, [b"@"] * 5]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
@@ -273,7 +276,7 @@ class TestMapEnv(unittest.TestCase):
         agent_view = self.env.agents[agent_id].get_state()
         agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
-            [[" "] * 5, [" "] * 5, [" "] * 2 + ["1"] + [" "] * 2, ["@"] * 5, [""] * 5]
+            [[b" "] * 5, [b" "] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b"@"] * 5, [b""] * 5]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
@@ -282,11 +285,11 @@ class TestMapEnv(unittest.TestCase):
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [
-                [" "] * 4 + ["@"],
-                [" "] * 4 + ["@"],
-                [" "] * 2 + ["1"] + [" "] + ["@"],
-                [" "] * 4 + ["@"],
-                [" "] * 4 + ["@"],
+                [b" "] * 4 + [b"@"],
+                [b" "] * 4 + [b"@"],
+                [b" "] * 2 + [b"1"] + [b" "] + [b"@"],
+                [b" "] * 4 + [b"@"],
+                [b" "] * 4 + [b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
@@ -297,11 +300,11 @@ class TestMapEnv(unittest.TestCase):
         agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [
-                [" "] * 3 + ["@"] + [""],
-                [" "] * 3 + ["@"] + [""],
-                [" "] * 2 + ["1"] + ["@"] + [""],
-                [" "] * 3 + ["@"] + [""],
-                [" "] * 3 + ["@"] + [""],
+                [b" "] * 3 + [b"@"] + [b""],
+                [b" "] * 3 + [b"@"] + [b""],
+                [b" "] * 2 + [b"1"] + [b"@"] + [b""],
+                [b" "] * 3 + [b"@"] + [b""],
+                [b" "] * 3 + [b"@"] + [b""],
             ]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
@@ -312,11 +315,11 @@ class TestMapEnv(unittest.TestCase):
         agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [
-                [" "] * 3 + ["@"] + [""],
-                [" "] * 3 + ["@"] + [""],
-                [" "] * 2 + ["1"] + ["@"] + [""],
-                ["@"] * 4 + [""],
-                [""] * 5,
+                [b" "] * 3 + [b"@"] + [b""],
+                [b" "] * 3 + [b"@"] + [b""],
+                [b" "] * 2 + [b"1"] + [b"@"] + [b""],
+                [b"@"] * 4 + [b""],
+                [b""] * 5,
             ]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
@@ -370,7 +373,7 @@ class TestMapEnv(unittest.TestCase):
         # check that stay works properly
         self.env.step({agent_id: ACTION_MAP["STAY"]})
         np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
-        self.assertEqual(self.env.test_map[2, 2], "P")
+        self.assertEqual(self.env.test_map[2, 2], b"P")
 
         # quick test of stay
         self.env.step({agent_id: ACTION_MAP["STAY"]})
@@ -451,12 +454,12 @@ class TestMapEnv(unittest.TestCase):
         # also check that the map looks correct, no agent has disappeared
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", "P", "P", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b"P", b"P", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -468,12 +471,12 @@ class TestMapEnv(unittest.TestCase):
             self.env.step({"agent-0": ACTION_MAP["MOVE_RIGHT"], "agent-1": ACTION_MAP["MOVE_UP"]})
             expected_map = np.array(
                 [
-                    ["@", "@", "@", "@", "@", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", " ", " ", " ", "P", "@"],
-                    ["@", " ", " ", " ", "P", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", "@", "@", "@", "@", "@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b" ", b" ", b" ", b"P", b"@"],
+                    [b"@", b" ", b" ", b" ", b"P", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
                 ]
             )
             np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -493,22 +496,22 @@ class TestMapEnv(unittest.TestCase):
             # Also check that the map looks correct
             expect_1 = np.array(
                 [
-                    ["@", "@", "@", "@", "@", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", " ", "P", "P", " ", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", "@", "@", "@", "@", "@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b" ", b"P", b"P", b" ", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
                 ]
             )
             expect_2 = np.array(
                 [
-                    ["@", "@", "@", "@", "@", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", " ", " ", "P", "P", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", "@", "@", "@", "@", "@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b" ", b" ", b"P", b"P", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
                 ]
             )
             equal_1 = np.array_equal(self.env.test_map, expect_1)
@@ -540,32 +543,32 @@ class TestMapEnv(unittest.TestCase):
             # Also check that the map looks correct
             expect_1 = np.array(
                 [
-                    ["@", "@", "@", "@", "@", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", " ", " ", "P", " ", "@"],
-                    ["@", " ", "P", "P", " ", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", "@", "@", "@", "@", "@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b" ", b" ", b"P", b" ", b"@"],
+                    [b"@", b" ", b"P", b"P", b" ", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
                 ]
             )
             expect_2 = np.array(
                 [
-                    ["@", "@", "@", "@", "@", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", " ", "P", "P", "P", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", "@", "@", "@", "@", "@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b" ", b"P", b"P", b"P", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
                 ]
             )
             expect_3 = np.array(
                 [
-                    ["@", "@", "@", "@", "@", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", " ", " ", "P", " ", "@"],
-                    ["@", " ", " ", "P", "P", "@"],
-                    ["@", " ", " ", " ", " ", "@"],
-                    ["@", "@", "@", "@", "@", "@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b" ", b" ", b"P", b" ", b"@"],
+                    [b"@", b" ", b" ", b"P", b"P", b"@"],
+                    [b"@", b" ", b" ", b" ", b" ", b"@"],
+                    [b"@", b"@", b"@", b"@", b"@", b"@"],
                 ]
             )
             equal_1 = np.array_equal(self.env.test_map, expect_1)
@@ -595,12 +598,12 @@ class TestMapEnv(unittest.TestCase):
                 percent_failed += 1
                 expect_1 = np.array(
                     [
-                        ["@", "@", "@", "@", "@", "@"],
-                        ["@", " ", " ", " ", " ", "@"],
-                        ["@", " ", "P", " ", " ", "@"],
-                        ["@", " ", "P", "P", " ", "@"],
-                        ["@", " ", " ", " ", " ", "@"],
-                        ["@", "@", "@", "@", "@", "@"],
+                        [b"@", b"@", b"@", b"@", b"@", b"@"],
+                        [b"@", b" ", b" ", b" ", b" ", b"@"],
+                        [b"@", b" ", b"P", b" ", b" ", b"@"],
+                        [b"@", b" ", b"P", b"P", b" ", b"@"],
+                        [b"@", b" ", b" ", b" ", b" ", b"@"],
+                        [b"@", b"@", b"@", b"@", b"@", b"@"],
                     ]
                 )
                 np.testing.assert_array_equal(expect_1, self.env.test_map)
@@ -608,12 +611,12 @@ class TestMapEnv(unittest.TestCase):
                 percent_accomplished += 1
                 expect_1 = np.array(
                     [
-                        ["@", "@", "@", "@", "@", "@"],
-                        ["@", " ", " ", " ", " ", "@"],
-                        ["@", " ", " ", " ", " ", "@"],
-                        ["@", " ", "P", "P", "P", "@"],
-                        ["@", " ", " ", " ", " ", "@"],
-                        ["@", "@", "@", "@", "@", "@"],
+                        [b"@", b"@", b"@", b"@", b"@", b"@"],
+                        [b"@", b" ", b" ", b" ", b" ", b"@"],
+                        [b"@", b" ", b" ", b" ", b" ", b"@"],
+                        [b"@", b" ", b"P", b"P", b"P", b"@"],
+                        [b"@", b" ", b" ", b" ", b" ", b"@"],
+                        [b"@", b"@", b"@", b"@", b"@", b"@"],
                     ]
                 )
                 np.testing.assert_array_equal(expect_1, self.env.test_map)
@@ -668,12 +671,12 @@ class TestMapEnv(unittest.TestCase):
         )
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", " ", "P", "P", " ", "@"],
-                ["@", " ", "P", "P", " ", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b"P", b"P", b" ", b"@"],
+                [b"@", b" ", b"P", b"P", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -699,24 +702,24 @@ class TestMapEnv(unittest.TestCase):
                 agent_2_success += 1
                 expected_map = np.array(
                     [
-                        ["@", "@", "@", "@", "@", "@"],
-                        ["@", " ", " ", " ", " ", "@"],
-                        ["@", " ", " ", " ", " ", "@"],
-                        ["@", " ", "P", "P", " ", "@"],
-                        ["@", " ", "P", " ", "P", "@"],
-                        ["@", "@", "@", "@", "@", "@"],
+                        [b"@", b"@", b"@", b"@", b"@", b"@"],
+                        [b"@", b" ", b" ", b" ", b" ", b"@"],
+                        [b"@", b" ", b" ", b" ", b" ", b"@"],
+                        [b"@", b" ", b"P", b"P", b" ", b"@"],
+                        [b"@", b" ", b"P", b" ", b"P", b"@"],
+                        [b"@", b"@", b"@", b"@", b"@", b"@"],
                     ]
                 )
                 np.testing.assert_array_equal(expected_map, self.env.test_map)
             else:
                 expected_map = np.array(
                     [
-                        ["@", "@", "@", "@", "@", "@"],
-                        ["@", " ", " ", " ", " ", "@"],
-                        ["@", " ", "P", " ", " ", "@"],
-                        ["@", " ", "P", " ", " ", "@"],
-                        ["@", " ", "P", " ", "P", "@"],
-                        ["@", "@", "@", "@", "@", "@"],
+                        [b"@", b"@", b"@", b"@", b"@", b"@"],
+                        [b"@", b" ", b" ", b" ", b" ", b"@"],
+                        [b"@", b" ", b"P", b" ", b" ", b"@"],
+                        [b"@", b" ", b"P", b" ", b" ", b"@"],
+                        [b"@", b" ", b"P", b" ", b"P", b"@"],
+                        [b"@", b"@", b"@", b"@", b"@", b"@"],
                     ]
                 )
                 np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -810,12 +813,12 @@ class TestHarvestEnv(unittest.TestCase):
         # check that the map is full of apples
         test_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", "A", "A", "@"],
-                ["@", " ", " ", "A", "A", "@"],
-                ["@", " ", " ", "A", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b"A", b"A", b"@"],
+                [b"@", b" ", b" ", b"A", b"A", b"@"],
+                [b"@", b" ", b" ", b"A", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(self.env.test_map, test_map)
@@ -843,16 +846,16 @@ class TestHarvestEnv(unittest.TestCase):
         self.rotate_agent("agent-0", "UP")
         self.rotate_agent("agent-1", "UP")
         self.env.step({"agent-1": HARVEST_ACTION_MAP["FIRE"]})
-        self.env.update_map([[2, 1, "A"]])
+        self.env.update_map([[2, 1, b"A"]])
         self.env.step({})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "A", " ", "A", "A", "@"],
-                ["@", "P", " ", "P", "A", "@"],
-                ["@", " ", " ", "A", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"A", b" ", b"A", b"A", b"@"],
+                [b"@", b"P", b" ", b"P", b"A", b"@"],
+                [b"@", b" ", b" ", b"A", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -860,17 +863,17 @@ class TestHarvestEnv(unittest.TestCase):
         # If an agent is temporarily obscured by a beam, and an apple attempts to spawn there
         # no apple should spawn
         self.env.step({"agent-1": HARVEST_ACTION_MAP["FIRE"]})
-        self.env.update_map([[3, 1, "A"]])
+        self.env.update_map([[3, 1, b"A"]])
         self.env.step({})
 
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "A", " ", "A", "A", "@"],
-                ["@", "P", " ", "P", "A", "@"],
-                ["@", " ", " ", "A", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"A", b" ", b"A", b"A", b"@"],
+                [b"@", b"P", b" ", b"P", b"A", b"@"],
+                [b"@", b" ", b" ", b"A", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -885,11 +888,11 @@ class TestHarvestEnv(unittest.TestCase):
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [
-                ["@"] + [" "] * 4,
-                ["@"] + ["F"] * 2 + [" "] * 2,
-                ["@"] + ["F"] + ["1"] + [" "] * 2,
-                ["@"] + ["F"] * 2 + [" "] * 2,
-                ["@"] + [" "] * 4,
+                [b"@"] + [b" "] * 4,
+                [b"@"] + [b"F"] * 2 + [b" "] * 2,
+                [b"@"] + [b"F"] + [b"1"] + [b" "] * 2,
+                [b"@"] + [b"F"] * 2 + [b" "] * 2,
+                [b"@"] + [b" "] * 4,
             ]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
@@ -902,11 +905,11 @@ class TestHarvestEnv(unittest.TestCase):
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [
-                ["@"] + [" "] * 4,
-                ["@"] + [" "] + ["F"] * 3,
-                ["@"] + [" "] + ["1"] + ["F"] * 2,
-                ["@"] + [" "] + ["F"] * 3,
-                ["@"] + [" "] * 4,
+                [b"@"] + [b" "] * 4,
+                [b"@"] + [b" "] + [b"F"] * 3,
+                [b"@"] + [b" "] + [b"1"] + [b"F"] * 2,
+                [b"@"] + [b" "] + [b"F"] * 3,
+                [b"@"] + [b" "] * 4,
             ]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
@@ -919,11 +922,11 @@ class TestHarvestEnv(unittest.TestCase):
         agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [
-                ["@", " ", " ", " ", " "],
-                ["@", " ", " ", "A", "A"],
-                ["@", " ", "1", " ", "A"],
-                ["@", " ", " ", "A", " "],
-                ["@", "@", "@", "@", "@"],
+                [b"@", b" ", b" ", b" ", b" "],
+                [b"@", b" ", b" ", b"A", b"A"],
+                [b"@", b" ", b"1", b" ", b"A"],
+                [b"@", b" ", b" ", b"A", b" "],
+                [b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_view, agent_view)
@@ -968,12 +971,12 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.step({"agent-1": HARVEST_ACTION_MAP["FIRE"]})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "F", "F", "F", "F", "@"],
-                ["@", " ", "F", "F", "P", "@"],
-                ["@", "F", "F", "F", "F", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"F", b"F", b"F", b"F", b"@"],
+                [b"@", b" ", b"F", b"F", b"P", b"@"],
+                [b"@", b"F", b"F", b"F", b"F", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -981,12 +984,12 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.step({})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", " ", "P", " ", "P", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b"P", b" ", b"P", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -997,12 +1000,12 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.step({})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", " ", "P", " ", "P", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b"P", b" ", b"P", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1021,12 +1024,12 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.step({"agent-1": HARVEST_ACTION_MAP["FIRE"]})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", "A", "A", "@"],
-                ["@", "F", "F", "F", "F", "@"],
-                ["@", " ", "F", "F", "P", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b"A", b"A", b"@"],
+                [b"@", b"F", b"F", b"F", b"F", b"@"],
+                [b"@", b" ", b"F", b"F", b"P", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1034,12 +1037,12 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.step({})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", "A", "A", "@"],
-                ["@", " ", " ", "A", "A", "@"],
-                ["@", " ", "P", "A", "P", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b"A", b"A", b"@"],
+                [b"@", b" ", b" ", b"A", b"A", b"@"],
+                [b"@", b" ", b"P", b"A", b"P", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1106,19 +1109,19 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.step({"agent-0": HARVEST_ACTION_MAP["FIRE"]})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", " ", "F", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "F", "F", "F", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "F", "F", "F", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "F", "F", "F", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "F", "F", "F", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "F", "P", "F", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b"F", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"F", b"F", b"F", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"F", b"F", b"F", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"F", b"F", b"F", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"F", b"F", b"F", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"F", b"P", b"F", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1126,19 +1129,19 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.step({"agent-0": HARVEST_ACTION_MAP["FIRE"]})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "F", "P", "F", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "F", "F", "F", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "F", "F", "F", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "F", "F", "F", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", "F", "F", "F", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", "F", " ", " ", " ", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"F", b"P", b"F", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"F", b"F", b"F", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"F", b"F", b"F", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"F", b"F", b"F", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"F", b"F", b"F", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b"F", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1146,19 +1149,19 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.step({"agent-0": HARVEST_ACTION_MAP["FIRE"]})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", "F", "F", "F", "F", "F", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", "P", "F", "F", "F", "F", "F", "@"],
-                ["@", " ", " ", " ", " ", " ", "F", "F", "F", "F", "F", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b"F", b"F", b"F", b"F", b"F", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b"P", b"F", b"F", b"F", b"F", b"F", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b"F", b"F", b"F", b"F", b"F", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1167,19 +1170,19 @@ class TestHarvestEnv(unittest.TestCase):
         self.env.step({"agent-0": HARVEST_ACTION_MAP["FIRE"]})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", "F", "F", "F", "F", "F", " ", " ", " ", " ", " ", "@"],
-                ["@", "F", "F", "F", "F", "F", "P", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", "F", "F", "F", "F", "F", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b"F", b"F", b"F", b"F", b"F", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"F", b"F", b"F", b"F", b"F", b"P", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b"F", b"F", b"F", b"F", b"F", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1196,12 +1199,12 @@ class TestCleanupEnv(unittest.TestCase):
         # check that the map has no apples
         test_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "H", " ", " ", " ", "@"],
-                ["@", "R", " ", " ", " ", "@"],
-                ["@", "S", " ", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"H", b" ", b" ", b" ", b"@"],
+                [b"@", b"R", b" ", b" ", b" ", b"@"],
+                [b"@", b"S", b" ", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(self.env.test_map, test_map)
@@ -1220,12 +1223,12 @@ class TestCleanupEnv(unittest.TestCase):
         self.env.step({"agent-0": CLEANUP_ACTION_MAP["CLEAN"]})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "H", "C", "C", " ", "@"],
-                ["@", "R", "C", "P", " ", "@"],
-                ["@", "H", "C", "C", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"H", b"C", b"C", b" ", b"@"],
+                [b"@", b"R", b"C", b"P", b" ", b"@"],
+                [b"@", b"H", b"C", b"C", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1233,12 +1236,12 @@ class TestCleanupEnv(unittest.TestCase):
         self.env.step({})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "H", "R", " ", " ", "@"],
-                ["@", "R", "R", "P", " ", "@"],
-                ["@", "H", "P", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"H", b"R", b" ", b" ", b"@"],
+                [b"@", b"R", b"R", b"P", b" ", b"@"],
+                [b"@", b"H", b"P", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1247,18 +1250,18 @@ class TestCleanupEnv(unittest.TestCase):
         self.env.reset()
         self.move_agent("agent-0", [3, 3])
         self.move_agent("agent-1", [4, 2])
-        self.env.update_map([[3, 4, "A"]])
+        self.env.update_map([[3, 4, b"A"]])
         self.rotate_agent("agent-0", "RIGHT")
         self.env.step({"agent-0": CLEANUP_ACTION_MAP["CLEAN"]})
         self.env.step({})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "H", "H", " ", " ", "@"],
-                ["@", "R", "H", "P", "A", "@"],
-                ["@", "H", "P", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"H", b"H", b" ", b" ", b"@"],
+                [b"@", b"R", b"H", b"P", b"A", b"@"],
+                [b"@", b"H", b"P", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1269,7 +1272,7 @@ class TestCleanupEnv(unittest.TestCase):
         self.rotate_agent("agent-0", "DOWN")
         random.seed(6)
         self.env.step({"agent-0": CLEANUP_ACTION_MAP["CLEAN"]})
-        self.assertTrue(self.env.world_map[2, 2] == "R")
+        self.assertTrue(self.env.world_map[2, 2] == b"R")
 
         # check that the beams add constructively, i.e. that if one beam clears
         # some waste then the next agents beam is not blocked by it and can hit
@@ -1278,14 +1281,14 @@ class TestCleanupEnv(unittest.TestCase):
         self.move_agent("agent-1", [2, 3])
         self.move_agent("agent-0", [4, 3])
         # put some waste back where it's needed
-        self.env.update_map([[2, 2, "H"]])
-        self.env.update_map([[3, 1, "H"]])
+        self.env.update_map([[2, 2, b"H"]])
+        self.env.update_map([[3, 1, b"H"]])
         self.rotate_agent("agent-0", "LEFT")
         self.rotate_agent("agent-1", "LEFT")
         self.env.step(
             {"agent-0": CLEANUP_ACTION_MAP["CLEAN"], "agent-1": CLEANUP_ACTION_MAP["CLEAN"]}
         )
-        self.assertTrue(self.env.world_map[3, 1] == "R")
+        self.assertTrue(self.env.world_map[3, 1] == b"R")
 
     def test_firing_beam(self):
         self.env = CleanupEnv(ascii_map=FIRING_CLEANUP_MAP, num_agents=2)
@@ -1299,12 +1302,12 @@ class TestCleanupEnv(unittest.TestCase):
         self.env.step({"agent-0": CLEANUP_ACTION_MAP["FIRE"]})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "F", "F", "F", " ", "@"],
-                ["@", "F", "F", "P", " ", "@"],
-                ["@", "H", "F", "F", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"F", b"F", b"F", b" ", b"@"],
+                [b"@", b"F", b"F", b"P", b" ", b"@"],
+                [b"@", b"H", b"F", b"F", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1313,12 +1316,12 @@ class TestCleanupEnv(unittest.TestCase):
         self.env.step({})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "H", "H", " ", " ", "@"],
-                ["@", "R", "H", "P", " ", "@"],
-                ["@", "H", "P", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"H", b"H", b" ", b" ", b"@"],
+                [b"@", b"R", b"H", b"P", b" ", b"@"],
+                [b"@", b"H", b"P", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1327,18 +1330,18 @@ class TestCleanupEnv(unittest.TestCase):
         self.env.reset()
         self.move_agent("agent-0", [3, 3])
         self.move_agent("agent-1", [4, 2])
-        self.env.update_map([[3, 4, "A"]])
+        self.env.update_map([[3, 4, b"A"]])
         self.rotate_agent("agent-0", "RIGHT")
         self.env.step({"agent-0": CLEANUP_ACTION_MAP["FIRE"]})
         self.env.step({})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", " ", " ", " ", "@"],
-                ["@", "H", "H", " ", " ", "@"],
-                ["@", "R", "H", "P", "A", "@"],
-                ["@", "H", "P", " ", " ", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b" ", b" ", b" ", b"@"],
+                [b"@", b"H", b"H", b" ", b" ", b"@"],
+                [b"@", b"R", b"H", b"P", b"A", b"@"],
+                [b"@", b"H", b"P", b" ", b" ", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1351,12 +1354,12 @@ class TestCleanupEnv(unittest.TestCase):
             self.env.step({})
         expected_map = np.array(
             [
-                ["@", "@", "@", "@", "@", "@"],
-                ["@", " ", "P", " ", " ", "@"],
-                ["@", " ", " ", "A", "A", "@"],
-                ["@", " ", " ", "A", "A", "@"],
-                ["@", " ", " ", "A", "P", "@"],
-                ["@", "@", "@", "@", "@", "@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
+                [b"@", b" ", b"P", b" ", b" ", b"@"],
+                [b"@", b" ", b" ", b"A", b"A", b"@"],
+                [b"@", b" ", b" ", b"A", b"A", b"@"],
+                [b"@", b" ", b" ", b"A", b"P", b"@"],
+                [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
@@ -1402,7 +1405,7 @@ class TestCleanupEnv(unittest.TestCase):
         self.move_agent("agent-0", [2, 1])
         random.seed(2)
         self.env.step({})
-        self.assertTrue(self.env.world_map[2, 1] == "H")
+        self.assertTrue(self.env.world_map[2, 1] == b"H")
 
     def test_past_bugs(self):
         """This function is used to check that previous bugs do not regress"""
