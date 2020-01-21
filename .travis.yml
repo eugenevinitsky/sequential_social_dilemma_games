@@ -10,7 +10,7 @@ os: linux
 dist: bionic
 
 install:
-  - apt install libopencv-*
+  - sudo apt-get -y install libopencv-*
   - pip install flake8 .
   - pip install pytest
   - pip install -r requirements.txt
