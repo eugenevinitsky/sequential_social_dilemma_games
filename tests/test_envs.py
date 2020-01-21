@@ -1044,28 +1044,24 @@ class TestHarvestEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_map, self.env.test_map)
 
-    def test_rotation(self):
-        # confirms that the rotations of agent views work correctly
-        self.env = HarvestEnv(ascii_map=MINI_HARVEST_MAP, num_agents=2)
-        rot_matrix = np.array([[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]]])
-        rot_left = self.env.rotate_view("LEFT", rot_matrix)
-        rot_left_true = np.array([[[2, 2, 2], [4, 4, 4]], [[1, 1, 1], [3, 3, 3]]])
-        np.testing.assert_array_equal(rot_left, rot_left_true)
+    def map_to_colors(self, orientation, unrotated_view, equal_array):
+        env = DummyMapEnv(BASE_MAP_1, num_agents=0)
+        color_map = dict()
+        for i in range(9):
+            color_map[i] = int(i)
 
-        rot_matrix = np.array([[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]]])
-        rot_up = self.env.rotate_view("UP", rot_matrix)
-        rot_up_true = np.array([[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]]])
-        np.testing.assert_array_equal(rot_up, rot_up_true)
+        rgb_array = np.full((3, 3, 1), fill_value=-1)
+        env.map_to_colors(unrotated_view, color_map, rgb_array, orientation=orientation)
+        rgb_array = rgb_array.reshape((3, 3))
 
-        rot_matrix = np.array([[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]]])
-        rot_down = self.env.rotate_view("DOWN", rot_matrix)
-        rot_down_true = np.array([[[4, 4, 4], [3, 3, 3]], [[2, 2, 2], [1, 1, 1]]])
-        np.testing.assert_array_equal(rot_down, rot_down_true)
+        np.testing.assert_array_equal(rgb_array, equal_array)
 
-        rot_matrix = np.array([[[1, 1, 1], [2, 2, 2]], [[3, 3, 3], [4, 4, 4]]])
-        rot_right = self.env.rotate_view("RIGHT", rot_matrix)
-        rot_right_true = np.array([[[3, 3, 3], [1, 1, 1]], [[4, 4, 4], [2, 2, 2]]])
-        np.testing.assert_array_equal(rot_right, rot_right_true)
+    def test_rotations(self):
+        unrotated_view = np.array(range(9)).reshape((3, 3))
+        self.map_to_colors("UP", unrotated_view, np.rot90(unrotated_view, k=0))
+        self.map_to_colors("LEFT", unrotated_view, np.rot90(unrotated_view, k=1))
+        self.map_to_colors("DOWN", unrotated_view, np.rot90(unrotated_view, k=2))
+        self.map_to_colors("RIGHT", unrotated_view, np.rot90(unrotated_view, k=3))
 
     def clear_agents(self):
         self.env.agents = {}

@@ -197,8 +197,9 @@ class MapEnv(MultiAgentEnv):
         info = {}
         for agent in self.agents.values():
             agent.full_map = map_with_agents
-            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map, agent.rgb_arr)
-            rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
+            rgb_arr = self.map_to_colors(
+                agent.get_state(), self.color_map, agent.rgb_arr, orientation=agent.orientation
+            )
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 prev_actions = np.array(
@@ -333,7 +334,7 @@ class MapEnv(MultiAgentEnv):
         rgb_arr = np.zeros((map_with_agents.shape[0], map_with_agents.shape[1], 3), dtype=int)
         return self.map_to_colors(map_with_agents, self.color_map, rgb_arr)
 
-    def map_to_colors(self, mmap, color_map, rgb_arr):
+    def map_to_colors(self, mmap, color_map, rgb_arr, orientation="UP"):
         """Converts a map to an array of RGB values.
         Parameters
         ----------
@@ -344,14 +345,39 @@ class MapEnv(MultiAgentEnv):
             mapping between array elements and desired colors
         rgb_arr: np.array
             Variable to store the mapping in
+        orientation:
+            The way in which the output should be oriented.
+             UP = no rotation.
+             RIGHT = Clockwise 90 degree rotation.
+             DOWN = Clockwise 180 degree rotation.
+             LEFT = Clockwise 270 degree rotation.
         Returns
         -------
         arr: np.ndarray
             3-dim numpy array consisting of color map
         """
-        for row_elem in range(mmap.shape[0]):
-            for col_elem in range(mmap.shape[1]):
-                rgb_arr[row_elem, col_elem, :] = color_map[mmap[row_elem, col_elem]]
+        x_len = mmap.shape[0]
+        y_len = mmap.shape[1]
+        if orientation == "UP":
+            for row_elem in range(x_len):
+                for col_elem in range(y_len):
+                    rgb_arr[row_elem, col_elem, :] = color_map[mmap[row_elem, col_elem]]
+        elif orientation == "LEFT":
+            for row_elem in range(x_len):
+                for col_elem in range(y_len):
+                    rgb_arr[row_elem, col_elem, :] = color_map[mmap[col_elem, x_len - 1 - row_elem]]
+        elif orientation == "DOWN":
+            for row_elem in range(x_len):
+                for col_elem in range(y_len):
+                    rgb_arr[row_elem, col_elem, :] = color_map[
+                        mmap[x_len - 1 - row_elem, y_len - 1 - col_elem]
+                    ]
+        elif orientation == "RIGHT":
+            for row_elem in range(x_len):
+                for col_elem in range(y_len):
+                    rgb_arr[row_elem, col_elem, :] = color_map[mmap[y_len - 1 - col_elem, row_elem]]
+        else:
+            raise ValueError("Orientation {} is not valid".format(orientation))
 
         return rgb_arr
 
@@ -713,28 +739,6 @@ class MapEnv(MultiAgentEnv):
         """Return a randomly selected initial rotation for an agent"""
         rand_int = np.random.randint(len(ORIENTATIONS.keys()))
         return list(ORIENTATIONS.keys())[rand_int]
-
-    def rotate_view(self, orientation, view):
-        """Takes a view of the map and rotates it the agent orientation
-        Parameters
-        ----------
-        orientation: str
-            str in {'UP', 'LEFT', 'DOWN', 'RIGHT'}
-        view: np.ndarray (row, column, channel)
-        Returns
-        -------
-        a rotated view
-        """
-        if orientation == "UP":
-            return view
-        elif orientation == "LEFT":
-            return np.rot90(view, k=1, axes=(0, 1))
-        elif orientation == "DOWN":
-            return np.rot90(view, k=2, axes=(0, 1))
-        elif orientation == "RIGHT":
-            return np.rot90(view, k=3, axes=(0, 1))
-        else:
-            raise ValueError("Orientation {} is not valid".format(orientation))
 
     def build_walls(self):
         for i in range(len(self.wall_points)):
