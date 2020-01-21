@@ -6,7 +6,13 @@ from visualization.rollout import Controller
 
 class TestRollout(unittest.TestCase):
     def setUp(self):
-        self.controller = Controller()
+        class Args(object):
+            pass
+
+        args = Args()
+        args.env = "cleanup"
+
+        self.controller = Controller(args)
 
     def test_rollouts(self):
         path = os.path.abspath(os.path.dirname(__file__))
