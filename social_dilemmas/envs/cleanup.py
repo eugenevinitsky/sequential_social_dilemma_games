@@ -26,8 +26,10 @@ appleRespawnProbability = 0.05
 class CleanupEnv(MapEnv):
 
     def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False,
-                 shuffle_spawn=False, global_ref_point=None):
+                 shuffle_spawn=False, global_ref_point=None,
+                 view_size=7):
         self.global_ref_point = global_ref_point
+        self.view_size = view_size
         super().__init__(ascii_map, num_agents, render,
                          shuffle_spawn=shuffle_spawn)
 
@@ -119,7 +121,8 @@ class CleanupEnv(MapEnv):
             #                         CLEANUP_VIEW_SIZE, CLEANUP_VIEW_SIZE)
             # agent = CleanupAgent(agent_id, spawn_point, rotation, grid)
             agent = CleanupAgent(agent_id, spawn_point, rotation, map_with_agents,
-                                 global_ref_point=self.global_ref_point)
+                                 global_ref_point=self.global_ref_point,
+                                 view_len=self.view_size)
             self.agents[agent_id] = agent
 
     def spawn_apples_and_waste(self):
