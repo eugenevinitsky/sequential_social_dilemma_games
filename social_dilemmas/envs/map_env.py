@@ -7,18 +7,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 from ray.rllib.env import MultiAgentEnv
 
-ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
-           'MOVE_RIGHT': [1, 0],  # Move right
-           'MOVE_UP': [0, -1],  # Move up
-           'MOVE_DOWN': [0, 1],  # Move down
+ACTIONS = {'MOVE_LEFT': [0, -1],  # Move left
+           'MOVE_RIGHT': [0, 1],  # Move right
+           'MOVE_UP': [-1, 0],  # Move up
+           'MOVE_DOWN': [1, 0],  # Move down
            'STAY': [0, 0],  # don't move
-           'TURN_CLOCKWISE': [[0, -1], [1, 0]],  # Rotate counter clockwise
-           'TURN_COUNTERCLOCKWISE': [[0, 1], [-1, 0]]}  # Move right
+           'TURN_CLOCKWISE': [[0, 1], [-1, 0]],  # Rotate clockwise
+           'TURN_COUNTERCLOCKWISE': [[0, -1], [1, 0]]}  # Rotate counterclockwise
 
-ORIENTATIONS = {'LEFT': [-1, 0],
-                'RIGHT': [1, 0],
-                'UP': [0, -1],
-                'DOWN': [0, 1]}
+ORIENTATIONS = {'LEFT': [0, -1],
+                'RIGHT': [0, 1],
+                'UP': [-1, 0],
+                'DOWN': [1, 0]}
 
 DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    '0': [0, 0, 0],  # Black background beyond map walls
@@ -39,11 +39,10 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    '8': [250, 204, 255],  # Pink
                    '9': [238, 223, 16]}  # Yellow
 
-# the axes look like
-# graphic is here to help me get my head in order
-# WARNING: increasing array position in the direction of down
-# so for example if you move_left when facing left
-# your y position decreases.
+# WARNING: agent.pos[0] increases in the direction of DOWN
+# and agent.pos[1] increases in the direction of RIGHT
+# Movement actions take effect according to the agent's absolute orientation
+# e.g. if an agent is facing UP, actions take effect like this
 #         ^
 #         |
 #         U
@@ -225,6 +224,7 @@ class MapEnv(MultiAgentEnv):
             # agent.grid = util.return_view(map_with_agents, agent.pos,
             #                               agent.row_size, agent.col_size)
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
+            rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
             observations[agent.agent_id] = rgb_arr
         return observations
 
@@ -676,11 +676,11 @@ class MapEnv(MultiAgentEnv):
         if orientation == 'UP':
             return view
         elif orientation == 'LEFT':
-            return np.rot90(view, k=1, axes=(0, 1))
+            return np.rot90(view, k=3, axes=(0, 1))
         elif orientation == 'DOWN':
             return np.rot90(view, k=2, axes=(0, 1))
         elif orientation == 'RIGHT':
-            return np.rot90(view, k=3, axes=(0, 1))
+            return np.rot90(view, k=1, axes=(0, 1))
         else:
             raise ValueError('Orientation {} is not valid'.format(orientation))
 
