@@ -29,8 +29,9 @@ The above plot shows the empirical Schelling diagrams for both Cleanup (A) and H
 
 
 # Setup instructions
-Run `python setup.py develop`
-Then, activate your environment by running `source activate causal`.
+* Create `causal` virtual environment: `conda env create -n causal environment.yml`
+* Run `python setup.py develop`
+* Activate your environment by running `source activate causal`, or `conda activate causal`.
 
 To then set up the branch of Ray on which we have built the causal influence code, clone the repo to your desired folder:
 `git clone https://github.com/natashamjaques/ray.git`.
