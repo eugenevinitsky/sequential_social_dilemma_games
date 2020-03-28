@@ -28,7 +28,7 @@ def add_default_args(parser):
     )
     parser.add_argument("--num_agents", type=int, default=1, help="Number of agent policies")
     parser.add_argument(
-        "--sample_batch_size",
+        "--rollout_fragment_length",
         type=int,
         default=1000,
         help="Size of samples taken from single workers, concatenated to size train_batch_size.",

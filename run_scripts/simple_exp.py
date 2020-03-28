@@ -24,7 +24,7 @@ tune.run(
     config={
         "env": env_name,
         "horizon": 1000,
-        "sample_batch_size": 1000,
+        "rollout_fragment_length": 1000,
         "num_cpus_for_driver": 0,
         "num_gpus": 1,
         "num_gpus_per_worker": 3.0 / 12.0,

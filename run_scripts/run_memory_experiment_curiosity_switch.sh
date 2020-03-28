@@ -6,7 +6,7 @@ python train.py \
 --env switch \
 --model curiosity \
 --algorithm A3C \
---sample_batch_size 8 \
+--rollout_fragment_length 8 \
 --train_batch_size 64 \
 --stop_at_timesteps_total $((1 * 10 ** 9)) \
 --memory $((4 * 10 ** 9)) \

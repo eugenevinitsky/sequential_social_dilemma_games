@@ -86,7 +86,7 @@ def setup(args):
             "gamma": 0.99,
             "lr": args.lr,
             "lr_schedule": list(zip(args.lr_schedule_steps, args.lr_schedule_weights)),
-            "sample_batch_size": args.sample_batch_size,
+            "rollout_fragment_length": args.rollout_fragment_length,
             "train_batch_size": args.train_batch_size,
             "num_workers": args.num_workers,
             "num_envs_per_worker": args.num_envs_per_worker,

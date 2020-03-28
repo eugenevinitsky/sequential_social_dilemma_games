@@ -6,7 +6,7 @@ from ray.rllib.agents.ppo.ppo import (
     validate_config,
     warn_about_bad_reward_scales,
 )
-from ray.rllib.agents.ppo.ppo_policy import (
+from ray.rllib.agents.ppo.ppo_tf_policy import (
     BEHAVIOUR_LOGITS,
     KLCoeffMixin,
     PPOLoss,
