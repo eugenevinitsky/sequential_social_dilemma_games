@@ -9,7 +9,6 @@ cycler==0.10.0
 flatbuffers==1.12
 funcsigs==1.0.2
 future==0.18.2
-gast==0.3.3
 grpcio==1.27.2
 gym==0.17.1
 h5py==2.10.0
@@ -30,7 +29,6 @@ pre-commit==2.2.0
 protobuf==3.11.3
 psutil==5.7.0
 py==1.8.1
-pyglet==1.5.2
 pyparsing==2.4.6
 pytest==5.4.1
 pytz==2019.3
@@ -41,7 +39,6 @@ requests==2.23.0
 setproctitle==1.1.10
 scipy==1.4.1
 six==1.14.0
-tensorboard==2.2.0
 tensorflow-gpu==2.1.0
 termcolor==1.1.0
 urllib3==1.25.8
