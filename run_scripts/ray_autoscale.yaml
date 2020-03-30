@@ -115,8 +115,6 @@ setup_commands:
 #    # Nightly build install
     - source activate tensorflow_p36 && pip install -U https://s3-us-west-2.amazonaws.com/ray-wheels/latest/ray-0.8.0.dev6-cp36-cp36m-manylinux1_x86_64.whl
     - source activate tensorflow_p36 && pip install tabulate
-#    - # we can remove this once it is merged in
-    - source activate tensorflow_p36 && python ~/sequential_social_dilemma_games/run_scripts/replace_rnn_sequencing.py
     - source activate tensorflow_p36 && pip install tensorflow-gpu
     - source activate tensorflow_p36 && pip install gputil
 ##      # TBD why this is necessary

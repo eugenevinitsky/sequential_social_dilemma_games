@@ -13,7 +13,6 @@ install:
   - pip install flake8 .
   - pip install pytest
   - pip install -r requirements.txt
-  - python run_scripts/replace_rnn_sequencing.py
 
 before_script:
   - flake8 --version
