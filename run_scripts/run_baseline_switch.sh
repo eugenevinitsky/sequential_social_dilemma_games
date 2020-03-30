@@ -6,7 +6,7 @@ python train.py \
 --model baseline \
 --algorithm PPO \
 --num_agents 1 \
---sample_batch_size 1000 \
+--rollout_fragment_length 1000 \
 --train_batch_size 24000 \
 --stop_at_timesteps_total $((1 * 10 ** 6)) \
 --num_workers 12 \
