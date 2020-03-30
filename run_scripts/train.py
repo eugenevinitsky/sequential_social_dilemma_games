@@ -168,6 +168,7 @@ if __name__ == "__main__":
         memory=args.memory,
         object_store_memory=args.object_store_memory,
         redis_max_memory=args.redis_max_memory,
+        webui_host="127.0.0.1",
     )
     env_name, config = setup(args)
 
