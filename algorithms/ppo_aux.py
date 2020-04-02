@@ -46,7 +46,6 @@ def loss_with_aux(setup_aux_loss_fn, policy, model, dist_class, train_batch):
         mask = tf.ones_like(train_batch[Postprocessing.ADVANTAGES], dtype=tf.bool)
 
     policy.loss_obj = PPOLoss(
-        policy.action_space,
         dist_class,
         model,
         train_batch[Postprocessing.VALUE_TARGETS],
@@ -59,12 +58,11 @@ def loss_with_aux(setup_aux_loss_fn, policy, model, dist_class, train_batch):
         model.value_function(),
         policy.kl_coeff,
         mask,
-        entropy_coeff=policy.entropy_coeff,
-        clip_param=policy.config["clip_param"],
-        vf_clip_param=policy.config["vf_clip_param"],
-        vf_loss_coeff=policy.config["vf_loss_coeff"],
-        use_gae=policy.config["use_gae"],
-        model_config=policy.config["model"],
+        policy.entropy_coeff,
+        policy.config["clip_param"],
+        policy.config["vf_clip_param"],
+        policy.config["vf_loss_coeff"],
+        policy.config["use_gae"],
     )
 
     policy.loss_obj.loss += aux_loss.total_loss
