@@ -58,7 +58,7 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
 class MapEnv(MultiAgentEnv):
 
     def __init__(self, ascii_map, num_agents=1, render=True, color_map=None,
-                 shuffle_spawn=False):
+                 shuffle_spawn=True, random_orientation=True):
         """
 
         Parameters
@@ -79,6 +79,7 @@ class MapEnv(MultiAgentEnv):
         self.world_map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.beam_pos = []
         self.shuffle_spawn = shuffle_spawn
+        self.random_orientation = random_orientation
 
         self.agents = {}
 
@@ -659,8 +660,13 @@ class MapEnv(MultiAgentEnv):
 
     def spawn_rotation(self):
         """Return a randomly selected initial rotation for an agent"""
-        rand_int = np.random.randint(len(ORIENTATIONS.keys()))
-        return list(ORIENTATIONS.keys())[rand_int]
+        if self.random_orientation:
+            rand_int = np.random.randint(len(ORIENTATIONS.keys()))
+            orientation = list(ORIENTATIONS.keys())[rand_int]
+        else:
+            orientation = 'UP'
+        # return list(ORIENTATIONS.keys())[rand_int]
+        return orientation
 
     def rotate_view(self, orientation, view):
         """Takes a view of the map and rotates it the agent orientation

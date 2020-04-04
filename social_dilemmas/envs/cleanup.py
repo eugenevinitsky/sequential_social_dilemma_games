@@ -17,28 +17,34 @@ CLEANUP_COLORS = {'C': [100, 255, 255],  # Cyan cleaning beam
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
-thresholdDepletion = 0.4
-thresholdRestoration = 0.0
-wasteSpawnProbability = 0.5
-appleRespawnProbability = 0.05
-
+cleanup_params_default = {'thresholdDepletion': 0.4,
+                          'thresholdRestoration': 0.0,
+                          'wasteSpawnProbability': 0.5,
+                          'appleRespawnProbability': 0.05}
 
 class CleanupEnv(MapEnv):
 
     def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False,
-                 shuffle_spawn=False, global_ref_point=None,
-                 view_size=7):
+                 shuffle_spawn=True, global_ref_point=None,
+                 view_size=7, random_orientation=True,
+                 cleanup_params=cleanup_params_default):
         self.global_ref_point = global_ref_point
         self.view_size = view_size
         super().__init__(ascii_map, num_agents, render,
-                         shuffle_spawn=shuffle_spawn)
+                         shuffle_spawn=shuffle_spawn,
+                         random_orientation=random_orientation)
+
+        self.thresholdDepletion = cleanup_params['thresholdDepletion']
+        self.thresholdRestoration = cleanup_params['thresholdRestoration']
+        self.wasteSpawnProbability = cleanup_params['wasteSpawnProbability']
+        self.appleRespawnProbability = cleanup_params['appleRespawnProbability']
 
         # compute potential waste area
         unique, counts = np.unique(self.base_map, return_counts=True)
         counts_dict = dict(zip(unique, counts))
         self.potential_waste_area = counts_dict.get('H', 0) + counts_dict.get('R', 0)
-        self.current_apple_spawn_prob = appleRespawnProbability
-        self.current_waste_spawn_prob = wasteSpawnProbability
+        self.current_apple_spawn_prob = self.appleRespawnProbability
+        self.current_waste_spawn_prob = self.wasteSpawnProbability
         self.compute_probabilities()
 
         # make a list of the potential apple and waste spawn points
@@ -153,17 +159,17 @@ class CleanupEnv(MapEnv):
         waste_density = 0
         if self.potential_waste_area > 0:
             waste_density = 1 - self.compute_permitted_area() / self.potential_waste_area
-        if waste_density >= thresholdDepletion:
+        if waste_density >= self.thresholdDepletion:
             self.current_apple_spawn_prob = 0
             self.current_waste_spawn_prob = 0
         else:
-            self.current_waste_spawn_prob = wasteSpawnProbability
-            if waste_density <= thresholdRestoration:
-                self.current_apple_spawn_prob = appleRespawnProbability
+            self.current_waste_spawn_prob = self.wasteSpawnProbability
+            if waste_density <= self.thresholdRestoration:
+                self.current_apple_spawn_prob = self.appleRespawnProbability
             else:
-                spawn_prob = (1 - (waste_density - thresholdRestoration)
-                              / (thresholdDepletion - thresholdRestoration)) \
-                             * appleRespawnProbability
+                spawn_prob = (1 - (waste_density - self.thresholdRestoration)
+                              / (self.thresholdDepletion - self.thresholdRestoration)) \
+                             * self.appleRespawnProbability
                 self.current_apple_spawn_prob = spawn_prob
 
     def compute_permitted_area(self):
