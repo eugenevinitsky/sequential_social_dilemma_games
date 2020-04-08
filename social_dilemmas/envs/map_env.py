@@ -6,6 +6,7 @@ from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
+from gym.spaces import Box, Dict
 from ray.rllib.env import MultiAgentEnv
 
 ACTIONS = {
@@ -103,6 +104,38 @@ class MapEnv(MultiAgentEnv):
                 elif self.base_map[row, col] == b"@":
                     self.wall_points.append([row, col])
         self.setup_agents()
+
+    @property
+    def observation_space(self):
+        if self.return_agent_actions:
+            # Append the actions of other agents
+            return Dict(
+                {
+                    "curr_obs": Box(
+                        low=0,
+                        high=255,
+                        shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
+                        dtype=np.uint8,
+                    ),
+                    "other_agent_actions": Box(
+                        low=0, high=len(ACTIONS), shape=(self.num_agents - 1,), dtype=np.uint8,
+                    ),
+                    "visible_agents": Box(
+                        low=0, high=self.num_agents, shape=(self.num_agents - 1,), dtype=np.uint8,
+                    ),
+                }
+            )
+        else:
+            return Dict(
+                {
+                    "curr_obs": Box(
+                        low=0,
+                        high=255,
+                        shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
+                        dtype=np.uint8,
+                    )
+                }
+            )
 
     def custom_reset(self):
         """Reset custom elements of the map. For example, spawn apples and build walls"""

@@ -1,5 +1,5 @@
 import numpy as np
-from gym.spaces import Box, Dict, Discrete
+from gym.spaces import Discrete
 
 from social_dilemmas.envs.agent import HarvestAgent  # HARVEST_VIEW_SIZE
 from social_dilemmas.envs.map_env import ACTIONS, MapEnv
@@ -27,34 +27,6 @@ class HarvestEnv(MapEnv):
                     self.apple_points.append([row, col])
 
         self.view_len = HARVEST_VIEW_SIZE
-
-    @property
-    def observation_space(self):
-        if self.return_agent_actions:
-            # We will append on some extra values to represent the actions of other agents
-            return Dict(
-                {
-                    "curr_obs": Box(
-                        low=0,
-                        high=255,
-                        shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
-                        dtype=np.uint8,
-                    ),
-                    "other_agent_actions": Box(
-                        low=0, high=len(ACTIONS), shape=(self.num_agents - 1,), dtype=np.uint8,
-                    ),
-                    "visible_agents": Box(
-                        low=0, high=self.num_agents, shape=(self.num_agents - 1,), dtype=np.uint8,
-                    ),
-                }
-            )
-        else:
-            return Box(
-                low=0,
-                high=255,
-                shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
-                dtype=np.uint8,
-            )
 
     @property
     def action_space(self):
