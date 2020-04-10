@@ -9,7 +9,7 @@ import numpy as np
 from gym.spaces import Box, Dict
 from ray.rllib.env import MultiAgentEnv
 
-ACTIONS = {
+_MAP_ENV_ACTIONS = {
     "MOVE_LEFT": [0, -1],  # Move left
     "MOVE_RIGHT": [0, 1],  # Move right
     "MOVE_UP": [-1, 0],  # Move up
@@ -60,7 +60,7 @@ DEFAULT_COLOURS = {
 
 class MapEnv(MultiAgentEnv):
     def __init__(
-        self, ascii_map, num_agents=1, render=True, color_map=None, return_agent_actions=False,
+        self, ascii_map, extra_actions, num_agents=1, color_map=None, return_agent_actions=False
     ):
         """
 
@@ -69,10 +69,10 @@ class MapEnv(MultiAgentEnv):
         ascii_map: list of strings
             Specify what the map should look like. Look at constant.py for
             further explanation
+        extra_actions: dict with action name-value pair
+            Environment-specific actions that are not present in _MAP_ENV_ACTIONS
         num_agents: int
             Number of agents to have in the system.
-        render: bool
-            Whether to render the environment
         color_map: dict
             Specifies how to convert between ascii chars and colors
         return_agent_actions: bool
@@ -81,6 +81,8 @@ class MapEnv(MultiAgentEnv):
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
         self.return_agent_actions = return_agent_actions
+        self.all_actions = _MAP_ENV_ACTIONS.copy()
+        self.all_actions.update(extra_actions)
         if self.return_agent_actions:
             self.prev_actions = defaultdict(lambda: [0] * self.num_agents)
         # map without agents or beams
@@ -118,10 +120,13 @@ class MapEnv(MultiAgentEnv):
                         dtype=np.uint8,
                     ),
                     "other_agent_actions": Box(
-                        low=0, high=len(ACTIONS), shape=(self.num_agents - 1,), dtype=np.uint8,
+                        low=0,
+                        high=len(self.all_actions),
+                        shape=(self.num_agents - 1,),
+                        dtype=np.uint8,
                     ),
                     "visible_agents": Box(
-                        low=0, high=self.num_agents, shape=(self.num_agents - 1,), dtype=np.uint8,
+                        low=0, high=1, shape=(self.num_agents - 1,), dtype=np.uint8,
                     ),
                 }
             )
@@ -453,7 +458,7 @@ class MapEnv(MultiAgentEnv):
         reserved_slots = []
         for agent_id, action in agent_actions.items():
             agent = self.agents[agent_id]
-            selected_action = ACTIONS[action]
+            selected_action = self.all_actions[action]
             # TODO(ev) these two parts of the actions
             if "MOVE" in action or "STAY" in action:
                 # rotate the selected action appropriately
@@ -685,13 +690,13 @@ class MapEnv(MultiAgentEnv):
             the direction the beam is to be fired in
         fire_len: (int)
             the number of cells forward to fire
-        fire_char: (str)
+        fire_char: (bytes)
             the cell that should be placed where the beam goes
-        cell_types: (list of str)
+        cell_types: (list of bytes)
             the cells that are affected by the beam
-        update_char: (list of str)
+        update_char: (list of bytes)
             the character that should replace the affected cells.
-        blocking_cells: (list of str)
+        blocking_cells: (list of bytes)
             cells that block the firing beam
         Returns
         -------
@@ -795,10 +800,10 @@ class MapEnv(MultiAgentEnv):
             return self.rotate_left(self.rotate_left(action_vec))
 
     def rotate_left(self, action_vec):
-        return np.dot(ACTIONS["TURN_COUNTERCLOCKWISE"], action_vec)
+        return np.dot(self.all_actions["TURN_COUNTERCLOCKWISE"], action_vec)
 
     def rotate_right(self, action_vec):
-        return np.dot(ACTIONS["TURN_CLOCKWISE"], action_vec)
+        return np.dot(self.all_actions["TURN_CLOCKWISE"], action_vec)
 
     # TODO(ev) this should be an agent property
     def update_rotation(self, action, curr_orientation):

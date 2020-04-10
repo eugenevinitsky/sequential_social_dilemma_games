@@ -4,12 +4,11 @@ import numpy as np
 from gym.spaces import Discrete
 
 from social_dilemmas.envs.agent import CleanupAgent  # CLEANUP_VIEW_SIZE
-from social_dilemmas.envs.map_env import ACTIONS, MapEnv
+from social_dilemmas.envs.map_env import MapEnv
 from social_dilemmas.maps import CLEANUP_MAP
 
 # Add custom actions to the agent
-ACTIONS["FIRE"] = 5  # length of firing beam
-ACTIONS["CLEAN"] = 5  # length of cleanup beam
+_CLEANUP_ACTIONS = {"FIRE": 5, "CLEAN": 5}  # length of firing beam, length of cleanup beam
 
 # Custom colour dictionary
 CLEANUP_COLORS = {
@@ -31,9 +30,11 @@ appleRespawnProbability = 0.05
 
 class CleanupEnv(MapEnv):
     def __init__(
-        self, ascii_map=CLEANUP_MAP, num_agents=1, render=False, return_agent_actions=False,
+        self, ascii_map=CLEANUP_MAP, num_agents=1, return_agent_actions=False,
     ):
-        super().__init__(ascii_map, num_agents, render, return_agent_actions=return_agent_actions)
+        super().__init__(
+            ascii_map, _CLEANUP_ACTIONS, num_agents, return_agent_actions=return_agent_actions,
+        )
 
         # compute potential waste area
         unique, counts = np.unique(self.base_map, return_counts=True)
@@ -88,14 +89,17 @@ class CleanupEnv(MapEnv):
         if action == "FIRE":
             agent.fire_beam(b"F")
             updates = self.update_map_fire(
-                agent.get_pos().tolist(), agent.get_orientation(), ACTIONS["FIRE"], fire_char=b"F",
+                agent.get_pos().tolist(),
+                agent.get_orientation(),
+                self.all_actions["FIRE"],
+                fire_char=b"F",
             )
         elif action == "CLEAN":
             agent.fire_beam(b"C")
             updates = self.update_map_fire(
                 agent.get_pos().tolist(),
                 agent.get_orientation(),
-                ACTIONS["FIRE"],
+                self.all_actions["FIRE"],
                 fire_char=b"C",
                 cell_types=[b"H"],
                 update_char=[b"R"],

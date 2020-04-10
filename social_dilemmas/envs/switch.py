@@ -4,11 +4,11 @@ import numpy as np
 from gym.spaces import Discrete
 
 from social_dilemmas.envs.agent import SwitchAgent
-from social_dilemmas.envs.map_env import ACTIONS, MapEnv
+from social_dilemmas.envs.map_env import MapEnv
 from social_dilemmas.maps import SwitchMapElements
 
 # Add custom actions to the agent
-ACTIONS["TOGGLE_SWITCH"] = 1  # length of firing range
+_SWITCH_ACTIONS = {"TOGGLE_SWITCH": 1}  # distance at which switch can be pulled
 
 # Custom colour dictionary
 SWITCH_COLORS = {
@@ -26,7 +26,7 @@ SWITCH_VIEW_SIZE = 3
 class SwitchEnv(MapEnv):
     def __init__(self, args, num_agents=1, render=False, return_agent_actions=False):
         constructed_map = self.construct_map(args.num_switches)
-        super().__init__(constructed_map, num_agents, render)
+        super().__init__(constructed_map, _SWITCH_ACTIONS, num_agents)
         self.return_agent_actions = return_agent_actions
         self.initial_map_state = dict()
         self.switch_locations = []
@@ -132,7 +132,7 @@ class SwitchEnv(MapEnv):
         updates = self.update_map_fire(
             agent.get_pos().tolist(),
             agent.get_orientation(),
-            fire_len=ACTIONS["TOGGLE_SWITCH"],
+            fire_len=self.all_actions["TOGGLE_SWITCH"],
             fire_char=b"F",
             cell_types=[b"s", b"S"],
             update_char=[b"S", b"s"],

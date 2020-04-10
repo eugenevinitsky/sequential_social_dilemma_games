@@ -23,10 +23,15 @@ class Baseline_LSTM(RecurrentTFModelV2):
 
         original_obs_dims = obs_space.original_space.spaces["curr_obs"].shape
         # Determine vision network input shape: add an extra none for the time dimension
-        inputs = tf.keras.layers.Input(shape=(None,) + original_obs_dims, name="observations")
+        inputs = tf.keras.layers.Input(
+            shape=(None,) + original_obs_dims, name="observations", dtype="uint8"
+        )
+
+        # Divide by 255 to transform [0,255] uint8 rgb pixel values to [0,1] float32.
+        last_layer = tf.keras.backend.cast(inputs, "float32")
+        last_layer = tf.math.divide(last_layer, 255.0)
 
         # Build the CNN layers
-        last_layer = inputs
         activation = get_activation_fn(model_config.get("conv_activation"))
         filters = model_config.get("conv_filters")
         for i, (out_size, kernel, stride) in enumerate(filters[:-1], 1):

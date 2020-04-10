@@ -24,13 +24,13 @@ class KerasRNN(RecurrentTFModelV2):
         name,
         cell_size=64,
         use_value_fn=False,
-        append_others_actions=False,
+        append_actions=False,
     ):
         super(KerasRNN, self).__init__(obs_space, action_space, num_outputs, model_config, name)
 
         self.cell_size = cell_size
         self.use_value_fn = use_value_fn
-        self.append_others_actions = append_others_actions
+        self.append_actions = append_actions
 
         # Define input layers
         # TODO(@evinitsky) add in an option for prev_action_reward
@@ -39,7 +39,7 @@ class KerasRNN(RecurrentTFModelV2):
         input_layer = tf.keras.layers.Input(shape=(None,) + obs_space.shape, name="inputs")
         flat_layer = tf.keras.layers.TimeDistributed(tf.keras.layers.Flatten())(input_layer)
 
-        if self.append_others_actions:
+        if self.append_actions:
             name = "pred_logits"
         else:
             name = "action_logits"
@@ -58,13 +58,12 @@ class KerasRNN(RecurrentTFModelV2):
             )(last_layer)
             i += 1
 
-        # TODO(@evinitsky) add in the info that the actions will be appended in
-        #  if append_others_actions is true
-        if self.append_others_actions:
+        if self.append_actions:
             num_other_agents = model_config["custom_options"]["num_other_agents"]
             actions_layer = tf.keras.layers.Input(
                 shape=(None, num_other_agents + 1), name="other_actions"
             )
+
             last_layer = tf.keras.layers.concatenate([last_layer, actions_layer])
 
         state_in_h = tf.keras.layers.Input(shape=(cell_size,), name="h")
@@ -81,7 +80,7 @@ class KerasRNN(RecurrentTFModelV2):
         )(lstm_out)
 
         inputs = [input_layer, seq_in, state_in_h, state_in_c]
-        if self.append_others_actions:
+        if self.append_actions:
             inputs.insert(1, actions_layer)
         if use_value_fn:
             value_out = tf.keras.layers.Dense(
@@ -95,7 +94,7 @@ class KerasRNN(RecurrentTFModelV2):
     @override(RecurrentTFModelV2)
     def forward_rnn(self, input_dict, state, seq_lens):
         input = [input_dict["curr_obs"], seq_lens] + state
-        if self.append_others_actions:
+        if self.append_actions:
             input.insert(1, input_dict["prev_total_actions"])
 
         if self.use_value_fn:
@@ -128,18 +127,19 @@ class MOA_LSTM(RecurrentTFModelV2):
         self.num_other_agents = model_config["custom_options"]["num_other_agents"]
 
         # Build the vision network here
-        # TODO(@evinitsky) replace this with obs_space.original_space
-        total_obs = obs_space.shape[0]
-        vision_obs = total_obs - 2 * self.num_other_agents
-        vision_width = int(np.sqrt(vision_obs / 3))
-        vision_box = Box(low=-1.0, high=1.0, shape=(vision_width, vision_width, 3), dtype=np.float32)
+        original_obs_dims = obs_space.original_space.spaces["curr_obs"].shape
         # an extra none for the time dimension
-        inputs = tf.keras.layers.Input(shape=(None,) + vision_box.shape, name="observations")
+        inputs = tf.keras.layers.Input(
+            shape=(None,) + original_obs_dims, name="observations", dtype="uint8"
+        )
+
+        # Divide by 255 to transform [0,255] uint8 rgb pixel values to [0,1] float32.
+        last_layer = tf.keras.backend.cast(inputs, "float32")
+        last_layer = tf.math.divide(last_layer, 255.0)
 
         # A temp config with custom_model false so that we can get a basic vision model
         # with the desired filters
         # Build the CNN layer
-        last_layer = inputs
         activation = get_activation_fn(model_config.get("conv_activation"))
         filters = model_config.get("conv_filters")
         for i, (out_size, kernel, stride) in enumerate(filters[:-1], 1):
@@ -186,6 +186,7 @@ class MOA_LSTM(RecurrentTFModelV2):
             "actions",
             cell_size=cell_size,
             use_value_fn=True,
+            append_actions=False,
         )
 
         # predicts the actions of all the agents besides itself
@@ -203,7 +204,7 @@ class MOA_LSTM(RecurrentTFModelV2):
             "moa_model",
             cell_size=cell_size,
             use_value_fn=False,
-            append_others_actions=True,
+            append_actions=True,
         )
         self.register_variables(self.actions_model.rnn_model.variables)
         self.register_variables(self.moa_model.rnn_model.variables)
@@ -217,7 +218,13 @@ class MOA_LSTM(RecurrentTFModelV2):
         new_dict = {
             "obs": {k: add_time_dimension(v, seq_lens) for k, v in input_dict["obs"].items()}
         }
-        new_dict.update({"prev_action": add_time_dimension(input_dict["prev_actions"], seq_lens)})
+        new_dict.update(
+            {
+                "prev_action": add_time_dimension(
+                    tf.cast(input_dict["prev_actions"], tf.uint8), seq_lens
+                )
+            }
+        )
         # new_dict.update({k: add_time_dimension(v, seq_lens)
         # for k, v in input_dict.items() if k != "obs"})
 
@@ -245,9 +252,10 @@ class MOA_LSTM(RecurrentTFModelV2):
         # First we have to compute it over the trajectory to give us the hidden state
         # that we will actually use
         other_actions = input_dict["obs"]["other_agent_actions"]
-        agent_action = tf.cast(tf.expand_dims(input_dict["prev_action"], axis=-1), tf.float32)
-        stacked_actions = tf.concat([agent_action, other_actions], axis=-1)
-        pass_dict = {"curr_obs": trunk, "prev_total_actions": stacked_actions}
+        agent_action = tf.expand_dims(input_dict["prev_action"], axis=-1)
+        stacked_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_lemon")
+        cast_actions = tf.cast(stacked_actions, tf.float32)
+        pass_dict = {"curr_obs": trunk, "prev_total_actions": cast_actions}
 
         # Compute the action prediction. This is unused in the actual rollout and is only to generate
         # a series of hidden states for the counterfactuals
@@ -256,9 +264,12 @@ class MOA_LSTM(RecurrentTFModelV2):
         # Now we can use that cell state to do the counterfactual predictions
         counterfactual_preds = []
         for i in range(self.num_outputs):
-            possible_actions = np.array([i])[np.newaxis, np.newaxis, :]
-            stacked_actions = tf.concat([possible_actions, other_actions], axis=-1)
-            pass_dict = {"curr_obs": trunk, "prev_total_actions": stacked_actions}
+            possible_actions = np.array([i])[None, None, :]
+            stacked_actions = tf.concat(
+                [possible_actions, other_actions], axis=-1, name="concat_counterfactual"
+            )
+            cast_actions = tf.cast(stacked_actions, tf.float32)
+            pass_dict = {"curr_obs": trunk, "prev_total_actions": cast_actions}
             counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
             counterfactual_preds.append(tf.expand_dims(counterfactual_pred, axis=-2))
         self._counterfactual_preds = tf.concat(counterfactual_preds, axis=-2)
@@ -280,17 +291,20 @@ class MOA_LSTM(RecurrentTFModelV2):
 
         What this does is unpack the tensor batch to call this model with the
         right input dict, state, and seq len arguments.
+
+        This is used when setting up the loss function.
         """
 
         obs_dict = restore_original_dimensions(train_batch["obs"], self.obs_space)
         curr_obs = obs_dict["curr_obs"]
 
         # stack the agent actions together
-        other_agent_actions = tf.cast(obs_dict["other_agent_actions"], tf.float32)
+        other_agent_actions = tf.cast(obs_dict["other_agent_actions"], tf.uint8)
         agent_actions = tf.cast(
-            tf.expand_dims(train_batch[SampleBatch.PREV_ACTIONS], axis=1), tf.float32
+            tf.expand_dims(train_batch[SampleBatch.PREV_ACTIONS], axis=1), tf.uint8
         )
         prev_total_actions = tf.concat([agent_actions, other_agent_actions], axis=-1)
+        prev_total_actions = tf.cast(prev_total_actions, tf.float32)
 
         # Now we add the appropriate time dimension
         curr_obs = add_time_dimension(curr_obs, train_batch.get("seq_lens"))

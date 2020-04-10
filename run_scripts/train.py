@@ -20,7 +20,6 @@ from config.default_args import add_default_args
 from models.baseline_model import Baseline_LSTM
 from models.curiosity_model import CuriosityLSTM
 from models.moa_model import MOA_LSTM
-from models.preprocessors import PreprocessorUint8
 from social_dilemmas.envs.env_creator import get_env_creator
 from utility_funcs import update_nested_dict
 
@@ -44,9 +43,6 @@ def setup(args):
         ModelCatalog.register_custom_model(model_name, MOA_LSTM)
     elif args.model == "baseline":
         ModelCatalog.register_custom_model(model_name, Baseline_LSTM)
-
-    preprocessor_name = "PreprocessorUint8"
-    ModelCatalog.register_custom_preprocessor(preprocessor_name, PreprocessorUint8)
 
     # Each policy can have a different configuration (including custom model)
     def gen_policy():
@@ -100,7 +96,6 @@ def setup(args):
             "callbacks": single_env.get_environment_callbacks(),
             "model": {
                 "custom_model": model_name,
-                "custom_preprocessor": preprocessor_name,
                 "use_lstm": False,
                 "conv_filters": conv_filters,
                 "fcnet_hiddens": fcnet_hiddens,

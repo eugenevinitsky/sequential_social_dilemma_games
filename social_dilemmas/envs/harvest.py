@@ -2,13 +2,13 @@ import numpy as np
 from gym.spaces import Discrete
 
 from social_dilemmas.envs.agent import HarvestAgent  # HARVEST_VIEW_SIZE
-from social_dilemmas.envs.map_env import ACTIONS, MapEnv
+from social_dilemmas.envs.map_env import MapEnv
 from social_dilemmas.maps import HARVEST_MAP
 
 APPLE_RADIUS = 2
 
 # Add custom actions to the agent
-ACTIONS["FIRE"] = 5  # length of firing range
+_HARVEST_ACTIONS = {"FIRE": 5}  # length of firing range
 
 SPAWN_PROB = [0, 0.005, 0.02, 0.05]
 
@@ -17,9 +17,11 @@ HARVEST_VIEW_SIZE = 7
 
 class HarvestEnv(MapEnv):
     def __init__(
-        self, ascii_map=HARVEST_MAP, num_agents=1, render=False, return_agent_actions=False,
+        self, ascii_map=HARVEST_MAP, num_agents=1, return_agent_actions=False,
     ):
-        super().__init__(ascii_map, num_agents, render, return_agent_actions=return_agent_actions)
+        super().__init__(
+            ascii_map, _HARVEST_ACTIONS, num_agents, return_agent_actions=return_agent_actions,
+        )
         self.apple_points = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
@@ -51,7 +53,10 @@ class HarvestEnv(MapEnv):
     def custom_action(self, agent, action):
         agent.fire_beam(b"F")
         updates = self.update_map_fire(
-            agent.get_pos().tolist(), agent.get_orientation(), ACTIONS["FIRE"], fire_char=b"F",
+            agent.get_pos().tolist(),
+            agent.get_orientation(),
+            self.all_actions["FIRE"],
+            fire_char=b"F",
         )
         return updates
 
