@@ -20,13 +20,13 @@ class Controller(object):
         self.env_name = args.env
         if self.env_name == "harvest":
             print("Initializing Harvest environment")
-            self.env = HarvestEnv(num_agents=5, render=True)
+            self.env = HarvestEnv(num_agents=5)
         elif self.env_name == "cleanup":
             print("Initializing Cleanup environment")
-            self.env = CleanupEnv(num_agents=5, render=True)
+            self.env = CleanupEnv(num_agents=5)
         elif self.env_name == "switch":
             print("Initializing Switch environment")
-            self.env = SwitchEnv(args, num_agents=1, render=True)
+            self.env = SwitchEnv(args, num_agents=1)
         else:
             print("Error! Not a valid environment type")
             return
