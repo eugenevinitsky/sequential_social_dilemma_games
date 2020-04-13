@@ -264,9 +264,11 @@ class MOA_LSTM(RecurrentTFModelV2):
         # Now we can use that cell state to do the counterfactual predictions
         counterfactual_preds = []
         for i in range(self.num_outputs):
-            possible_action = np.array([i])[None, None, :]
-            stacked_actions = tf.concat(
-                [possible_action, other_actions], axis=-1, name="concat_single_counterfactual"
+            # Shape of other_actions is (num_envs, ?, num_other_agents)
+            # To add the counterfactual action to it, other_actions can be padded with the constant
+            # action value.
+            stacked_actions = tf.pad(
+                other_actions, paddings=[[0, 0], [0, 0], [0, 1]], mode="CONSTANT", constant_values=i
             )
             cast_actions = tf.cast(stacked_actions, tf.float32)
             pass_dict = {"curr_obs": trunk, "prev_total_actions": cast_actions}
