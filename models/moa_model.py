@@ -130,11 +130,11 @@ class MOA_LSTM(RecurrentTFModelV2):
         original_obs_dims = obs_space.original_space.spaces["curr_obs"].shape
         # an extra none for the time dimension
         inputs = tf.keras.layers.Input(
-            shape=(None,) + original_obs_dims, name="observations", dtype="uint8"
+            shape=(None,) + original_obs_dims, name="observations", dtype=tf.uint8
         )
 
         # Divide by 255 to transform [0,255] uint8 rgb pixel values to [0,1] float32.
-        last_layer = tf.keras.backend.cast(inputs, "float32")
+        last_layer = tf.keras.backend.cast(inputs, tf.float32)
         last_layer = tf.math.divide(last_layer, 255.0)
 
         # A temp config with custom_model false so that we can get a basic vision model
@@ -253,7 +253,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         # that we will actually use
         other_actions = input_dict["obs"]["other_agent_actions"]
         agent_action = tf.expand_dims(input_dict["prev_action"], axis=-1)
-        stacked_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_lemon")
+        stacked_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_actions")
         cast_actions = tf.cast(stacked_actions, tf.float32)
         pass_dict = {"curr_obs": trunk, "prev_total_actions": cast_actions}
 
@@ -264,15 +264,17 @@ class MOA_LSTM(RecurrentTFModelV2):
         # Now we can use that cell state to do the counterfactual predictions
         counterfactual_preds = []
         for i in range(self.num_outputs):
-            possible_actions = np.array([i])[None, None, :]
+            possible_action = np.array([i])[None, None, :]
             stacked_actions = tf.concat(
-                [possible_actions, other_actions], axis=-1, name="concat_counterfactual"
+                [possible_action, other_actions], axis=-1, name="concat_single_counterfactual"
             )
             cast_actions = tf.cast(stacked_actions, tf.float32)
             pass_dict = {"curr_obs": trunk, "prev_total_actions": cast_actions}
             counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
             counterfactual_preds.append(tf.expand_dims(counterfactual_pred, axis=-2))
-        self._counterfactual_preds = tf.concat(counterfactual_preds, axis=-2)
+        self._counterfactual_preds = tf.concat(
+            counterfactual_preds, axis=-2, name="concat_counterfactuals"
+        )
 
         # TODO(@evinitsky) move this into ppo_causal by using restore_original_dimensions()
         self._other_agent_actions = input_dict["obs"]["other_agent_actions"]
@@ -299,9 +301,9 @@ class MOA_LSTM(RecurrentTFModelV2):
         curr_obs = obs_dict["curr_obs"]
 
         # stack the agent actions together
-        other_agent_actions = tf.cast(obs_dict["other_agent_actions"], tf.uint8)
+        other_agent_actions = tf.cast(obs_dict["other_agent_actions"], tf.float32)
         agent_actions = tf.cast(
-            tf.expand_dims(train_batch[SampleBatch.PREV_ACTIONS], axis=1), tf.uint8
+            tf.expand_dims(train_batch[SampleBatch.PREV_ACTIONS], axis=1), tf.float32
         )
         prev_total_actions = tf.concat([agent_actions, other_agent_actions], axis=-1)
         prev_total_actions = tf.cast(prev_total_actions, tf.float32)
