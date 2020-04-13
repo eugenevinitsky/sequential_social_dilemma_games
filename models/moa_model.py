@@ -267,10 +267,10 @@ class MOA_LSTM(RecurrentTFModelV2):
             # Shape of other_actions is (num_envs, ?, num_other_agents)
             # To add the counterfactual action to it, other_actions can be padded with the constant
             # action value.
-            stacked_actions = tf.pad(
-                other_actions, paddings=[[0, 0], [0, 0], [0, 1]], mode="CONSTANT", constant_values=i
+            actions_with_counterfactual = tf.pad(
+                other_actions, paddings=[[0, 0], [0, 0], [1, 0]], mode="CONSTANT", constant_values=i
             )
-            cast_actions = tf.cast(stacked_actions, tf.float32)
+            cast_actions = tf.cast(actions_with_counterfactual, tf.float32)
             pass_dict = {"curr_obs": trunk, "prev_total_actions": cast_actions}
             counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
             counterfactual_preds.append(tf.expand_dims(counterfactual_pred, axis=-2))
