@@ -125,9 +125,53 @@ class MOA_LSTM(RecurrentTFModelV2):
         self.num_outputs = num_outputs
         self.num_other_agents = model_config["custom_options"]["num_other_agents"]
 
-        # Build the vision network here
+        self.moa_encoder_model = self.create_encoder_model(obs_space, model_config)
+        self.register_variables(self.moa_encoder_model.variables)
+        self.moa_encoder_model.summary()
+
+        # now output two heads, one for action selection and one for the prediction of other agents
+        inner_obs_space = Box(
+            low=-1, high=1, shape=self.moa_encoder_model.output.shape[2:], dtype=np.float32
+        )
+
+        cell_size = model_config["custom_options"].get("cell_size")
+        self.actions_model = KerasRNN(
+            inner_obs_space,
+            action_space,
+            num_outputs,
+            model_config,
+            "actions",
+            cell_size=cell_size,
+            use_value_fn=True,
+            append_actions=False,
+        )
+
+        # predicts the actions of all the agents besides itself
+        # create a new input reader per worker
+        self.train_moa_only_when_visible = model_config["custom_options"][
+            "train_moa_only_when_visible"
+        ]
+        self.moa_weight = model_config["custom_options"]["aux_loss_weight"]
+
+        self.moa_model = KerasRNN(
+            inner_obs_space,
+            action_space,
+            self.num_other_agents * num_outputs,
+            model_config,
+            "moa_model",
+            cell_size=cell_size,
+            use_value_fn=False,
+            append_actions=True,
+        )
+        self.register_variables(self.actions_model.rnn_model.variables)
+        self.register_variables(self.moa_model.rnn_model.variables)
+        self.actions_model.rnn_model.summary()
+        self.moa_model.rnn_model.summary()
+
+    @staticmethod
+    def create_encoder_model(obs_space, model_config):
         original_obs_dims = obs_space.original_space.spaces["curr_obs"].shape
-        # an extra none for the time dimension
+        # An extra none for the time dimension
         inputs = tf.keras.layers.Input(
             shape=(None,) + original_obs_dims, name="observations", dtype=tf.uint8
         )
@@ -169,46 +213,7 @@ class MOA_LSTM(RecurrentTFModelV2):
             )
         )(last_layer)
 
-        self.base_model = tf.keras.Model(inputs, [conv_out])
-        self.register_variables(self.base_model.variables)
-        self.base_model.summary()
-
-        # now output two heads, one for action selection and one for the prediction of other agents
-        inner_obs_space = Box(low=-1, high=1, shape=conv_out.shape[2:], dtype=np.float32)
-
-        cell_size = model_config["custom_options"].get("cell_size")
-        self.actions_model = KerasRNN(
-            inner_obs_space,
-            action_space,
-            num_outputs,
-            model_config,
-            "actions",
-            cell_size=cell_size,
-            use_value_fn=True,
-            append_actions=False,
-        )
-
-        # predicts the actions of all the agents besides itself
-        # create a new input reader per worker
-        self.train_moa_only_when_visible = model_config["custom_options"][
-            "train_moa_only_when_visible"
-        ]
-        self.moa_weight = model_config["custom_options"]["aux_loss_weight"]
-
-        self.moa_model = KerasRNN(
-            inner_obs_space,
-            action_space,
-            self.num_other_agents * num_outputs,
-            model_config,
-            "moa_model",
-            cell_size=cell_size,
-            use_value_fn=False,
-            append_actions=True,
-        )
-        self.register_variables(self.actions_model.rnn_model.variables)
-        self.register_variables(self.moa_model.rnn_model.variables)
-        self.actions_model.rnn_model.summary()
-        self.moa_model.rnn_model.summary()
+        return tf.keras.Model(inputs, [conv_out])
 
     @override(ModelV2)
     def forward(self, input_dict, state, seq_lens):
@@ -233,7 +238,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         # TODO(@evinitsky) are we passing seq_lens correctly?
         #  should we pass prev_actions, prev_rewards etc?
 
-        trunk = self.base_model(input_dict["obs"]["curr_obs"])
+        trunk = self.moa_encoder_model(input_dict["obs"]["curr_obs"])
 
         pass_dict = {"curr_obs": trunk}
 
@@ -252,11 +257,13 @@ class MOA_LSTM(RecurrentTFModelV2):
         agent_action = tf.expand_dims(input_dict["prev_action"], axis=-1)
         all_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_true_actions")
         one_hot_actions = self._reshaped_one_hot_actions(all_actions, "forward_one_hot")
-        pass_dict = {"curr_obs": trunk, "prev_total_actions": one_hot_actions}
+        self._true_action_pass_dict = {"curr_obs": trunk, "prev_total_actions": one_hot_actions}
 
         # Compute the action prediction. This is unused in the actual rollout and is only to generate
         # a series of hidden states for the counterfactuals
-        action_pred, output_h2, output_c2 = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
+        action_pred, output_h2, output_c2 = self.moa_model.forward_rnn(
+            self._true_action_pass_dict, [h2, c2], seq_lens
+        )
 
         # Now we can use that cell state to do the counterfactual predictions
         counterfactual_preds = []
@@ -313,7 +320,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         curr_obs = add_time_dimension(curr_obs, train_batch.get("seq_lens"))
         prev_total_actions = add_time_dimension(prev_total_actions, train_batch.get("seq_lens"))
 
-        trunk = self.base_model(curr_obs)
+        trunk = self.moa_encoder_model(curr_obs)
         input_dict = {
             "curr_obs": trunk,
             "is_training": True,
