@@ -263,7 +263,6 @@ class ConfigInitializerMixIn(object):
         self.aux_loss_weight = config["aux_loss_weight"]
         self.aux_reward_clip = config["aux_reward_clip"]
         self.train_moa_only_when_visible = config["train_moa_only_when_visible"]
-        self.train_moa_only_when_visible = config["train_moa_only_when_visible"]
         self.influence_divergence_measure = config["influence_divergence_measure"]
         self.influence_only_when_visible = config["influence_only_when_visible"]
 
