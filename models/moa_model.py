@@ -59,9 +59,8 @@ class KerasRNN(RecurrentTFModelV2):
             i += 1
 
         if self.append_actions:
-            num_other_agents = model_config["custom_options"]["num_other_agents"]
             actions_layer = tf.keras.layers.Input(
-                shape=(None, num_other_agents + 1), name="other_actions"
+                shape=(None, self.num_outputs + self.action_space.n), name="action_input"
             )
 
             last_layer = tf.keras.layers.concatenate([last_layer, actions_layer])
@@ -225,8 +224,6 @@ class MOA_LSTM(RecurrentTFModelV2):
                 )
             }
         )
-        # new_dict.update({k: add_time_dimension(v, seq_lens)
-        # for k, v in input_dict.items() if k != "obs"})
 
         output, new_state = self.forward_rnn(new_dict, state, seq_lens)
         return tf.reshape(output, [-1, self.num_outputs]), new_state
@@ -253,9 +250,9 @@ class MOA_LSTM(RecurrentTFModelV2):
         # that we will actually use
         other_actions = input_dict["obs"]["other_agent_actions"]
         agent_action = tf.expand_dims(input_dict["prev_action"], axis=-1)
-        stacked_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_actions")
-        cast_actions = tf.cast(stacked_actions, tf.float32)
-        pass_dict = {"curr_obs": trunk, "prev_total_actions": cast_actions}
+        all_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_true_actions")
+        one_hot_actions = self._reshaped_one_hot_actions(all_actions, "forward_one_hot")
+        pass_dict = {"curr_obs": trunk, "prev_total_actions": one_hot_actions}
 
         # Compute the action prediction. This is unused in the actual rollout and is only to generate
         # a series of hidden states for the counterfactuals
@@ -270,8 +267,10 @@ class MOA_LSTM(RecurrentTFModelV2):
             actions_with_counterfactual = tf.pad(
                 other_actions, paddings=[[0, 0], [0, 0], [1, 0]], mode="CONSTANT", constant_values=i
             )
-            cast_actions = tf.cast(actions_with_counterfactual, tf.float32)
-            pass_dict = {"curr_obs": trunk, "prev_total_actions": cast_actions}
+            one_hot_actions = self._reshaped_one_hot_actions(
+                actions_with_counterfactual, "actions_with_counterfactual_one_hot"
+            )
+            pass_dict = {"curr_obs": trunk, "prev_total_actions": one_hot_actions}
             counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
             counterfactual_preds.append(tf.expand_dims(counterfactual_pred, axis=-2))
         self._counterfactual_preds = tf.concat(
@@ -302,13 +301,13 @@ class MOA_LSTM(RecurrentTFModelV2):
         obs_dict = restore_original_dimensions(train_batch["obs"], self.obs_space)
         curr_obs = obs_dict["curr_obs"]
 
-        # stack the agent actions together
-        other_agent_actions = tf.cast(obs_dict["other_agent_actions"], tf.float32)
-        agent_actions = tf.cast(
-            tf.expand_dims(train_batch[SampleBatch.PREV_ACTIONS], axis=1), tf.float32
+        # Concat the agent actions together
+        other_agent_actions = obs_dict["other_agent_actions"]
+        agent_actions = tf.expand_dims(
+            tf.cast(train_batch[SampleBatch.PREV_ACTIONS], tf.uint8), axis=1
         )
         prev_total_actions = tf.concat([agent_actions, other_agent_actions], axis=-1)
-        prev_total_actions = tf.cast(prev_total_actions, tf.float32)
+        prev_total_actions = self._reshaped_one_hot_actions(prev_total_actions, "loss_one_hot")
 
         # Now we add the appropriate time dimension
         curr_obs = add_time_dimension(curr_obs, train_batch.get("seq_lens"))
@@ -334,6 +333,25 @@ class MOA_LSTM(RecurrentTFModelV2):
 
         moa_preds, _, _ = self.moa_model.forward_rnn(input_dict, states, train_batch.get("seq_lens"))
         return moa_preds
+
+    def _reshaped_one_hot_actions(self, actions_layer, name):
+        """
+        Converts the collection of all actions from a number encoding to a one-hot encoding.
+        Then, flattens the one-hot encoding so that all one-hot vectors are in the same dimension.
+        E.g. with a num_outputs (action_space.n) of 3:
+        _reshaped_one_hot_actions([0,1,2]) returns [1,0,0,0,1,0,0,0,1]
+        :param actions_layer: The tensor containing actions.
+        :return: Tensor containing one-hot reshaped action values.
+        """
+        one_hot_actions = tf.keras.backend.one_hot(actions_layer, self.num_outputs)
+        # Extract partially known tensor shape and combine with actions_layer known shape
+        # This combination is a bit contrived for a reason: the shape cannot be determined otherwise
+        batch_time_dims = [
+            tf.shape(one_hot_actions)[k] for k in range(one_hot_actions.shape.rank - 2)
+        ]
+        reshape_dims = batch_time_dims + [actions_layer.shape[-1] * self.num_outputs]
+        reshaped = tf.reshape(one_hot_actions, shape=reshape_dims, name=name)
+        return reshaped
 
     def action_logits(self):
         return self._model_out
