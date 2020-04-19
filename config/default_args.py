@@ -88,7 +88,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--num_envs_per_worker",
         type=float,
-        default=5,
+        default=16,
         help="Number of envs to place on a single worker",
     )
     parser.add_argument(
@@ -100,7 +100,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--local_mode",
         action="store_true",
-        default=True,
+        default=False,
         help="Force all the computation onto the driver. Useful for debugging.",
     )
     parser.add_argument(
