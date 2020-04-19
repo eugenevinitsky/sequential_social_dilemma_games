@@ -5,7 +5,7 @@ from ray.rllib.agents.a3c.a3c_tf_policy import A3CTFPolicy
 from ray.rllib.agents.trainer_template import build_trainer
 
 
-def build_a3c_baseline_trainer_with_config(config):
+def build_a3c_baseline_trainer(config):
     a3c_trainer = build_trainer(
         name="A3C",
         default_config=config,

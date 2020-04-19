@@ -1,15 +1,55 @@
 import numpy as np
+from ray.rllib.policy.policy import Policy
 from ray.rllib.utils import try_import_tf
+from ray.rllib.utils.annotations import override
 
-from algorithms.common_funcs import AuxScheduleMixIn
+from algorithms.common_funcs_moa import compute_influence_reward, get_moa_mixins, moa_fetches
 
 tf = try_import_tf()
 
-# Frozen logits of the policy that computed the action
-ACTION_LOGITS = "action_logits"
-POLICY_SCOPE = "func"
+
 ENCODED_OBSERVATIONS = "enc_obs"
 PREDICTED_OBSERVATIONS = "pred_obs"
+
+
+class SocialCuriosityScheduleMixIn(object):
+    def __init__(self, config):
+        config = config["model"]["custom_options"]
+        self.baseline_social_curiosity_reward_weight = config["social_curiosity_reward_weight"]
+        self.social_curiosity_reward_schedule_steps = config[
+            "social_curiosity_reward_schedule_steps"
+        ]
+        self.social_curiosity_reward_schedule_weights = config[
+            "social_curiosity_reward_schedule_weights"
+        ]
+        self.timestep = 0
+        self.cur_social_curiosity_reward_weight = np.float32(self.compute_weight())
+        # This tensor is for logging the weight to progress.csv
+        self.cur_social_curiosity_reward_weight_tensor = tf.get_variable(
+            "cur_social_curiosity_reward_weight",
+            initializer=self.cur_social_curiosity_reward_weight,
+            trainable=False,
+        )
+
+    @override(Policy)
+    def on_global_var_update(self, global_vars):
+        super(SocialCuriosityScheduleMixIn, self).on_global_var_update(global_vars)
+        self.timestep = global_vars["timestep"]
+        self.cur_social_curiosity_reward_weight = self.compute_weight()
+        self.cur_social_curiosity_reward_weight_tensor.load(
+            self.cur_social_curiosity_reward_weight, session=self._sess
+        )
+
+    def compute_weight(self):
+        """ Computes multiplier for social_curiosity reward based on training steps
+        taken and schedule parameters.
+        """
+        weight = np.interp(
+            self.timestep,
+            self.social_curiosity_reward_schedule_steps,
+            self.social_curiosity_reward_schedule_weights,
+        )
+        return weight * self.baseline_social_curiosity_reward_weight
 
 
 def calculate_surprisal(pred_states, true_states):
@@ -36,8 +76,8 @@ def calculate_surprisal(pred_states, true_states):
     return mse
 
 
-class CuriosityLoss(object):
-    def __init__(self, pred_states, true_states, loss_weight=1.0):
+class SCMLoss(object):
+    def __init__(self, pred_states, true_states, pred_influence, true_influence, loss_weight=1.0):
         """Surprisal with self-supervised MSE on a trajectory.
 
          The loss is based on the difference between the predicted encoding of the observation x
@@ -64,16 +104,26 @@ class CuriosityLoss(object):
         self.total_loss = mse * loss_weight
 
 
-def setup_curiosity_loss(logits, model, policy, train_batch):
+def setup_scm_loss(model, policy, train_batch):
     # Instantiate the prediction loss
-    aux_preds = model.predicted_encoded_observations()
+    predicted_states = model.predicted_encoded_observations()
     true_states = model.true_encoded_observations()
-    curiosity_loss = CuriosityLoss(aux_preds, true_states, loss_weight=policy.aux_loss_weight)
-    return curiosity_loss
+    predicted_influence = model.predicted_influence()
+    true_influence = train_batch["total_influence_reward"]
+
+    scm_loss = SCMLoss(
+        predicted_states,
+        true_states,
+        predicted_influence,
+        true_influence,
+        loss_weight=policy.scm_loss_weight,
+    )
+    return scm_loss
 
 
-def curiosity_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, episode=None):
+def scm_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, episode=None):
     # Compute curiosity reward and add to batch.
+    sample_batch = compute_influence_reward(policy, sample_batch)
     sample_batch = compute_curiosity_reward(policy, sample_batch)
     return sample_batch
 
@@ -99,34 +149,24 @@ def compute_curiosity_reward(policy, trajectory):
 
     # Add to trajectory
     trajectory["total_aux_reward"] = reward
-    trajectory["reward_without_aux"] = trajectory["rewards"]
+    trajectory["extrinsic_reward"] = trajectory["rewards"]
     trajectory["rewards"] = trajectory["rewards"] + reward
 
     return trajectory
 
 
-def curiosity_fetches(policy):
-    """Adds value function, logits, moa predictions of counterfactual actions
-     to experience train_batches."""
+def scm_fetches(policy):
+    """Adds observations and causal influence to experience train_batches."""
     return {
-        ACTION_LOGITS: policy.model.action_logits(),
         ENCODED_OBSERVATIONS: policy.model.true_encoded_observations(),
         PREDICTED_OBSERVATIONS: policy.model.predicted_encoded_observations(),
+        **moa_fetches(policy),
     }
 
 
-class ConfigInitializerMixIn(object):
-    def __init__(self, config):
-        config = config["model"]["custom_options"]
-        self.num_other_agents = config["num_other_agents"]
-        self.aux_loss_weight = config["aux_loss_weight"]
-        self.aux_reward_clip = config["aux_reward_clip"]
-
-
-def setup_curiosity_mixins(policy, obs_space, action_space, config):
-    AuxScheduleMixIn.__init__(policy, config)
-    ConfigInitializerMixIn.__init__(policy, config)
+def setup_scm_mixins(policy, obs_space, action_space, config):
+    SocialCuriosityScheduleMixIn.__init__(policy, config)
 
 
 def get_curiosity_mixins():
-    return [ConfigInitializerMixIn, AuxScheduleMixIn]
+    return get_moa_mixins() + [SocialCuriosityScheduleMixIn]

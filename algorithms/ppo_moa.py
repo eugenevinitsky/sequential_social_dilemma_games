@@ -1,5 +1,3 @@
-from functools import partial
-
 from ray.rllib.agents.ppo.ppo import (
     choose_policy_optimizer,
     update_kl,
@@ -19,24 +17,32 @@ from ray.rllib.agents.ppo.ppo_tf_policy import (
 )
 from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.evaluation.postprocessing import Postprocessing
-from ray.rllib.models import ModelCatalog
 from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.policy.tf_policy import ACTION_LOGP, EntropyCoeffSchedule, LearningRateSchedule
 from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.utils import try_import_tf
+
+from algorithms.common_funcs_moa import (
+    build_model,
+    get_moa_mixins,
+    moa_fetches,
+    moa_postprocess_trajectory,
+    setup_moa_loss,
+    setup_moa_mixins,
+)
 
 tf = try_import_tf()
 
 POLICY_SCOPE = "func"
 
 
-def loss_with_aux(setup_aux_loss_fn, policy, model, dist_class, train_batch):
+def loss_with_moa(policy, model, dist_class, train_batch):
     # you need to override this bit to pull out the right bits from train_batch
     logits, state = model.from_batch(train_batch)
     action_dist = dist_class(logits, model)
 
-    aux_loss = setup_aux_loss_fn(logits, model, policy, train_batch)
-    policy.aux_loss = aux_loss.total_loss
+    moa_loss = setup_moa_loss(logits, model, policy, train_batch)
+    policy.moa_loss = moa_loss.total_loss
 
     if state:
         max_seq_len = tf.reduce_max(train_batch["seq_lens"])
@@ -45,7 +51,7 @@ def loss_with_aux(setup_aux_loss_fn, policy, model, dist_class, train_batch):
     else:
         mask = tf.ones_like(train_batch[Postprocessing.ADVANTAGES], dtype=tf.bool)
 
-    policy.loss_obj = PPOLoss(
+    policy.ppo_loss = PPOLoss(
         dist_class,
         model,
         train_batch[Postprocessing.VALUE_TARGETS],
@@ -65,108 +71,77 @@ def loss_with_aux(setup_aux_loss_fn, policy, model, dist_class, train_batch):
         policy.config["use_gae"],
     )
 
-    policy.loss_obj.loss += aux_loss.total_loss
-    return policy.loss_obj.loss
+    policy.ppo_loss.loss += moa_loss.total_loss
+    return policy.ppo_loss.loss
 
 
-def extra_fetches(aux_fetches_fn, policy):
-    """Adds value function, logits, aux predictions to experience train_batches."""
+def extra_fetches(policy):
+    """Adds value function, logits, moa predictions to experience train_batches."""
     ppo_fetches = vf_preds_and_logits_fetches(policy)
-    ppo_fetches.update(aux_fetches_fn(policy))
+    ppo_fetches.update(moa_fetches(policy))
     return ppo_fetches
 
 
-def extra_stats(policy, train_batch):
+def extra_moa_stats(policy, train_batch):
     base_stats = kl_and_loss_stats(policy, train_batch)
     base_stats = {
         **base_stats,
         "var_gnorm": tf.global_norm([x for x in policy.model.trainable_variables()]),
-        "cur_aux_reward_weight": tf.cast(policy.cur_aux_reward_weight_tensor, tf.float32),
-        "total_aux_reward": train_batch["total_aux_reward"],
-        "reward_without_aux": train_batch["reward_without_aux"],
-        "aux_loss": policy.aux_loss * policy.aux_loss_weight,
+        "cur_influence_reward_weight": tf.cast(
+            policy.cur_influence_reward_weight_tensor, tf.float32
+        ),
+        "total_influence_reward": train_batch["total_influence_reward"],
+        "extrinsic_reward": train_batch["extrinsic_reward"],
+        "moa_loss": policy.moa_loss * policy.moa_loss_weight,
     }
 
     return base_stats
 
 
-def postprocess_ppo_aux(
-    aux_postprocess_trajectory_fn, policy, sample_batch, other_agent_batches=None, episode=None
-):
+def postprocess_ppo_moa(policy, sample_batch, other_agent_batches=None, episode=None):
     """Adds the policy logits, VF preds, and advantages to the trajectory."""
 
-    batch = aux_postprocess_trajectory_fn(policy, sample_batch)
+    batch = moa_postprocess_trajectory(policy, sample_batch)
     batch = postprocess_ppo_gae(policy, batch)
     return batch
 
 
-def build_model(policy, obs_space, action_space, config):
-    _, logit_dim = ModelCatalog.get_action_dist(action_space, config["model"])
-
-    policy.model = ModelCatalog.get_model_v2(
-        obs_space, action_space, logit_dim, config["model"], name=POLICY_SCOPE, framework="tf",
-    )
-
-    return policy.model
-
-
-def setup_mixins(setup_aux_mixins_fn, policy, obs_space, action_space, config):
+def setup_ppo_moa_mixins(policy, obs_space, action_space, config):
     ValueNetworkMixin.__init__(policy, obs_space, action_space, config)
     KLCoeffMixin.__init__(policy, config)
     EntropyCoeffSchedule.__init__(policy, config["entropy_coeff"], config["entropy_coeff_schedule"])
     LearningRateSchedule.__init__(policy, config["lr"], config["lr_schedule"])
-    setup_aux_mixins_fn(policy, obs_space, action_space, config)
+    setup_moa_mixins(policy, obs_space, action_space, config)
 
 
-def get_ppo_trainer(aux_model_type, aux_config):
+def build_ppo_moa_trainer(moa_config):
     tf.keras.backend.set_floatx("float32")
 
-    if aux_model_type == "moa":
-        from algorithms.common_funcs_causal import (
-            setup_moa_loss as setup_aux_loss,
-            causal_fetches as aux_fetches,
-            setup_causal_mixins as setup_aux_mixins,
-            get_causal_mixins as get_aux_mixins,
-            causal_postprocess_trajectory as aux_postprocess_trajectory,
-        )
+    trainer_name = "MOAPPOTrainer"
 
-        trainer_name = "CausalMOAPPOTrainer"
-    elif aux_model_type == "curiosity":
-        from algorithms.common_funcs_curiosity import (
-            setup_curiosity_loss as setup_aux_loss,
-            curiosity_fetches as aux_fetches,
-            setup_curiosity_mixins as setup_aux_mixins,
-            get_curiosity_mixins as get_aux_mixins,
-            curiosity_postprocess_trajectory as aux_postprocess_trajectory,
-        )
-
-        trainer_name = "CuriosityPPOTrainer"
-    else:
-        raise NotImplementedError
-
-    aux_ppo_policy = build_tf_policy(
-        name="PPOAuxTFPolicy",
-        get_default_config=lambda: aux_config,
-        loss_fn=partial(loss_with_aux, setup_aux_loss),
+    moa_ppo_policy = build_tf_policy(
+        name="MOAPPOTFPolicy",
+        get_default_config=lambda: moa_config,
+        loss_fn=loss_with_moa,
         make_model=build_model,
-        stats_fn=extra_stats,
-        extra_action_fetches_fn=partial(extra_fetches, aux_fetches),
-        postprocess_fn=partial(postprocess_ppo_aux, aux_postprocess_trajectory),
+        stats_fn=extra_moa_stats,
+        extra_action_fetches_fn=extra_fetches,
+        postprocess_fn=postprocess_ppo_moa,
         gradients_fn=clip_gradients,
         before_init=setup_config,
-        before_loss_init=partial(setup_mixins, setup_aux_mixins),
+        before_loss_init=setup_ppo_moa_mixins,
         mixins=[LearningRateSchedule, EntropyCoeffSchedule, KLCoeffMixin, ValueNetworkMixin]
-        + get_aux_mixins(),
+        + get_moa_mixins(),
     )
 
-    aux_ppo_trainer = build_trainer(
+    moa_ppo_trainer = build_trainer(
         name=trainer_name,
-        default_policy=aux_ppo_policy,
+        default_policy=moa_ppo_policy,
         make_policy_optimizer=choose_policy_optimizer,
-        default_config=aux_config,
+        default_config=moa_config,
         validate_config=validate_config,
         after_optimizer_step=update_kl,
         after_train_result=warn_about_bad_reward_scales,
     )
 
-    return aux_ppo_trainer
+    return moa_ppo_trainer

@@ -59,32 +59,32 @@ class KerasRNN(RecurrentTFModelV2):
             i += 1
 
         if self.append_actions:
-            actions_layer = tf.keras.layers.Input(
+            self.actions_layer = tf.keras.layers.Input(
                 shape=(None, self.num_outputs + self.action_space.n), name="action_input"
             )
 
-            last_layer = tf.keras.layers.concatenate([last_layer, actions_layer])
+            last_layer = tf.keras.layers.concatenate([last_layer, self.actions_layer])
 
         state_in_h = tf.keras.layers.Input(shape=(cell_size,), name="h")
         state_in_c = tf.keras.layers.Input(shape=(cell_size,), name="c")
         seq_in = tf.keras.layers.Input(shape=(), name="seq_in", dtype=tf.int32)
 
-        lstm_out, state_h, state_c = tf.keras.layers.LSTM(
+        self.lstm_out, state_h, state_c = tf.keras.layers.LSTM(
             cell_size, return_sequences=True, return_state=True, name="lstm"
         )(inputs=last_layer, mask=tf.sequence_mask(seq_in), initial_state=[state_in_h, state_in_c],)
 
         # Postprocess LSTM output with another hidden layer and compute values
         logits = tf.keras.layers.Dense(
             self.num_outputs, activation=tf.keras.activations.linear, name=name
-        )(lstm_out)
+        )(self.lstm_out)
 
         inputs = [input_layer, seq_in, state_in_h, state_in_c]
         if self.append_actions:
-            inputs.insert(1, actions_layer)
+            inputs.insert(1, self.actions_layer)
         if use_value_fn:
             value_out = tf.keras.layers.Dense(
                 1, name="value_out", activation=None, kernel_initializer=normc_initializer(0.01),
-            )(lstm_out)
+            )(self.lstm_out)
             outputs = [logits, value_out, state_h, state_c]
         else:
             outputs = [logits, state_h, state_c]
@@ -125,7 +125,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         self.num_outputs = num_outputs
         self.num_other_agents = model_config["custom_options"]["num_other_agents"]
 
-        self.moa_encoder_model = self.create_encoder_model(obs_space, model_config)
+        self.moa_encoder_model = self.create_moa_encoder_model(obs_space, model_config)
         self.register_variables(self.moa_encoder_model.variables)
         self.moa_encoder_model.summary()
 
@@ -168,8 +168,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         self.actions_model.rnn_model.summary()
         self.moa_model.rnn_model.summary()
 
-    @staticmethod
-    def create_encoder_model(obs_space, model_config):
+    def create_moa_encoder_model(self, obs_space, model_config):
         original_obs_dims = obs_space.original_space.spaces["curr_obs"].shape
         # An extra none for the time dimension
         inputs = tf.keras.layers.Input(
@@ -179,6 +178,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         # Divide by 255 to transform [0,255] uint8 rgb pixel values to [0,1] float32.
         last_layer = tf.keras.backend.cast(inputs, tf.float32)
         last_layer = tf.math.divide(last_layer, 255.0)
+        self.postprocessed_input = last_layer
 
         # A temp config with custom_model false so that we can get a basic vision model
         # with the desired filters
@@ -256,13 +256,13 @@ class MOA_LSTM(RecurrentTFModelV2):
         other_actions = input_dict["obs"]["other_agent_actions"]
         agent_action = tf.expand_dims(input_dict["prev_action"], axis=-1)
         all_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_true_actions")
-        one_hot_actions = self._reshaped_one_hot_actions(all_actions, "forward_one_hot")
-        self._true_action_pass_dict = {"curr_obs": trunk, "prev_total_actions": one_hot_actions}
+        self._true_one_hot_actions = self._reshaped_one_hot_actions(all_actions, "forward_one_hot")
+        true_action_pass_dict = {"curr_obs": trunk, "prev_total_actions": self._true_one_hot_actions}
 
         # Compute the action prediction. This is unused in the actual rollout and is only to generate
         # a series of hidden states for the counterfactuals
         action_pred, output_h2, output_c2 = self.moa_model.forward_rnn(
-            self._true_action_pass_dict, [h2, c2], seq_lens
+            true_action_pass_dict, [h2, c2], seq_lens
         )
 
         # Now we can use that cell state to do the counterfactual predictions
@@ -284,7 +284,7 @@ class MOA_LSTM(RecurrentTFModelV2):
             counterfactual_preds, axis=-2, name="concat_counterfactuals"
         )
 
-        # TODO(@evinitsky) move this into ppo_causal by using restore_original_dimensions()
+        # TODO(@evinitsky) move this into ppo_moa by using restore_original_dimensions()
         self._other_agent_actions = input_dict["obs"]["other_agent_actions"]
         self._visibility = input_dict["obs"]["visible_agents"]
 

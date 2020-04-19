@@ -25,15 +25,15 @@ from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.explained_variance import explained_variance
 
-from algorithms.common_funcs_causal import (
-    causal_fetches,
-    causal_postprocess_trajectory,
-    get_causal_mixins,
-    setup_causal_mixins,
+from algorithms.common_funcs_moa import (
+    get_moa_mixins,
+    moa_fetches,
+    moa_postprocess_trajectory,
     setup_moa_loss,
+    setup_moa_mixins,
 )
 
-CAUSAL_CONFIG = DEFAULT_CONFIG
+MOA_CONFIG = DEFAULT_CONFIG
 
 
 tf = try_import_tf()
@@ -146,7 +146,7 @@ def build_vtrace_loss(policy, model, dist_class, train_batch):
     return policy.loss.total_loss
 
 
-def causal_stats(policy, train_batch):
+def moa_stats(policy, train_batch):
     values_batched = _make_time_major(
         policy,
         train_batch.get("seq_lens"),
@@ -164,10 +164,10 @@ def causal_stats(policy, train_batch):
         "vf_explained_var": explained_variance(
             tf.reshape(policy.loss.value_targets, [-1]), tf.reshape(values_batched, [-1]),
         ),
+        "total_influence": train_batch["total_influence"],
+        "extrinsic_reward": train_batch["extrinsic_reward"],
+        "moa_loss": policy.moa_loss / policy.moa_weight,
     }
-    base_stats["total_influence"] = train_batch["total_influence"]
-    base_stats["reward_without_influence"] = train_batch["reward_without_influence"]
-    base_stats["moa_loss"] = policy.moa_loss / policy.moa_weight
     return base_stats
 
 
@@ -178,56 +178,60 @@ def grad_stats(policy, train_batch, grads):
 
 
 def postprocess_trajectory(policy, sample_batch, other_agent_batches=None, episode=None):
-    sample_batch = causal_postprocess_trajectory(policy, sample_batch)
+    sample_batch = moa_postprocess_trajectory(policy, sample_batch)
     del sample_batch.data[SampleBatch.NEXT_OBS]
     return sample_batch
 
 
 def add_behaviour_logits(policy):
     fetches = {BEHAVIOUR_LOGITS: policy.model.last_output()}
-    fetches.update(causal_fetches(policy))
+    fetches.update(moa_fetches(policy))
     return fetches
 
 
 def setup_mixins(policy, obs_space, action_space, config):
     LearningRateSchedule.__init__(policy, config["lr"], config["lr_schedule"])
     EntropyCoeffSchedule.__init__(policy, config["entropy_coeff"], config["entropy_coeff_schedule"])
-    setup_causal_mixins(policy, obs_space, action_space, config)
+    setup_moa_mixins(policy, obs_space, action_space, config)
 
 
-CausalVTracePolicy = build_tf_policy(
-    name="CausalVTracePolicy",
-    get_default_config=lambda: CAUSAL_CONFIG,
-    loss_fn=build_vtrace_loss,
-    stats_fn=causal_stats,
-    grad_stats_fn=grad_stats,
-    postprocess_fn=postprocess_trajectory,
-    optimizer_fn=choose_optimizer,
-    gradients_fn=clip_gradients,
-    extra_action_fetches_fn=add_behaviour_logits,
-    before_init=validate_config_policy,
-    before_loss_init=setup_mixins,
-    mixins=[LearningRateSchedule, EntropyCoeffSchedule] + get_causal_mixins(),
-    get_batch_divisibility_req=lambda p: p.config["rollout_fragment_length"],
-)
+def get_moa_vtrace_policy():
+    moa_vtrace_policy = build_tf_policy(
+        name="MOAVTracePolicy",
+        get_default_config=lambda: MOA_CONFIG,
+        loss_fn=build_vtrace_loss,
+        stats_fn=moa_stats,
+        grad_stats_fn=grad_stats,
+        postprocess_fn=postprocess_trajectory,
+        optimizer_fn=choose_optimizer,
+        gradients_fn=clip_gradients,
+        extra_action_fetches_fn=add_behaviour_logits,
+        before_init=validate_config_policy,
+        before_loss_init=setup_mixins,
+        mixins=[LearningRateSchedule, EntropyCoeffSchedule] + get_moa_mixins(),
+        get_batch_divisibility_req=lambda p: p.config["rollout_fragment_length"],
+    )
+    return moa_vtrace_policy
 
 
 def choose_policy(config):
     if config["vtrace"]:
-        return CausalVTracePolicy
+        return get_moa_vtrace_policy()
     else:
         import sys
 
         sys.exit("Hey, set vtrace to true")
 
 
-CausalImpalaTrainer = build_trainer(
-    name="CausalIMPALA",
-    default_config=CAUSAL_CONFIG,
-    default_policy=CausalVTracePolicy,
-    validate_config=validate_config,
-    get_policy_class=choose_policy,
-    make_workers=defer_make_workers,
-    make_policy_optimizer=make_aggregators_and_optimizer,
-    mixins=[OverrideDefaultResourceRequest],
-)
+def build_impala_moa_trainer(config):
+    moa_impala_trainer = build_trainer(
+        name="MOAIMPALA",
+        default_config=config,
+        default_policy=get_moa_vtrace_policy(),
+        validate_config=validate_config,
+        get_policy_class=choose_policy,
+        make_workers=defer_make_workers,
+        make_policy_optimizer=make_aggregators_and_optimizer,
+        mixins=[OverrideDefaultResourceRequest],
+    )
+    return moa_impala_trainer

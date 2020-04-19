@@ -10,7 +10,7 @@ from ray.rllib.agents.ppo.ppo_tf_policy import PPOTFPolicy
 from ray.rllib.agents.trainer_template import build_trainer
 
 
-def build_ppo_baseline_trainer_with_config(config):
+def build_ppo_baseline_trainer(config):
     ppo_trainer = build_trainer(
         name="PPO",
         default_config=config,

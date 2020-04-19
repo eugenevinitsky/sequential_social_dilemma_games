@@ -10,16 +10,17 @@ from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
 from ray.tune.registry import register_env
 
-from algorithms.a3c_aux import get_a3c_trainer
-from algorithms.a3c_baseline import build_a3c_baseline_trainer_with_config
-from algorithms.impala_baseline import build_impala_baseline_trainer_with_config
-from algorithms.impala_causal import CausalImpalaTrainer
-from algorithms.ppo_aux import get_ppo_trainer
-from algorithms.ppo_baseline import build_ppo_baseline_trainer_with_config
+from algorithms.a3c_baseline import build_a3c_baseline_trainer
+from algorithms.a3c_moa import build_a3c_moa_trainer
+from algorithms.impala_baseline import build_impala_baseline_trainer
+from algorithms.impala_moa import build_impala_moa_trainer
+from algorithms.ppo_baseline import build_ppo_baseline_trainer
+from algorithms.ppo_moa import build_ppo_moa_trainer
+from algorithms.ppo_scm import build_ppo_scm_trainer
 from config.default_args import add_default_args
 from models.baseline_model import Baseline_LSTM
-from models.curiosity_model import CuriosityLSTM
 from models.moa_model import MOA_LSTM
+from models.scm_model import SocialCuriosityModule
 from social_dilemmas.envs.env_creator import get_env_creator
 from utility_funcs import update_nested_dict
 
@@ -37,8 +38,8 @@ def setup(args):
     act_space = single_env.action_space
 
     model_name = args.model + "_lstm"
-    if args.model == "curiosity":
-        ModelCatalog.register_custom_model(model_name, CuriosityLSTM)
+    if args.model == "scm":
+        ModelCatalog.register_custom_model(model_name, SocialCuriosityModule)
     elif args.model == "moa":
         ModelCatalog.register_custom_model(model_name, MOA_LSTM)
     elif args.model == "baseline":
@@ -110,7 +111,7 @@ def setup(args):
     if args.model != "baseline":
         config["model"]["custom_options"].update(
             {
-                "aux_loss_weight": args.aux_loss_weight,
+                "aux_loss_weight": args.scm_loss_weight,
                 "aux_reward_clip": 10,
                 "aux_reward_weight": args.aux_reward_weight,
                 "aux_reward_schedule_steps": args.aux_reward_schedule_steps,
@@ -178,18 +179,28 @@ if __name__ == "__main__":
 
     if args.model == "baseline":
         if args.algorithm == "A3C":
-            trainer = build_a3c_baseline_trainer_with_config(config)
+            trainer = build_a3c_baseline_trainer(config)
         if args.algorithm == "PPO":
-            trainer = build_ppo_baseline_trainer_with_config(config)
+            trainer = build_ppo_baseline_trainer(config)
         if args.algorithm == "IMPALA":
-            trainer = build_impala_baseline_trainer_with_config(config)
-    else:
+            trainer = build_impala_baseline_trainer(config)
+    elif args.model == "moa":
         if args.algorithm == "A3C":
-            trainer = get_a3c_trainer(args.model, config)
+            trainer = build_a3c_moa_trainer(config)
         if args.algorithm == "PPO":
-            trainer = get_ppo_trainer(args.model, config)
+            trainer = build_ppo_moa_trainer(config)
         if args.algorithm == "IMPALA":
-            trainer = CausalImpalaTrainer
+            trainer = build_impala_moa_trainer(config)
+    elif args.model == "scm":
+        if args.algorithm == "A3C":
+            # trainer = build_a3c_scm_trainer(config)
+            raise NotImplementedError
+        if args.algorithm == "PPO":
+            trainer = build_ppo_scm_trainer(config)
+            raise NotImplementedError
+        if args.algorithm == "IMPALA":
+            # trainer = build_impala_scm_trainer(config)
+            raise NotImplementedError
 
     exp_dict = {
         "name": exp_name,

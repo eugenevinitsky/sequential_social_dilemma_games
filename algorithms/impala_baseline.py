@@ -11,7 +11,7 @@ from ray.rllib.agents.impala.vtrace_policy import VTraceTFPolicy
 from ray.rllib.agents.trainer_template import build_trainer
 
 
-def build_impala_baseline_trainer_with_config(config):
+def build_impala_baseline_trainer(config):
     impala_trainer = build_trainer(
         name="IMPALA",
         default_config=config,

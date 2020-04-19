@@ -8,7 +8,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--env",
         type=str,
-        default="switch",
+        default="harvest",
         help="Name of the environment to use. Can be switch, cleanup or harvest.",
     )
     parser.add_argument(
@@ -18,7 +18,7 @@ def add_default_args(parser):
         "--model",
         type=str,
         default="baseline",
-        help="Name of the model to use. Can be baseline, curiosity, moa, moa_curiosity",
+        help="Name of the model to use. Can be baseline, moa, or scm",
     )
     parser.add_argument(
         "--small_model",
@@ -26,7 +26,7 @@ def add_default_args(parser):
         default=False,
         help="Set to true to use a neural network with smaller layers.",
     )
-    parser.add_argument("--num_agents", type=int, default=1, help="Number of agent policies")
+    parser.add_argument("--num_agents", type=int, default=2, help="Number of agent policies")
     parser.add_argument(
         "--rollout_fragment_length",
         type=int,
@@ -73,10 +73,10 @@ def add_default_args(parser):
 
     parser.add_argument("--num_workers", type=int, default=2, help="Total number of workers")
     parser.add_argument(
-        "--cpus_for_driver", type=int, default=1, help="Number of CPUs used by the driver"
+        "--cpus_for_driver", type=int, default=0, help="Number of CPUs used by the driver"
     )
     parser.add_argument(
-        "--gpus_for_driver", type=float, default=0, help="Number of GPUs used by the driver"
+        "--gpus_for_driver", type=float, default=1, help="Number of GPUs used by the driver"
     )
     parser.add_argument(
         "--cpus_per_worker", type=int, default=1, help="Number of CPUs used by one worker"
@@ -88,7 +88,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--num_envs_per_worker",
         type=float,
-        default=16,
+        default=5,
         help="Number of envs to place on a single worker",
     )
     parser.add_argument(
@@ -100,7 +100,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--local_mode",
         action="store_true",
-        default=False,
+        default=True,
         help="Force all the computation onto the driver. Useful for debugging.",
     )
     parser.add_argument(
@@ -207,6 +207,6 @@ def add_default_args(parser):
     parser.add_argument(
         "--ppo_sgd_minibatch_size",
         type=int,
-        default=4000,
+        default=1000,
         help="Minibatch size for the stochastic gradient descent step in the PPO algorithm",
     )

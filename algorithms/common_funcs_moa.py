@@ -3,9 +3,9 @@ import sys
 import numpy as np
 import scipy
 from ray.rllib.models import ModelCatalog
+from ray.rllib.policy.policy import Policy
 from ray.rllib.utils import try_import_tf
-
-from algorithms.common_funcs import AuxScheduleMixIn
+from ray.rllib.utils.annotations import override
 
 tf = try_import_tf()
 
@@ -19,6 +19,42 @@ VISIBILITY_MATRIX = "visibility_matrix"
 ACTION_LOGITS = "action_logits"
 COUNTERFACTUAL_ACTIONS = "counterfactual_actions"
 POLICY_SCOPE = "func"
+
+
+class InfluenceScheduleMixIn(object):
+    def __init__(self, config):
+        config = config["model"]["custom_options"]
+        self.baseline_influence_reward_weight = config["influence_reward_weight"]
+        self.influence_reward_schedule_steps = config["influence_reward_schedule_steps"]
+        self.influence_reward_schedule_weights = config["influence_reward_schedule_weights"]
+        self.timestep = 0
+        self.cur_influence_reward_weight = np.float32(self.compute_weight())
+        # This tensor is for logging the weight to progress.csv
+        self.cur_influence_reward_weight_tensor = tf.get_variable(
+            "cur_influence_reward_weight",
+            initializer=self.cur_influence_reward_weight,
+            trainable=False,
+        )
+
+    @override(Policy)
+    def on_global_var_update(self, global_vars):
+        super(InfluenceScheduleMixIn, self).on_global_var_update(global_vars)
+        self.timestep = global_vars["timestep"]
+        self.cur_influence_reward_weight = self.compute_weight()
+        self.cur_influence_reward_weight_tensor.load(
+            self.cur_influence_reward_weight, session=self._sess
+        )
+
+    def compute_weight(self):
+        """ Computes multiplier for influence reward based on training steps
+        taken and schedule parameters.
+        """
+        weight = np.interp(
+            self.timestep,
+            self.influence_reward_schedule_steps,
+            self.influence_reward_schedule_weights,
+        )
+        return weight * self.baseline_influence_reward_weight
 
 
 def kl_div(p, q):
@@ -88,20 +124,20 @@ def setup_moa_loss(logits, model, policy, train_batch):
     moa_loss = MOALoss(
         moa_preds,
         true_actions,
-        loss_weight=policy.aux_loss_weight,
+        loss_weight=policy.influence_loss_weight,
         others_visibility=others_visibility,
     )
     return moa_loss
 
 
-def causal_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, episode=None):
+def moa_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, episode=None):
     # Extract matrix of self and other agents' actions.
     own_actions = np.atleast_2d(np.array(sample_batch["actions"]))
     own_actions = np.reshape(own_actions, [-1, 1])
     all_actions = np.hstack((own_actions, sample_batch[OTHERS_ACTIONS]))
     sample_batch[ALL_ACTIONS] = all_actions
 
-    # Compute causal social influence reward and add to batch.
+    # Compute social influence reward and add to batch.
     sample_batch = compute_influence_reward(policy, sample_batch)
 
     return sample_batch
@@ -144,16 +180,16 @@ def compute_influence_reward(policy, trajectory):
         #     visibility = get_agent_visibility_multiplier(trajectory, policy.num_other_agents)
         influence_per_agent_step *= visibility
 
-    cur_aux_reward_weight = policy.compute_weight()
+    cur_influence_reward_weight = policy.compute_weight()
 
     # Summarize and clip influence reward
     influence = np.sum(influence_per_agent_step, axis=-1)
-    influence = np.clip(influence, -policy.aux_reward_clip, policy.aux_reward_clip)
-    influence = influence * cur_aux_reward_weight
+    influence = np.clip(influence, -policy.influence_reward_clip, policy.influence_reward_clip)
+    influence = influence * cur_influence_reward_weight
 
     # Add to trajectory
-    trajectory["total_aux_reward"] = influence
-    trajectory["reward_without_aux"] = trajectory["rewards"]
+    trajectory["total_influence_reward"] = influence
+    trajectory["extrinsic_reward"] = trajectory["rewards"]
     trajectory["rewards"] = trajectory["rewards"] + influence
 
     return trajectory
@@ -242,9 +278,8 @@ def extract_last_actions_from_episodes(episodes, batch_type=False, own_actions=N
     return all_actions
 
 
-def causal_fetches(policy):
-    """Adds value function, logits, moa predictions of counterfactual actions
-    to experience train_batches."""
+def moa_fetches(policy):
+    """Adds logits, moa predictions of counterfactual actions to experience train_batches."""
     return {
         # Be aware that this is frozen here so that we don't
         # propagate agent actions through the reward
@@ -256,12 +291,12 @@ def causal_fetches(policy):
     }
 
 
-class ConfigInitializerMixIn(object):
+class MOAConfigInitializerMixIn(object):
     def __init__(self, config):
         config = config["model"]["custom_options"]
         self.num_other_agents = config["num_other_agents"]
-        self.aux_loss_weight = config["aux_loss_weight"]
-        self.aux_reward_clip = config["aux_reward_clip"]
+        self.influence_loss_weight = config["influence_loss_weight"]
+        self.influence_reward_clip = config["influence_reward_clip"]
         self.train_moa_only_when_visible = config["train_moa_only_when_visible"]
         self.influence_divergence_measure = config["influence_divergence_measure"]
         self.influence_only_when_visible = config["influence_only_when_visible"]
@@ -277,10 +312,10 @@ def build_model(policy, obs_space, action_space, config):
     return policy.model
 
 
-def setup_causal_mixins(policy, obs_space, action_space, config):
-    AuxScheduleMixIn.__init__(policy, config)
-    ConfigInitializerMixIn.__init__(policy, config)
+def setup_moa_mixins(policy, obs_space, action_space, config):
+    InfluenceScheduleMixIn.__init__(policy, config)
+    MOAConfigInitializerMixIn.__init__(policy, config)
 
 
-def get_causal_mixins():
-    return [ConfigInitializerMixIn, AuxScheduleMixIn]
+def get_moa_mixins():
+    return [MOAConfigInitializerMixIn, InfluenceScheduleMixIn]

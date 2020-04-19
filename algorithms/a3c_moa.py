@@ -2,8 +2,6 @@
 
 from __future__ import absolute_import, division, print_function
 
-from functools import partial
-
 from ray.rllib.agents.a3c.a3c import validate_config
 from ray.rllib.agents.a3c.a3c_tf_policy import postprocess_advantages
 from ray.rllib.agents.trainer_template import build_trainer
@@ -14,6 +12,14 @@ from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.explained_variance import explained_variance
 from ray.rllib.utils.tf_ops import make_tf_callable
+
+from algorithms.common_funcs_moa import (
+    get_moa_mixins,
+    moa_fetches,
+    moa_postprocess_trajectory,
+    setup_moa_loss,
+    setup_moa_mixins,
+)
 
 tf = try_import_tf()
 
@@ -33,17 +39,15 @@ class A3CLoss(object):
         self.total_loss = self.pi_loss + self.vf_loss * vf_loss_coeff - self.entropy * entropy_coeff
 
 
-def postprocess_a3c_aux(
-    aux_postprocess_trajectory_fn, policy, sample_batch, other_agent_batches=None, episode=None,
-):
+def postprocess_a3c_moa(policy, sample_batch, other_agent_batches=None, episode=None):
     """Adds the policy logits, VF preds, and advantages to the trajectory."""
 
-    batch = aux_postprocess_trajectory_fn(policy, sample_batch)
+    batch = moa_postprocess_trajectory(policy, sample_batch)
     batch = postprocess_advantages(policy, batch)
     return batch
 
 
-def actor_critic_loss(setup_aux_loss_fn, policy, model, dist_class, train_batch):
+def actor_critic_loss(policy, model, dist_class, train_batch):
     logits, _ = model.from_batch(train_batch)
     action_dist = dist_class(logits, model)
     policy.loss = A3CLoss(
@@ -56,7 +60,7 @@ def actor_critic_loss(setup_aux_loss_fn, policy, model, dist_class, train_batch)
         policy.config["entropy_coeff"],
     )
 
-    aux_loss = setup_aux_loss_fn(logits, model, policy, train_batch)
+    aux_loss = setup_moa_loss(logits, model, policy, train_batch)
     policy.loss.total_loss += aux_loss.total_loss
 
     # store this for future statistics
@@ -65,9 +69,9 @@ def actor_critic_loss(setup_aux_loss_fn, policy, model, dist_class, train_batch)
     return policy.loss.total_loss
 
 
-def add_value_function_fetch(aux_fetches_fn, policy):
+def add_value_function_fetch(policy):
     fetch = {SampleBatch.VF_PREDS: policy.model.value_function()}
-    fetch.update(aux_fetches_fn(policy))
+    fetch.update(moa_fetches(policy))
     return fetch
 
 
@@ -99,8 +103,8 @@ def stats(policy, train_batch):
         "vf_loss": policy.loss.vf_loss,
         "cur_aux_reward_weight": tf.cast(policy.cur_aux_reward_weight_tensor, tf.float32),
         "total_aux_reward": train_batch["total_aux_reward"],
-        "reward_without_aux": train_batch["reward_without_aux"],
-        "aux_loss": policy.aux_loss * policy.aux_loss_weight,
+        "extrinsic_reward": train_batch["extrinsic_reward"],
+        "aux_loss": policy.aux_loss * policy.scm_loss_weight,
     }
     return base_stats
 
@@ -122,51 +126,28 @@ def clip_gradients(policy, optimizer, loss):
     return clipped_grads
 
 
-def setup_mixins(setup_fn, policy, obs_space, action_space, config):
+def setup_mixins(policy, obs_space, action_space, config):
     ValueNetworkMixin.__init__(policy)
     LearningRateSchedule.__init__(policy, config["lr"], config["lr_schedule"])
-    setup_fn(policy, obs_space, action_space, config)
+    setup_moa_mixins(policy, obs_space, action_space, config)
 
 
-def get_a3c_trainer(aux_model_type, aux_config):
+def build_a3c_moa_trainer(aux_config):
     tf.keras.backend.set_floatx("float32")
-
-    if aux_model_type == "moa":
-        from algorithms.common_funcs_causal import (
-            setup_moa_loss as setup_aux_loss,
-            causal_fetches as aux_fetches,
-            setup_causal_mixins as setup_aux_mixins,
-            get_causal_mixins as get_aux_mixins,
-            causal_postprocess_trajectory as aux_postprocess_trajectory,
-        )
-
-        trainer_name = "CausalMOAA3CTrainer"
-    elif aux_model_type == "curiosity":
-        from algorithms.common_funcs_curiosity import (
-            setup_curiosity_loss as setup_aux_loss,
-            curiosity_fetches as aux_fetches,
-            setup_curiosity_mixins as setup_aux_mixins,
-            get_curiosity_mixins as get_aux_mixins,
-            curiosity_postprocess_trajectory as aux_postprocess_trajectory,
-        )
-
-        trainer_name = "CuriosityA3CTrainer"
-    else:
-        raise NotImplementedError
-
+    trainer_name = "MOAA3CTrainer"
     aux_config["use_gae"] = False
 
     a3c_tf_policy = build_tf_policy(
         name="A3CAuxTFPolicy",
         get_default_config=lambda: aux_config,
-        loss_fn=partial(actor_critic_loss, setup_aux_loss),
+        loss_fn=actor_critic_loss,
         stats_fn=stats,
         grad_stats_fn=grad_stats,
         gradients_fn=clip_gradients,
-        postprocess_fn=partial(postprocess_a3c_aux, aux_postprocess_trajectory),
-        extra_action_fetches_fn=partial(add_value_function_fetch, aux_fetches),
-        before_loss_init=partial(setup_mixins, setup_aux_mixins),
-        mixins=[ValueNetworkMixin, LearningRateSchedule] + get_aux_mixins(),
+        postprocess_fn=postprocess_a3c_moa,
+        extra_action_fetches_fn=add_value_function_fetch,
+        before_loss_init=setup_mixins,
+        mixins=[ValueNetworkMixin, LearningRateSchedule] + get_moa_mixins(),
     )
 
     trainer = build_trainer(
