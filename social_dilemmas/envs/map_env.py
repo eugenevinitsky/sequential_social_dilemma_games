@@ -217,7 +217,7 @@ class MapEnv(MultiAgentEnv):
         self.update_moves(agent_actions)
 
         for agent in self.agents.values():
-            pos = agent.get_pos()
+            pos = agent.pos
             new_char = agent.consume(self.world_map[pos[0], pos[1]])
             self.world_map[pos[0], pos[1]] = new_char
 
@@ -295,7 +295,7 @@ class MapEnv(MultiAgentEnv):
 
     @property
     def agent_pos(self):
-        return [agent.get_pos().tolist() for agent in self.agents.values()]
+        return [agent.pos.tolist() for agent in self.agents.values()]
 
     # This method is just used for testing
     # FIXME(ev) move into the testing class
@@ -463,7 +463,7 @@ class MapEnv(MultiAgentEnv):
             if "MOVE" in action or "STAY" in action:
                 # rotate the selected action appropriately
                 rot_action = self.rotate_action(selected_action, agent.get_orientation())
-                new_pos = agent.get_pos() + rot_action
+                new_pos = agent.pos + rot_action
                 # allow the agents to confirm what position they can move to
                 new_pos = agent.return_valid_pos(new_pos)
                 reserved_slots.append((*new_pos, b"P", agent_id))
@@ -474,7 +474,7 @@ class MapEnv(MultiAgentEnv):
         # now do the conflict resolution part of the process
 
         # helpful for finding the agent in the conflicting slot
-        agent_by_pos = {tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()}
+        agent_by_pos = {tuple(agent.pos): agent.agent_id for agent in self.agents.values()}
 
         # agent moves keyed by ids
         agent_moves = {}
@@ -531,10 +531,8 @@ class MapEnv(MultiAgentEnv):
                                 # find the agent that is currently at that spot and make sure
                                 # that the move is possible. If it won't be, remove it.
                                 conflicting_agent_id = agent_by_pos[tuple(move)]
-                                curr_pos = self.agents[agent_id].get_pos().tolist()
-                                curr_conflict_pos = (
-                                    self.agents[conflicting_agent_id].get_pos().tolist()
-                                )
+                                curr_pos = self.agents[agent_id].pos.tolist()
+                                curr_conflict_pos = self.agents[conflicting_agent_id].pos.tolist()
                                 conflict_move = agent_moves.get(
                                     conflicting_agent_id, curr_conflict_pos
                                 )
@@ -558,7 +556,7 @@ class MapEnv(MultiAgentEnv):
                                     if (
                                         agent_moves[conflicting_agent_id] == curr_pos
                                         and move.tolist()
-                                        == self.agents[conflicting_agent_id].get_pos().tolist()
+                                        == self.agents[conflicting_agent_id].pos.tolist()
                                     ):
                                         conflict_cell_free = False
 
@@ -567,8 +565,7 @@ class MapEnv(MultiAgentEnv):
                         if conflict_cell_free:
                             self.agents[agent_to_slot[index]].update_agent_pos(move)
                             agent_by_pos = {
-                                tuple(agent.get_pos()): agent.agent_id
-                                for agent in self.agents.values()
+                                tuple(agent.pos): agent.agent_id for agent in self.agents.values()
                             }
                         # ------------------------------------
                         # remove all the other moves that would have conflicted
@@ -577,13 +574,11 @@ class MapEnv(MultiAgentEnv):
                         # all other agents now stay in place so update their moves
                         # to stay in place
                         for agent_id in all_agents_id:
-                            agent_moves[agent_id] = self.agents[agent_id].get_pos().tolist()
+                            agent_moves[agent_id] = self.agents[agent_id].pos.tolist()
 
             # make the remaining un-conflicted moves
             while len(agent_moves.items()) > 0:
-                agent_by_pos = {
-                    tuple(agent.get_pos()): agent.agent_id for agent in self.agents.values()
-                }
+                agent_by_pos = {tuple(agent.pos): agent.agent_id for agent in self.agents.values()}
                 num_moves = len(agent_moves.items())
                 moves_copy = agent_moves.copy()
                 del_keys = []
@@ -594,8 +589,8 @@ class MapEnv(MultiAgentEnv):
                         # find the agent that is currently at that spot and make sure
                         # that the move is possible. If it won't be, remove it.
                         conflicting_agent_id = agent_by_pos[tuple(move)]
-                        curr_pos = self.agents[agent_id].get_pos().tolist()
-                        curr_conflict_pos = self.agents[conflicting_agent_id].get_pos().tolist()
+                        curr_pos = self.agents[agent_id].pos.tolist()
+                        curr_conflict_pos = self.agents[conflicting_agent_id].pos.tolist()
                         conflict_move = agent_moves.get(conflicting_agent_id, curr_conflict_pos)
                         # Condition (1):
                         # a STAY command has been issued
@@ -616,7 +611,7 @@ class MapEnv(MultiAgentEnv):
                         elif conflicting_agent_id in moves_copy.keys():
                             if (
                                 agent_moves[conflicting_agent_id] == curr_pos
-                                and move == self.agents[conflicting_agent_id].get_pos().tolist()
+                                and move == self.agents[conflicting_agent_id].pos.tolist()
                             ):
                                 del agent_moves[conflicting_agent_id]
                                 del agent_moves[agent_id]
@@ -703,7 +698,7 @@ class MapEnv(MultiAgentEnv):
         updates: (tuple (row, col, char))
             the cells that have been hit by the beam and what char will be placed there
         """
-        agent_by_pos = {tuple(agent.get_pos()): agent_id for agent_id, agent in self.agents.items()}
+        agent_by_pos = {tuple(agent.pos): agent_id for agent_id, agent in self.agents.items()}
         start_pos = np.asarray(firing_pos)
         firing_direction = ORIENTATIONS[firing_orientation]
         # compute the other two starting positions
@@ -764,7 +759,7 @@ class MapEnv(MultiAgentEnv):
         """Returns a randomly selected spawn point."""
         spawn_index = 0
         is_free_cell = False
-        curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
+        curr_agent_pos = [agent.pos.tolist() for agent in self.agents.values()]
         random.shuffle(self.spawn_points)
         for i, spawn_point in enumerate(self.spawn_points):
             if [spawn_point[0], spawn_point[1]] not in curr_agent_pos:
@@ -842,7 +837,7 @@ class MapEnv(MultiAgentEnv):
         visible_agents: list
             which agents can be seen by the agent with id "agent_id"
         """
-        agent_pos = self.agents[agent_id].get_pos()
+        agent_pos = self.agents[agent_id].pos
         upper_lim = int(agent_pos[0] + self.agents[agent_id].row_size)
         lower_lim = int(agent_pos[0] - self.agents[agent_id].row_size)
         left_lim = int(agent_pos[1] - self.agents[agent_id].col_size)
@@ -850,7 +845,7 @@ class MapEnv(MultiAgentEnv):
 
         # keep this sorted so the visibility matrix is always in order
         other_agent_pos = [
-            self.agents[agent_id].get_pos()
+            self.agents[agent_id].pos
             for other_agent_id in sorted(self.agents.keys())
             if other_agent_id != agent_id
         ]

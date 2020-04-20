@@ -130,7 +130,7 @@ class SwitchEnv(MapEnv):
     def custom_action(self, agent, action):
         agent.fire_beam(b"F")
         updates = self.update_map_fire(
-            agent.get_pos().tolist(),
+            agent.pos.tolist(),
             agent.get_orientation(),
             fire_len=self.all_actions["TOGGLE_SWITCH"],
             fire_char=b"F",

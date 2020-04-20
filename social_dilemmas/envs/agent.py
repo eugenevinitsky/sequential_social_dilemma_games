@@ -77,7 +77,7 @@ class Agent(object):
         raise NotImplementedError
 
     def get_state(self):
-        return util.return_view(self.full_map, self.get_pos(), self.row_size, self.col_size)
+        return util.return_view(self.full_map, self.pos, self.row_size, self.col_size)
 
     def compute_reward(self):
         reward = self.reward_this_turn
@@ -91,7 +91,7 @@ class Agent(object):
         return self.pos
 
     def translate_pos_to_egocentric_coord(self, pos):
-        offset_pos = pos - self.get_pos()
+        offset_pos = pos - self.pos
         ego_centre = [self.row_size, self.col_size]
         return ego_centre + offset_pos
 
@@ -112,7 +112,7 @@ class Agent(object):
         if self.is_tile_walkable(new_row, new_col):
             return new_pos
         else:
-            return self.get_pos()
+            return self.pos
 
     def update_agent_pos(self, new_pos):
         """Updates the agents internal positions
@@ -124,16 +124,16 @@ class Agent(object):
         new_pos: (np.ndarray)
             2 element array describing the agent positions
         """
-        old_pos = self.get_pos()
+        old_pos = self.pos
         ego_new_pos = new_pos  # self.translate_pos_to_egocentric_coord(new_pos)
         new_row, new_col = ego_new_pos
         if self.is_tile_walkable(new_row, new_col):
             validated_new_pos = new_pos
         else:
-            validated_new_pos = self.get_pos()
+            validated_new_pos = self.pos
         self.set_pos(validated_new_pos)
         # TODO(ev) list array consistency
-        return self.get_pos(), np.array(old_pos)
+        return self.pos, np.array(old_pos)
 
     def is_tile_walkable(self, row, column):
         return (

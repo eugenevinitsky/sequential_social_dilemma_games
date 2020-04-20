@@ -332,80 +332,80 @@ class TestMapEnv(unittest.TestCase):
         # Test that all the moves and rotations work correctly
         # test when facing left
         self.env.step({agent_id: ACTION_MAP["MOVE_LEFT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [3, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [3, 2])
         self.env.step({agent_id: ACTION_MAP["MOVE_RIGHT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
         self.env.step({agent_id: ACTION_MAP["MOVE_UP"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 1])
         self.env.step({agent_id: ACTION_MAP["MOVE_DOWN"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
         # test when facing up
         self.rotate_agent(agent_id, "UP")
         self.env.step({agent_id: ACTION_MAP["MOVE_LEFT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 1])
         self.env.step({agent_id: ACTION_MAP["MOVE_RIGHT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
         self.env.step({agent_id: ACTION_MAP["MOVE_UP"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [1, 2])
         self.env.step({agent_id: ACTION_MAP["MOVE_DOWN"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
         # test when facing down
         self.rotate_agent(agent_id, "DOWN")
         self.env.step({agent_id: ACTION_MAP["MOVE_LEFT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 3])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 3])
         self.env.step({agent_id: ACTION_MAP["MOVE_RIGHT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
         self.env.step({agent_id: ACTION_MAP["MOVE_UP"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [3, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [3, 2])
         self.env.step({agent_id: ACTION_MAP["MOVE_DOWN"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
         # test when facing right
         self.rotate_agent(agent_id, "RIGHT")
         self.env.step({agent_id: ACTION_MAP["MOVE_LEFT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [1, 2])
         self.env.step({agent_id: ACTION_MAP["MOVE_RIGHT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
         self.env.step({agent_id: ACTION_MAP["MOVE_UP"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 3])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 3])
         self.env.step({agent_id: ACTION_MAP["MOVE_DOWN"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
 
         # check that stay works properly
         self.env.step({agent_id: ACTION_MAP["STAY"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
         self.assertEqual(self.env.test_map[2, 2], b"P")
 
         # quick test of stay
         self.env.step({agent_id: ACTION_MAP["STAY"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
 
         # if an agent tries to move through a wall they should stay in the same place
         # we check that this works correctly for both corner and non-corner edges
         self.rotate_agent(agent_id, "UP")
         self.move_agent(agent_id, [1, 1])
         self.env.step({agent_id: ACTION_MAP["MOVE_UP"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 1])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [1, 1])
         self.env.step({agent_id: ACTION_MAP["MOVE_LEFT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 1])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [1, 1])
         self.move_agent(agent_id, [4, 4])
         self.env.step({agent_id: ACTION_MAP["MOVE_RIGHT"]})
         self.env.step({agent_id: ACTION_MAP["MOVE_DOWN"]})
         self.env.step({agent_id: ACTION_MAP["MOVE_RIGHT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [5, 5])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [5, 5])
         self.env.step({agent_id: ACTION_MAP["MOVE_DOWN"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [5, 5])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [5, 5])
         self.env.step({agent_id: ACTION_MAP["MOVE_LEFT"]})
         self.env.step({agent_id: ACTION_MAP["MOVE_DOWN"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [5, 4])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [5, 4])
         self.move_agent(agent_id, [4, 5])
         self.env.step({agent_id: ACTION_MAP["MOVE_RIGHT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [4, 5])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [4, 5])
         self.move_agent(agent_id, [2, 1])
         self.env.step({agent_id: ACTION_MAP["MOVE_LEFT"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [2, 1])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 1])
         self.move_agent(agent_id, [1, 2])
         self.env.step({agent_id: ACTION_MAP["MOVE_UP"]})
-        np.testing.assert_array_equal(self.env.agents[agent_id].get_pos(), [1, 2])
+        np.testing.assert_array_equal(self.env.agents[agent_id].pos, [1, 2])
 
         # rotations correctly update the agent state
         self.rotate_agent(agent_id, "UP")
@@ -444,13 +444,13 @@ class TestMapEnv(unittest.TestCase):
         self.rotate_agent("agent-1", "UP")
         self.env.step({"agent-0": ACTION_MAP["MOVE_RIGHT"]})
         self.env.step({"agent-1": ACTION_MAP["MOVE_LEFT"]})
-        np.testing.assert_array_equal(self.env.agents["agent-0"].get_pos(), [3, 3])
-        np.testing.assert_array_equal(self.env.agents["agent-1"].get_pos(), [3, 4])
+        np.testing.assert_array_equal(self.env.agents["agent-0"].pos, [3, 3])
+        np.testing.assert_array_equal(self.env.agents["agent-1"].pos, [3, 4])
 
         # test that agents can't walk through each other if they move simultaneously
         self.env.step({"agent-0": ACTION_MAP["MOVE_RIGHT"], "agent-1": ACTION_MAP["MOVE_LEFT"]})
-        np.testing.assert_array_equal(self.env.agents["agent-0"].get_pos(), [3, 3])
-        np.testing.assert_array_equal(self.env.agents["agent-1"].get_pos(), [3, 4])
+        np.testing.assert_array_equal(self.env.agents["agent-0"].pos, [3, 3])
+        np.testing.assert_array_equal(self.env.agents["agent-1"].pos, [3, 4])
         # also check that the map looks correct, no agent has disappeared
         expected_map = np.array(
             [
@@ -489,7 +489,7 @@ class TestMapEnv(unittest.TestCase):
             self.move_agent("agent-0", [3, 2])
             self.move_agent("agent-1", [3, 4])
             self.env.step({"agent-0": ACTION_MAP["MOVE_RIGHT"], "agent-1": ACTION_MAP["MOVE_LEFT"]})
-            if self.env.agents["agent-0"].get_pos().tolist() == [3, 3]:
+            if self.env.agents["agent-0"].pos.tolist() == [3, 3]:
                 num_agent_1 += 1
             else:
                 num_agent_2 += 1
@@ -536,7 +536,7 @@ class TestMapEnv(unittest.TestCase):
                     "agent-2": ACTION_MAP["MOVE_DOWN"],
                 }
             )
-            if self.env.agents["agent-2"].get_pos().tolist() == [3, 3]:
+            if self.env.agents["agent-2"].pos.tolist() == [3, 3]:
                 num_agent_1 += 1
             else:
                 other_agents += 1
@@ -594,7 +594,7 @@ class TestMapEnv(unittest.TestCase):
                     "agent-2": ACTION_MAP["MOVE_DOWN"],
                 }
             )
-            if self.env.agents["agent-2"].get_pos().tolist() == [2, 2]:
+            if self.env.agents["agent-2"].pos.tolist() == [2, 2]:
                 percent_failed += 1
                 expect_1 = np.array(
                     [
@@ -643,9 +643,9 @@ class TestMapEnv(unittest.TestCase):
                     "agent-3": ACTION_MAP["MOVE_DOWN"],
                 }
             )
-            if self.env.agents["agent-0"].get_pos().tolist() == [2, 2]:
+            if self.env.agents["agent-0"].pos.tolist() == [2, 2]:
                 agent_0_percent += 1
-            if self.env.agents["agent-1"].get_pos().tolist() == [2, 4]:
+            if self.env.agents["agent-1"].pos.tolist() == [2, 4]:
                 agent_1_percent += 1
         agent_0_success = agent_0_percent / num_trials
         agent_1_success = agent_1_percent / num_trials
@@ -698,7 +698,7 @@ class TestMapEnv(unittest.TestCase):
                     "agent-3": ACTION_MAP["MOVE_LEFT"],
                 }
             )
-            if self.env.agents["agent-2"].get_pos().tolist() == [3, 2]:
+            if self.env.agents["agent-2"].pos.tolist() == [3, 2]:
                 agent_2_success += 1
                 expected_map = np.array(
                     [
@@ -747,10 +747,10 @@ class TestMapEnv(unittest.TestCase):
                 "agent-3": ACTION_MAP["MOVE_LEFT"],
             }
         )
-        self.assertTrue(self.env.agents["agent-0"].get_pos().tolist() == [2, 2])
-        self.assertTrue(self.env.agents["agent-1"].get_pos().tolist() == [3, 3])
-        self.assertTrue(self.env.agents["agent-2"].get_pos().tolist() == [2, 3])
-        self.assertTrue(self.env.agents["agent-3"].get_pos().tolist() == [3, 2])
+        self.assertTrue(self.env.agents["agent-0"].pos.tolist() == [2, 2])
+        self.assertTrue(self.env.agents["agent-1"].pos.tolist() == [3, 3])
+        self.assertTrue(self.env.agents["agent-2"].pos.tolist() == [2, 3])
+        self.assertTrue(self.env.agents["agent-3"].pos.tolist() == [3, 2])
 
         # do a check that the conflict resolution still works right
         # if one of the agents is trying to walk through a wall
