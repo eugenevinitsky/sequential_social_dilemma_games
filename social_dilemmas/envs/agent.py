@@ -109,10 +109,10 @@ class Agent(object):
         ego_new_pos = new_pos  # self.translate_pos_to_egocentric_coord(new_pos)
         new_row, new_col = ego_new_pos
         # You can't walk through walls, closed doors or switches
-        temp_pos = new_pos.copy()
-        if self.full_map[new_row, new_col] in [b"@", b"D", b"s", b"S"]:
-            temp_pos = self.get_pos()
-        return temp_pos
+        if self.is_tile_walkable(new_row, new_col):
+            return new_pos
+        else:
+            return self.get_pos()
 
     def update_agent_pos(self, new_pos):
         """Updates the agents internal positions
@@ -127,13 +127,21 @@ class Agent(object):
         old_pos = self.get_pos()
         ego_new_pos = new_pos  # self.translate_pos_to_egocentric_coord(new_pos)
         new_row, new_col = ego_new_pos
-        # You can't walk through walls, closed doors or switches
-        temp_pos = new_pos.copy()
-        if self.full_map[new_row, new_col] in [b"@", b"D", b"s", b"S"]:
-            temp_pos = self.get_pos()
-        self.set_pos(temp_pos)
+        if self.is_tile_walkable(new_row, new_col):
+            validated_new_pos = new_pos
+        else:
+            validated_new_pos = self.get_pos()
+        self.set_pos(validated_new_pos)
         # TODO(ev) list array consistency
         return self.get_pos(), np.array(old_pos)
+
+    def is_tile_walkable(self, row, column):
+        return (
+            0 <= row < self.full_map.shape[0]
+            and 0 <= column < self.full_map.shape[1]
+            # You can't walk through walls, closed doors or switches
+            and self.full_map[row, column] not in [b"@", b"D", b"s", b"S"]
+        )
 
     def update_agent_rot(self, new_rot):
         self.set_orientation(new_rot)

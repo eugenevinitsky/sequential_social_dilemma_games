@@ -829,12 +829,7 @@ class MapEnv(MultiAgentEnv):
     # TODO(ev) this definitely should go into utils or the general agent class
     def test_if_in_bounds(self, pos):
         """Checks if a selected cell is outside the range of the map"""
-        if pos[0] < 0 or pos[0] >= self.world_map.shape[0]:
-            return False
-        elif pos[1] < 0 or pos[1] >= self.world_map.shape[1]:
-            return False
-        else:
-            return True
+        return 0 <= pos[0] < self.world_map.shape[0] and 0 <= pos[1] < self.world_map.shape[1]
 
     def find_visible_agents(self, agent_id):
         """Returns all the agents that can be seen by agent with agent_id
