@@ -28,8 +28,8 @@ DEFAULT_COLOURS = {
     b"": np.array([180, 180, 180], dtype=np.uint8),  # Grey board walls
     b"@": np.array([180, 180, 180], dtype=np.uint8),  # Grey board walls
     b"A": np.array([0, 255, 0], dtype=np.uint8),  # Green apples
-    b"F": np.array([255, 255, 0], dtype=np.uint8),  # Yellow fining beam
-    b"P": np.array([159, 67, 255], dtype=np.uint8),  # Purple player
+    b"F": np.array([255, 255, 0], dtype=np.uint8),  # Yellow firing beam
+    b"P": np.array([159, 67, 255], dtype=np.uint8),  # Player spawn points
     # Colours for agents. R value is a unique identifier
     b"1": np.array([0, 0, 255], dtype=np.uint8),  # Pure blue
     b"2": np.array([2, 81, 154], dtype=np.uint8),  # Sky blue
