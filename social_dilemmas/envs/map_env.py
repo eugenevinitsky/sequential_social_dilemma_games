@@ -95,7 +95,7 @@ class MapEnv(MultiAgentEnv):
 
         # returns the agent at a desired position if there is one
         self.pos_dict = {}
-        self.color_map = color_map if color_map is not None else DEFAULT_COLOURS
+        self.color_map = color_map if color_map is not None else DEFAULT_COLOURS.copy()
         self.spawn_points = []  # where agents can appear
 
         self.wall_points = []
