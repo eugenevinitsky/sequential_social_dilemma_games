@@ -722,25 +722,19 @@ class MapEnv(MultiAgentEnv):
                     self.test_if_in_bounds(next_cell)
                     and self.world_map[next_cell[0], next_cell[1]] != b"@"
                 ):
+                    # Update the cell if needed
+                    firing_points.append((next_cell[0], next_cell[1], fire_char))
+                    for c in range(len(cell_types)):
+                        if self.world_map[next_cell[0], next_cell[1]] == cell_types[c]:
+                            updates.append((next_cell[0], next_cell[1], update_char[c]))
+                            break
 
-                    # FIXME(ev) code duplication
                     # agents absorb beams
                     # activate the agents hit function if needed
                     if [next_cell[0], next_cell[1]] in self.agent_pos:
                         agent_id = agent_by_pos[(next_cell[0], next_cell[1])]
                         self.agents[agent_id].hit(fire_char)
-                        firing_points.append((next_cell[0], next_cell[1], fire_char))
-                        if self.world_map[next_cell[0], next_cell[1]] in cell_types:
-                            type_index = cell_types.index(self.world_map[next_cell[0], next_cell[1]])
-                            updates.append((next_cell[0], next_cell[1], update_char[type_index]))
                         break
-
-                    # update the cell if needed
-                    if self.world_map[next_cell[0], next_cell[1]] in cell_types:
-                        type_index = cell_types.index(self.world_map[next_cell[0], next_cell[1]])
-                        updates.append((next_cell[0], next_cell[1], update_char[type_index]))
-
-                    firing_points.append((next_cell[0], next_cell[1], fire_char))
 
                     # check if the cell blocks beams. For example, waste blocks beams.
                     if self.world_map[next_cell[0], next_cell[1]] in blocking_cells:
