@@ -14,9 +14,9 @@ _SWITCH_ACTIONS = {"TOGGLE_SWITCH": 1}  # distance at which switch can be pulled
 SWITCH_COLORS = {
     b"D": np.array([180, 180, 180], dtype=np.uint8),  # Grey closed door - same color as walls
     b"d": np.array([255, 255, 255], dtype=np.uint8),  # White opened door
-    b"S": np.array([0, 255, 0], dtype=np.uint8),  # Green turned-on switch
-    b"s": np.array([255, 0, 0], dtype=np.uint8),
-}  # Red turned-off switch
+    b"W": np.array([0, 255, 0], dtype=np.uint8),  # Green turned-on switch
+    b"w": np.array([255, 0, 0], dtype=np.uint8),  # Red turned-off switch
+}
 
 GIVE_EXTERNAL_SWITCH_REWARD = int(False)
 
@@ -47,10 +47,10 @@ class SwitchEnv(MapEnv):
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
                 current_char = self.base_map[row, col]
-                if current_char in [b"s", b"S", b"d", b"D"]:
+                if current_char in [b"w", b"W", b"d", b"D"]:
                     self.initial_map_state[row, col] = current_char
                 # Remember switch/door locations for faster access
-                if current_char in [b"s", b"S"]:
+                if current_char in [b"w", b"W"]:
                     self.switch_locations.append((row, col))
                     self.switch_count += 1
                 if current_char in [b"d", b"D"]:
@@ -134,8 +134,8 @@ class SwitchEnv(MapEnv):
             agent.get_orientation(),
             fire_len=self.all_actions["TOGGLE_SWITCH"],
             fire_char=b"F",
-            cell_types=[b"s", b"S"],
-            update_char=[b"S", b"s"],
+            cell_types=[b"w", b"W"],
+            update_char=[b"W", b"w"],
             beam_width=1,
         )
         return updates
@@ -143,7 +143,7 @@ class SwitchEnv(MapEnv):
     def custom_map_update(self):
         activated_switch_count = 0
         for row, col in self.switch_locations:
-            if self.world_map[row, col] == b"S":
+            if self.world_map[row, col] == b"W":
                 activated_switch_count += 1
 
         switch_difference = activated_switch_count - self.prev_activated_switch_count
@@ -176,7 +176,7 @@ class SwitchEnv(MapEnv):
         # Testing function
         unique, counts = np.unique(window, return_counts=True)
         counts_dict = dict(zip(unique, counts))
-        num_switches = counts_dict.get(b"S", 0)
+        num_switches = counts_dict.get(b"W", 0)
         return num_switches
 
     @staticmethod
