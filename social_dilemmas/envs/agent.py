@@ -76,6 +76,9 @@ class Agent(object):
         """Maps action_number to a desired action in the map"""
         raise NotImplementedError
 
+    def get_char_id(self):
+        return bytes(str(int(self.agent_id[-1]) + 1), encoding="ascii")
+
     def get_state(self):
         return util.return_view(self.full_map, self.pos, self.row_size, self.col_size)
 
@@ -100,9 +103,6 @@ class Agent(object):
 
     def get_orientation(self):
         return self.orientation
-
-    def get_map(self):
-        return self.full_map
 
     def return_valid_pos(self, new_pos):
         """Checks that the next pos is legal, if not return current pos"""

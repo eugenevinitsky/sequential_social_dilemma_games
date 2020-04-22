@@ -50,7 +50,7 @@ class HarvestEnv(MapEnv):
     def custom_reset(self):
         """Initialize the walls and the apples"""
         for apple_point in self.apple_points:
-            self.world_map[apple_point[0], apple_point[1]] = b"A"
+            self.single_update_map(apple_point[0], apple_point[1], b"A")
 
     def custom_action(self, agent, action):
         agent.fire_beam(b"F")
@@ -88,8 +88,7 @@ class HarvestEnv(MapEnv):
                                 0 <= x + j < self.world_map.shape[0]
                                 and self.world_map.shape[1] > y + k >= 0
                             ):
-                                symbol = self.world_map[x + j, y + k]
-                                if symbol == b"A":
+                                if self.world_map[x + j, y + k] == b"A":
                                     num_apples += 1
 
                 spawn_prob = SPAWN_PROB[min(num_apples, 3)]

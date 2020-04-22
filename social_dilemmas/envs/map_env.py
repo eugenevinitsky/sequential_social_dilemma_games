@@ -29,7 +29,7 @@ DEFAULT_COLOURS = {
     b"@": np.array([180, 180, 180], dtype=np.uint8),  # Grey board walls
     b"A": np.array([0, 255, 0], dtype=np.uint8),  # Green apples
     b"F": np.array([255, 255, 0], dtype=np.uint8),  # Yellow firing beam
-    b"P": np.array([159, 67, 255], dtype=np.uint8),  # Player spawn points
+    b"P": np.array([159, 67, 255], dtype=np.uint8),  # Generic agent (any player)
     # Colours for agents. R value is a unique identifier
     b"1": np.array([0, 0, 255], dtype=np.uint8),  # Pure blue
     b"2": np.array([2, 81, 154], dtype=np.uint8),  # Sky blue
@@ -87,14 +87,23 @@ class MapEnv(MultiAgentEnv):
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
         self.view_len = view_len
+        self.map_padding = view_len
         self.return_agent_actions = return_agent_actions
         self.all_actions = _MAP_ENV_ACTIONS.copy()
         self.all_actions.update(extra_actions)
         if self.return_agent_actions:
             self.prev_actions = defaultdict(lambda: [0] * self.num_agents)
-        # map without agents or beams
+        # Map without agents or beams
         self.world_map = np.full(
             (len(self.base_map), len(self.base_map[0])), fill_value=b" ", dtype="c"
+        )
+        # Color mapping
+        self.color_map = color_map if color_map is not None else DEFAULT_COLOURS.copy()
+        # World map image
+        self.world_map_color = np.full(
+            (len(self.base_map) + view_len * 2, len(self.base_map[0]) + view_len * 2, 3),
+            fill_value=0,
+            dtype=np.uint8,
         )
         self.beam_pos = []
 
@@ -102,7 +111,6 @@ class MapEnv(MultiAgentEnv):
 
         # returns the agent at a desired position if there is one
         self.pos_dict = {}
-        self.color_map = color_map if color_map is not None else DEFAULT_COLOURS.copy()
         self.spawn_points = []  # where agents can appear
 
         self.wall_points = []
@@ -220,13 +228,17 @@ class MapEnv(MultiAgentEnv):
             agent_action = self.agents[agent_id].action_map(action)
             agent_actions[agent_id] = agent_action
 
-        # move
+        # Remove agents from color map
+        for agent in self.agents.values():
+            row, col = agent.pos[0], agent.pos[1]
+            self.single_update_world_color_map(row, col, self.world_map[row, col])
+
         self.update_moves(agent_actions)
 
         for agent in self.agents.values():
             pos = agent.pos
             new_char = agent.consume(self.world_map[pos[0], pos[1]])
-            self.world_map[pos[0], pos[1]] = new_char
+            self.single_update_map(pos[0], pos[1], new_char)
 
         # execute custom moves like firing
         self.update_custom_moves(agent_actions)
@@ -235,6 +247,10 @@ class MapEnv(MultiAgentEnv):
         self.custom_map_update()
 
         map_with_agents = self.get_map_with_agents()
+        # Add agents to color map
+        for agent in self.agents.values():
+            row, col = agent.pos[0], agent.pos[1]
+            self.single_update_world_color_map(row, col, agent.get_char_id())
 
         observations = {}
         rewards = {}
@@ -242,9 +258,7 @@ class MapEnv(MultiAgentEnv):
         info = {}
         for agent in self.agents.values():
             agent.full_map = map_with_agents
-            rgb_arr = self.map_to_colors(
-                agent.get_state(), self.color_map, agent.rgb_arr, orientation=agent.orientation
-            )
+            rgb_arr = self.color_view(agent)
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 prev_actions = np.array(
@@ -286,7 +300,7 @@ class MapEnv(MultiAgentEnv):
         observations = {}
         for agent in self.agents.values():
             agent.full_map = map_with_agents
-            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map, agent.rgb_arr)
+            rgb_arr = self.color_view(agent)
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
                 # No previous actions so just pass in zeros
@@ -342,16 +356,11 @@ class MapEnv(MultiAgentEnv):
         """
         grid = np.copy(self.world_map)
 
-        for agent_id, agent in self.agents.items():
-            char_id = bytes(str(int(agent_id[-1]) + 1), encoding="ascii")
+        for agent in self.agents.values():
+            char_id = agent.get_char_id()
 
             # If agent is not within map, skip.
-            if not (
-                agent.pos[0] >= 0
-                and agent.pos[0] < grid.shape[0]
-                and agent.pos[1] >= 0
-                and agent.pos[1] < grid.shape[1]
-            ):
+            if not (0 <= agent.pos[0] < grid.shape[0] and 0 <= agent.pos[1] < grid.shape[1]):
                 continue
 
             grid[agent.pos[0], agent.pos[1]] = char_id
@@ -378,6 +387,22 @@ class MapEnv(MultiAgentEnv):
         map_with_agents = self.get_map_with_agents()
         rgb_arr = np.zeros((map_with_agents.shape[0], map_with_agents.shape[1], 3), dtype=int)
         return self.map_to_colors(map_with_agents, self.color_map, rgb_arr)
+
+    def color_view(self, agent):
+        row, col = agent.pos[0], agent.pos[1]
+        view_slice = self.world_map_color[
+            row + self.map_padding - self.view_len : row + self.map_padding + self.view_len + 1,
+            col + self.map_padding - self.view_len : col + self.map_padding + self.view_len + 1,
+        ]
+        if agent.orientation == "UP":
+            rotated_view = view_slice
+        elif agent.orientation == "LEFT":
+            rotated_view = np.rot90(view_slice)
+        elif agent.orientation == "DOWN":
+            rotated_view = np.rot90(view_slice, k=2)
+        elif agent.orientation == "RIGHT":
+            rotated_view = np.rot90(view_slice, k=2, axes=(1, 0))
+        return rotated_view
 
     def map_to_colors(self, mmap, color_map, rgb_arr, orientation="UP"):
         """Converts a map to an array of RGB values.
@@ -648,14 +673,28 @@ class MapEnv(MultiAgentEnv):
                     self.update_map(updates)
 
     def update_map(self, new_points):
-        """For points in new_points, place desired char on the map"""
-        for i in range(len(new_points)):
-            row, col, char = new_points[i]
-            self.world_map[row, col] = char
+        """For points in new_points, place desired char on the map
+            Update the color map as well"""
+        for point in new_points:
+            self.single_update_map(*point)
+
+    def single_update_map(self, row, col, char):
+        self.world_map[row, col] = char
+        self.world_map_color[row + self.map_padding, col + self.map_padding] = self.color_map[char]
+
+    def single_update_world_color_map(self, row, col, char):
+        """Only update the color map. This is done separately when agents move, because their own
+        position state is not contained in self.world_map, but in their own Agent objects"""
+        self.world_map_color[row + self.map_padding, col + self.map_padding] = self.color_map[char]
 
     def reset_map(self):
         """Resets the map to be empty as well as a custom reset set by subclasses"""
         self.world_map = np.full((len(self.base_map), len(self.base_map[0])), b" ", dtype="c")
+        self.world_map_color = np.full(
+            (len(self.base_map) + self.view_len * 2, len(self.base_map[0]) + self.view_len * 2, 3),
+            fill_value=0,
+            dtype=np.uint8,
+        )
         self.build_walls()
         self.custom_reset()
 
@@ -777,7 +816,7 @@ class MapEnv(MultiAgentEnv):
     def build_walls(self):
         for i in range(len(self.wall_points)):
             row, col = self.wall_points[i]
-            self.world_map[row, col] = b"@"
+            self.single_update_map(row, col, b"@")
 
     ########################################
     # Utility methods, move these eventually

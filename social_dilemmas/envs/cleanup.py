@@ -78,11 +78,11 @@ class CleanupEnv(MapEnv):
     def custom_reset(self):
         """Initialize the walls and the waste"""
         for waste_start_point in self.waste_start_points:
-            self.world_map[waste_start_point[0], waste_start_point[1]] = b"H"
+            self.single_update_map(waste_start_point[0], waste_start_point[1], b"H")
         for river_point in self.river_points:
-            self.world_map[river_point[0], river_point[1]] = b"R"
+            self.single_update_map(river_point[0], river_point[1], b"R")
         for stream_point in self.stream_points:
-            self.world_map[stream_point[0], stream_point[1]] = b"S"
+            self.single_update_map(stream_point[0], stream_point[1], b"S")
         self.compute_probabilities()
 
     def custom_action(self, agent, action):

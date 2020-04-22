@@ -114,7 +114,7 @@ class SwitchEnv(MapEnv):
     def custom_reset(self):
         """Initialize the switches/doors"""
         for coordinates, char in self.initial_map_state.items():
-            self.world_map[coordinates[0], coordinates[1]] = char
+            self.single_update_map(coordinates[0], coordinates[1], char)
         self.prev_activated_switch_count = 0
 
         # Extra logging metrics
