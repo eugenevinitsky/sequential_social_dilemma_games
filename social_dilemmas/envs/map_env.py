@@ -250,7 +250,9 @@ class MapEnv(MultiAgentEnv):
         # Add agents to color map
         for agent in self.agents.values():
             row, col = agent.pos[0], agent.pos[1]
-            self.single_update_world_color_map(row, col, agent.get_char_id())
+            # Firing beams have priority over agents and should cover them
+            if self.color_map[self.world_map[row, col]] not in [b"F", b"C"]:
+                self.single_update_world_color_map(row, col, agent.get_char_id())
 
         observations = {}
         rewards = {}
