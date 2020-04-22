@@ -60,7 +60,13 @@ DEFAULT_COLOURS = {
 
 class MapEnv(MultiAgentEnv):
     def __init__(
-        self, ascii_map, extra_actions, num_agents=1, color_map=None, return_agent_actions=False
+        self,
+        ascii_map,
+        extra_actions,
+        view_len,
+        num_agents=1,
+        color_map=None,
+        return_agent_actions=False,
     ):
         """
 
@@ -80,6 +86,7 @@ class MapEnv(MultiAgentEnv):
         """
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
+        self.view_len = view_len
         self.return_agent_actions = return_agent_actions
         self.all_actions = _MAP_ENV_ACTIONS.copy()
         self.all_actions.update(extra_actions)

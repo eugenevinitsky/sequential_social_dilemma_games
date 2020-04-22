@@ -33,7 +33,11 @@ class CleanupEnv(MapEnv):
         self, ascii_map=CLEANUP_MAP, num_agents=1, return_agent_actions=False,
     ):
         super().__init__(
-            ascii_map, _CLEANUP_ACTIONS, num_agents, return_agent_actions=return_agent_actions,
+            ascii_map,
+            _CLEANUP_ACTIONS,
+            CLEANUP_VIEW_SIZE,
+            num_agents,
+            return_agent_actions=return_agent_actions,
         )
 
         # compute potential waste area
@@ -66,8 +70,6 @@ class CleanupEnv(MapEnv):
                     self.river_points.append([row, col])
 
         self.color_map.update(CLEANUP_COLORS)
-
-        self.view_len = CLEANUP_VIEW_SIZE
 
     @property
     def action_space(self):

@@ -176,7 +176,7 @@ class TestMapEnv(unittest.TestCase):
 
     def test_step(self):
         """Just check that the step method works at all for all possible actions"""
-        self.env = DummyMapEnv(ascii_map=BASE_MAP_2, extra_actions={}, num_agents=1)
+        self.env = DummyMapEnv(ascii_map=BASE_MAP_2, extra_actions={}, view_len=2, num_agents=1)
         self.env.reset()
         agents = list(self.env.agents.values())
         action_dim = agents[0].action_space.n
@@ -185,7 +185,7 @@ class TestMapEnv(unittest.TestCase):
 
     def test_walls(self):
         """Check that the spawned map and base map have walls in the right place"""
-        self.env = DummyMapEnv(BASE_MAP_1, extra_actions={}, num_agents=0)
+        self.env = DummyMapEnv(BASE_MAP_1, extra_actions={}, view_len=2, num_agents=0)
         self.env.reset()
         np.testing.assert_array_equal(self.env.base_map[0, :], np.array([b"@"] * 7))
         np.testing.assert_array_equal(self.env.base_map[-1, :], np.array([b"@"] * 7))
@@ -433,7 +433,7 @@ class TestMapEnv(unittest.TestCase):
         """Test that agent conflicts are correctly resolved"""
 
         # test that if there are two agents and two spawning points, they hit both of them
-        self.env = DummyMapEnv(ascii_map=BASE_MAP_2, extra_actions={}, num_agents=2)
+        self.env = DummyMapEnv(ascii_map=BASE_MAP_2, extra_actions={}, view_len=2, num_agents=2)
         self.env.reset()
         np.testing.assert_array_equal(self.env.base_map, self.env.test_map)
 
@@ -775,7 +775,7 @@ class TestMapEnv(unittest.TestCase):
 
     def construct_map(self, map, agent_id, start_pos, start_orientation):
         # overwrite the map for testing
-        self.env = DummyMapEnv(map, extra_actions={}, num_agents=0)
+        self.env = DummyMapEnv(map, extra_actions={}, view_len=2, num_agents=0)
         self.env.reset()
 
         # replace the agents with agents with smaller views
@@ -1048,7 +1048,7 @@ class TestHarvestEnv(unittest.TestCase):
         np.testing.assert_array_equal(expected_map, self.env.test_map)
 
     def map_to_colors(self, orientation, unrotated_view, equal_array):
-        env = DummyMapEnv(BASE_MAP_1, extra_actions={}, num_agents=0)
+        env = DummyMapEnv(BASE_MAP_1, extra_actions={}, view_len=1, num_agents=0)
         color_map = dict()
         for i in range(9):
             color_map[i] = int(i)

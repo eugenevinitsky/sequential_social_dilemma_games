@@ -20,15 +20,17 @@ class HarvestEnv(MapEnv):
         self, ascii_map=HARVEST_MAP, num_agents=1, return_agent_actions=False,
     ):
         super().__init__(
-            ascii_map, _HARVEST_ACTIONS, num_agents, return_agent_actions=return_agent_actions,
+            ascii_map,
+            _HARVEST_ACTIONS,
+            HARVEST_VIEW_SIZE,
+            num_agents,
+            return_agent_actions=return_agent_actions,
         )
         self.apple_points = []
         for row in range(self.base_map.shape[0]):
             for col in range(self.base_map.shape[1]):
                 if self.base_map[row, col] == b"A":
                     self.apple_points.append([row, col])
-
-        self.view_len = HARVEST_VIEW_SIZE
 
     @property
     def action_space(self):
