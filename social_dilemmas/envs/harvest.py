@@ -1,5 +1,6 @@
 import numpy as np
 from gym.spaces import Discrete
+from numpy.random import rand
 
 from social_dilemmas.envs.agent import HarvestAgent  # HARVEST_VIEW_SIZE
 from social_dilemmas.envs.map_env import MapEnv
@@ -75,10 +76,13 @@ class HarvestEnv(MapEnv):
         """
 
         new_apple_points = []
+        agent_positions = self.agent_pos
+        random_numbers = rand(len(self.apple_points))
+        r = 0
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
             # apples can't spawn where agents are standing or where an apple already is
-            if [row, col] not in self.agent_pos and self.world_map[row, col] != b"A":
+            if [row, col] not in agent_positions and self.world_map[row, col] != b"A":
                 num_apples = 0
                 for j in range(-APPLE_RADIUS, APPLE_RADIUS + 1):
                     for k in range(-APPLE_RADIUS, APPLE_RADIUS + 1):
@@ -92,7 +96,8 @@ class HarvestEnv(MapEnv):
                                     num_apples += 1
 
                 spawn_prob = SPAWN_PROB[min(num_apples, 3)]
-                rand_num = np.random.rand(1)[0]
+                rand_num = random_numbers[r]
+                r += 1
                 if rand_num < spawn_prob:
                     new_apple_points.append((row, col, b"A"))
         return new_apple_points

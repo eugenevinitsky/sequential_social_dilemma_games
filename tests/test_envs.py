@@ -1403,7 +1403,7 @@ class TestCleanupEnv(unittest.TestCase):
 
         # test that you can spawn waste under an agent
         self.move_agent("agent-0", [2, 1])
-        random.seed(2)
+        random.seed(5)
         self.env.step({})
         self.assertTrue(self.env.world_map[2, 1] == b"H")
 

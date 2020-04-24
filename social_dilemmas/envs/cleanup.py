@@ -2,6 +2,7 @@ import random
 
 import numpy as np
 from gym.spaces import Discrete
+from numpy.random import rand
 
 from social_dilemmas.envs.agent import CleanupAgent  # CLEANUP_VIEW_SIZE
 from social_dilemmas.envs.map_env import MapEnv
@@ -133,11 +134,15 @@ class CleanupEnv(MapEnv):
     def spawn_apples_and_waste(self):
         spawn_points = []
         # spawn apples, multiple can spawn per step
+        agent_positions = self.agent_pos
+        random_numbers = rand(len(self.apple_points) + len(self.waste_points))
+        r = 0
         for i in range(len(self.apple_points)):
             row, col = self.apple_points[i]
             # don't spawn apples where agents already are
-            if [row, col] not in self.agent_pos and self.world_map[row, col] != b"A":
-                rand_num = np.random.rand(1)[0]
+            if [row, col] not in agent_positions and self.world_map[row, col] != b"A":
+                rand_num = random_numbers[r]
+                r += 1
                 if rand_num < self.current_apple_spawn_prob:
                     spawn_points.append((row, col, b"A"))
 
@@ -148,7 +153,8 @@ class CleanupEnv(MapEnv):
                 row, col = self.waste_points[i]
                 # don't spawn waste where it already is
                 if self.world_map[row, col] != b"H":
-                    rand_num = np.random.rand(1)[0]
+                    rand_num = random_numbers[r]
+                    r += 1
                     if rand_num < self.current_waste_spawn_prob:
                         spawn_points.append((row, col, b"H"))
                         break
