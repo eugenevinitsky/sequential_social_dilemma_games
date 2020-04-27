@@ -60,7 +60,8 @@ def plot_with_mean(x_lists, y_lists, color, y_label):
 
     plt.xlabel("Environment steps (1e8)")
     plt.ylabel(y_label)
-    plt.ylim(top=y_max + (y_max - y_min) / 100)
+    bottom = 0 if "reward" in y_label else None
+    plt.ylim(bottom=bottom, top=y_max + (y_max - y_min) / 100)
     plt.ticklabel_format(useOffset=False)
 
 
@@ -170,8 +171,6 @@ def plot_csvs_results(paths):
                         plot.plot_details.color,
                         plot.plot_details.legend_name,
                     )
-
-    # plot_and_save(plot_losses, path, "all_losses")
 
 
 category_folders = get_all_subdirs(ray_results_path)
