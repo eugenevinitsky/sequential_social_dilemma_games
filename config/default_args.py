@@ -154,6 +154,15 @@ def add_default_args(parser):
 
     parser.add_argument("--entropy_coeff", type=float, default=0.001, help="Entropy reward weight.")
     parser.add_argument(
+        "--entropy_tune",
+        nargs="+",
+        type=float,
+        default=[0.001],
+        help="When --grid_search is provided, perform a grid search over these entropy_coeff\
+                                    parameters. Replaces --entropy_coeff when used.",
+    )
+
+    parser.add_argument(
         "--moa_loss_weight", type=float, default=1.0, help="Loss weight of the moa network",
     )
 
@@ -179,14 +188,6 @@ def add_default_args(parser):
     )
 
     parser.add_argument(
-        "--entropy_tune",
-        nargs="+",
-        type=float,
-        default=[0.001],
-        help="When --grid_search is provided, perform a grid search over these entropy_coeff\
-                                parameters. Replaces --entropy_coeff when used.",
-    )
-    parser.add_argument(
         "--moa_loss_weight_tune",
         nargs="+",
         type=float,
@@ -201,6 +202,49 @@ def add_default_args(parser):
         default=[0.001],
         help="When --grid_search is provided, perform a grid search over these"
         " influence_reward_weight parameters. Replaces --entropy_coeff.",
+    )
+
+    parser.add_argument(
+        "--scm_loss_weight", type=float, default=1.0, help="Loss weight of the scm network",
+    )
+
+    parser.add_argument(
+        "--curiosity_reward_weight", type=float, default=0.001, help="The scm reward weight.",
+    )
+    parser.add_argument(
+        "--curiosity_reward_schedule_steps",
+        nargs="+",
+        type=int,
+        default=[0, int(1e7), int(1e8)],
+        help="Amounts of environment steps at which the scm reward has a value specified in"
+        "--curiosity_reward_schedule_weights",
+    )
+    parser.add_argument(
+        "--curiosity_reward_schedule_weights",
+        nargs="+",
+        type=float,
+        default=[0, 1.0, 0.5],
+        help="Values for the scm reward schedule. Linearly interpolates using "
+        "--curiosity_reward_schedule_steps. The final value is"
+        " --curiosity_reward_weight * interpolated_value",
+    )
+
+    parser.add_argument(
+        "--scm_loss_weight_tune",
+        nargs="+",
+        type=float,
+        default=[1.0],
+        help="When --grid_search is provided, perform a grid search over these scm_loss_weight\
+                                    parameters. Replaces --curiosity_reward_weight when used.",
+    )
+
+    parser.add_argument(
+        "--curiosity_reward_weight_tune",
+        nargs="+",
+        type=float,
+        default=[0.001],
+        help="When --grid_search is provided, perform a grid search over these"
+        " curiosity_reward_weight parameters. Replaces --entropy_coeff.",
     )
 
     # PPO parameters
