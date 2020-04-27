@@ -8,7 +8,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--env",
         type=str,
-        default="harvest",
+        default="cleanup",
         help="Name of the environment to use. Can be switch, cleanup or harvest.",
     )
     parser.add_argument(
@@ -88,7 +88,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--num_envs_per_worker",
         type=float,
-        default=16,
+        default=8,
         help="Number of envs to place on a single worker",
     )
     parser.add_argument(
