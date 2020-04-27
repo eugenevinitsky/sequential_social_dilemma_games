@@ -18,7 +18,7 @@ from algorithms.ppo_baseline import build_ppo_baseline_trainer
 from algorithms.ppo_moa import build_ppo_moa_trainer
 from algorithms.ppo_scm import build_ppo_scm_trainer
 from config.default_args import add_default_args
-from models.baseline_model import Baseline_LSTM
+from models.baseline_model import BaselineModel
 from models.moa_model import MOA_LSTM
 from models.scm_model import SocialCuriosityModule
 from social_dilemmas.envs.env_creator import get_env_creator
@@ -43,7 +43,7 @@ def setup(args):
     elif args.model == "moa":
         ModelCatalog.register_custom_model(model_name, MOA_LSTM)
     elif args.model == "baseline":
-        ModelCatalog.register_custom_model(model_name, Baseline_LSTM)
+        ModelCatalog.register_custom_model(model_name, BaselineModel)
 
     # Each policy can have a different configuration (including custom model)
     def gen_policy():
