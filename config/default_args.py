@@ -154,28 +154,28 @@ def add_default_args(parser):
 
     parser.add_argument("--entropy_coeff", type=float, default=0.001, help="Entropy reward weight.")
     parser.add_argument(
-        "--aux_loss_weight", type=float, default=1.0, help="Loss weight of the auxiliary network",
+        "--moa_loss_weight", type=float, default=1.0, help="Loss weight of the moa network",
     )
 
     parser.add_argument(
-        "--aux_reward_weight", type=float, default=0.001, help="The auxiliary reward weight.",
+        "--moa_reward_weight", type=float, default=0.001, help="The moa reward weight.",
     )
     parser.add_argument(
-        "--aux_reward_schedule_steps",
+        "--moa_reward_schedule_steps",
         nargs="+",
         type=int,
         default=[0, int(1e7), int(1e8)],
-        help="Amounts of environment steps at which the aux reward has a value specified in"
-        "--aux_reward_schedule_weights",
+        help="Amounts of environment steps at which the moa reward has a value specified in"
+        "--moa_reward_schedule_weights",
     )
     parser.add_argument(
-        "--aux_reward_schedule_weights",
+        "--moa_reward_schedule_weights",
         nargs="+",
         type=float,
         default=[0, 1.0, 0.5],
-        help="Values for the aux reward schedule. Linearly interpolates using "
-        "--aux_reward_schedule_steps. The final value is"
-        " --aux_reward_weight * interpolated_value",
+        help="Values for the moa reward schedule. Linearly interpolates using "
+        "--moa_reward_schedule_steps. The final value is"
+        " --moa_reward_weight * interpolated_value",
     )
 
     parser.add_argument(
@@ -187,19 +187,19 @@ def add_default_args(parser):
                                 parameters. Replaces --entropy_coeff when used.",
     )
     parser.add_argument(
-        "--aux_loss_weight_tune",
+        "--moa_loss_weight_tune",
         nargs="+",
         type=float,
         default=[1.0],
-        help="When --grid_search is provided, perform a grid search over these aux_loss_weight\
-                                parameters. Replaces --aux_reward_weight when used.",
+        help="When --grid_search is provided, perform a grid search over these moa_loss_weight\
+                                parameters. Replaces --moa_reward_weight when used.",
     )
     parser.add_argument(
-        "--aux_reward_weight_tune",
+        "--moa_reward_weight_tune",
         nargs="+",
         type=float,
         default=[0.001],
-        help="When --grid_search is provided, perform a grid search over these aux_reward_weight\
+        help="When --grid_search is provided, perform a grid search over these moa_reward_weight\
                                 parameters. Replaces --entropy_coeff.",
     )
 

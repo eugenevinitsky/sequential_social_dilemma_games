@@ -151,7 +151,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         self.train_moa_only_when_visible = model_config["custom_options"][
             "train_moa_only_when_visible"
         ]
-        self.moa_weight = model_config["custom_options"]["aux_loss_weight"]
+        self.moa_weight = model_config["custom_options"]["moa_loss_weight"]
 
         self.moa_model = KerasRNN(
             inner_obs_space,

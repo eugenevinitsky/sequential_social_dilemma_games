@@ -111,17 +111,11 @@ def setup(args):
     if args.model != "baseline":
         config["model"]["custom_options"].update(
             {
-                "aux_loss_weight": args.scm_loss_weight,
-                "aux_reward_clip": 10,
-                "aux_reward_weight": args.aux_reward_weight,
-                "aux_reward_schedule_steps": args.aux_reward_schedule_steps,
-                "aux_reward_schedule_weights": args.aux_reward_schedule_weights,
-            }
-        )
-
-    if args.model == "moa":
-        config["model"]["custom_options"].update(
-            {
+                "moa_loss_weight": args.moa_loss_weight,
+                "moa_reward_clip": 10,
+                "moa_reward_weight": args.moa_reward_weight,
+                "moa_reward_schedule_steps": args.moa_reward_schedule_steps,
+                "moa_reward_schedule_weights": args.moa_reward_schedule_weights,
                 "return_agent_actions": True,
                 "influence_divergence_measure": "kl",
                 "train_moa_only_when_visible": True,
@@ -129,13 +123,20 @@ def setup(args):
             }
         )
 
+    if args.model == "scm":
+        config["model"]["custom_options"].update(
+            {
+                # TODO: Add SCM hparams
+            }
+        )
+
     if args.grid_search:
         config["entropy_coeff"] = tune.grid_search(args.entropy_tune)
-        config["model"]["custom_options"]["aux_loss_weight"] = tune.grid_search(
-            args.aux_loss_weight_tune
+        config["model"]["custom_options"]["moa_loss_weight"] = tune.grid_search(
+            args.moa_loss_weight_tune
         )
-        config["model"]["custom_options"]["aux_reward_weight"] = tune.grid_search(
-            args.aux_reward_weight_tune
+        config["model"]["custom_options"]["moa_reward_weight"] = tune.grid_search(
+            args.moa_reward_weight_tune
         )
 
     if args.algorithm == "PPO":

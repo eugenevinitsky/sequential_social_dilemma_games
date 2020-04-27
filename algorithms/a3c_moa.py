@@ -60,11 +60,11 @@ def actor_critic_loss(policy, model, dist_class, train_batch):
         policy.config["entropy_coeff"],
     )
 
-    aux_loss = setup_moa_loss(logits, model, policy, train_batch)
-    policy.loss.total_loss += aux_loss.total_loss
+    moa_loss = setup_moa_loss(logits, model, policy, train_batch)
+    policy.loss.total_loss += moa_loss.total_loss
 
     # store this for future statistics
-    policy.aux_loss = aux_loss.total_loss
+    policy.moa_loss = moa_loss.total_loss
 
     return policy.loss.total_loss
 
@@ -101,10 +101,10 @@ def stats(policy, train_batch):
         "policy_entropy": policy.loss.entropy,
         "var_gnorm": tf.global_norm([x for x in policy.model.trainable_variables()]),
         "vf_loss": policy.loss.vf_loss,
-        "cur_aux_reward_weight": tf.cast(policy.cur_aux_reward_weight_tensor, tf.float32),
-        "total_aux_reward": train_batch["total_aux_reward"],
+        "cur_moa_reward_weight": tf.cast(policy.cur_moa_reward_weight_tensor, tf.float32),
+        "total_moa_reward": train_batch["total_moa_reward"],
         "extrinsic_reward": train_batch["extrinsic_reward"],
-        "aux_loss": policy.aux_loss * policy.scm_loss_weight,
+        "moa_loss": policy.moa_loss * policy.moa_loss_weight,
     }
     return base_stats
 
@@ -132,14 +132,14 @@ def setup_mixins(policy, obs_space, action_space, config):
     setup_moa_mixins(policy, obs_space, action_space, config)
 
 
-def build_a3c_moa_trainer(aux_config):
+def build_a3c_moa_trainer(moa_config):
     tf.keras.backend.set_floatx("float32")
     trainer_name = "MOAA3CTrainer"
-    aux_config["use_gae"] = False
+    moa_config["use_gae"] = False
 
     a3c_tf_policy = build_tf_policy(
         name="A3CAuxTFPolicy",
-        get_default_config=lambda: aux_config,
+        get_default_config=lambda: moa_config,
         loss_fn=actor_critic_loss,
         stats_fn=stats,
         grad_stats_fn=grad_stats,
@@ -153,7 +153,7 @@ def build_a3c_moa_trainer(aux_config):
     trainer = build_trainer(
         name=trainer_name,
         default_policy=a3c_tf_policy,
-        default_config=aux_config,
+        default_config=moa_config,
         validate_config=validate_config,
     )
 

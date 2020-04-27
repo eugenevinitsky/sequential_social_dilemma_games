@@ -138,17 +138,19 @@ def compute_curiosity_reward(policy, trajectory):
     true_obs = trajectory[ENCODED_OBSERVATIONS]
     pred_obs = trajectory[PREDICTED_OBSERVATIONS]
 
-    aux_reward_per_agent_step = [
+    curiosity_reward_per_agent_step = [
         calculate_surprisal(pred, truth) for pred, truth in zip(pred_obs, true_obs)
     ]
-    cur_aux_reward_weight = policy.compute_weight()
+    cur_curiosity_reward_weight = policy.compute_weight()
 
     # Clip curiosity reward
-    reward = np.clip(aux_reward_per_agent_step, -policy.aux_reward_clip, policy.aux_reward_clip)
-    reward = reward * cur_aux_reward_weight
+    reward = np.clip(
+        curiosity_reward_per_agent_step, -policy.curiosity_reward_clip, policy.curiosity_reward_clip
+    )
+    reward = reward * cur_curiosity_reward_weight
 
     # Add to trajectory
-    trajectory["total_aux_reward"] = reward
+    trajectory["total_curiosity_reward"] = reward
     trajectory["extrinsic_reward"] = trajectory["rewards"]
     trajectory["rewards"] = trajectory["rewards"] + reward
 
