@@ -198,7 +198,6 @@ if __name__ == "__main__":
             raise NotImplementedError
         if args.algorithm == "PPO":
             trainer = build_ppo_scm_trainer(config)
-            raise NotImplementedError
         if args.algorithm == "IMPALA":
             # trainer = build_impala_scm_trainer(config)
             raise NotImplementedError
