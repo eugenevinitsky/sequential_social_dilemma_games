@@ -51,7 +51,7 @@ def loss_with_moa(policy, model, dist_class, train_batch):
     else:
         mask = tf.ones_like(train_batch[Postprocessing.ADVANTAGES], dtype=tf.bool)
 
-    policy.ppo_loss = PPOLoss(
+    policy.loss_obj = PPOLoss(
         dist_class,
         model,
         train_batch[Postprocessing.VALUE_TARGETS],
@@ -71,8 +71,8 @@ def loss_with_moa(policy, model, dist_class, train_batch):
         policy.config["use_gae"],
     )
 
-    policy.ppo_loss.loss += moa_loss.total_loss
-    return policy.ppo_loss.loss
+    policy.loss_obj.loss += moa_loss.total_loss
+    return policy.loss_obj.loss
 
 
 def extra_fetches(policy):

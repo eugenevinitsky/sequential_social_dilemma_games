@@ -112,10 +112,10 @@ def setup(args):
         config["model"]["custom_options"].update(
             {
                 "moa_loss_weight": args.moa_loss_weight,
-                "moa_reward_clip": 10,
-                "moa_reward_weight": args.moa_reward_weight,
-                "moa_reward_schedule_steps": args.moa_reward_schedule_steps,
-                "moa_reward_schedule_weights": args.moa_reward_schedule_weights,
+                "influence_reward_clip": 10,
+                "influence_reward_weight": args.influence_reward_weight,
+                "influence_reward_schedule_steps": args.influence_reward_schedule_steps,
+                "influence_reward_schedule_weights": args.influence_reward_schedule_weights,
                 "return_agent_actions": True,
                 "influence_divergence_measure": "kl",
                 "train_moa_only_when_visible": True,
@@ -135,8 +135,8 @@ def setup(args):
         config["model"]["custom_options"]["moa_loss_weight"] = tune.grid_search(
             args.moa_loss_weight_tune
         )
-        config["model"]["custom_options"]["moa_reward_weight"] = tune.grid_search(
-            args.moa_reward_weight_tune
+        config["model"]["custom_options"]["influence_reward_weight"] = tune.grid_search(
+            args.influence_reward_weight_tune
         )
 
     if args.algorithm == "PPO":

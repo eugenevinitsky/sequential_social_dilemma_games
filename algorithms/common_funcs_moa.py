@@ -124,7 +124,7 @@ def setup_moa_loss(logits, model, policy, train_batch):
     moa_loss = MOALoss(
         moa_preds,
         true_actions,
-        loss_weight=policy.influence_loss_weight,
+        loss_weight=policy.moa_loss_weight,
         others_visibility=others_visibility,
     )
     return moa_loss
@@ -295,7 +295,7 @@ class MOAConfigInitializerMixIn(object):
     def __init__(self, config):
         config = config["model"]["custom_options"]
         self.num_other_agents = config["num_other_agents"]
-        self.influence_loss_weight = config["influence_loss_weight"]
+        self.moa_loss_weight = config["moa_loss_weight"]
         self.influence_reward_clip = config["influence_reward_clip"]
         self.train_moa_only_when_visible = config["train_moa_only_when_visible"]
         self.influence_divergence_measure = config["influence_divergence_measure"]

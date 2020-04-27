@@ -125,7 +125,7 @@ def plot_csvs_results(paths):
         PlotDetails("vf_loss", "Value function loss", "orange"),
         PlotDetails("total_a3c_loss", "Total A3C loss", "yellow"),
         PlotDetails("moa_loss", "MOA loss", "black"),
-        PlotDetails("total_moa_reward", "MOA reward", "black"),
+        PlotDetails("total_influence_reward", "MOA reward", "black"),
         PlotDetails("total_successes_mean", "Total successes", "black"),
         PlotDetails("switches_on_at_termination_mean", "Switches on at termination", "black"),
         PlotDetails("total_pulled_on_mean", "Total switched on", "black"),

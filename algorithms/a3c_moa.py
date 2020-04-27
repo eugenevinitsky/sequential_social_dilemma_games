@@ -101,8 +101,10 @@ def stats(policy, train_batch):
         "policy_entropy": policy.loss.entropy,
         "var_gnorm": tf.global_norm([x for x in policy.model.trainable_variables()]),
         "vf_loss": policy.loss.vf_loss,
-        "cur_moa_reward_weight": tf.cast(policy.cur_moa_reward_weight_tensor, tf.float32),
-        "total_moa_reward": train_batch["total_moa_reward"],
+        "cur_influence_reward_weight": tf.cast(
+            policy.cur_influence_reward_weight_tensor, tf.float32
+        ),
+        "total_influence_reward": train_batch["total_influence_reward"],
         "extrinsic_reward": train_batch["extrinsic_reward"],
         "moa_loss": policy.moa_loss * policy.moa_loss_weight,
     }
