@@ -18,7 +18,7 @@ class SocialCuriosityModule(MOA_LSTM):
         self._previous_actions = None
         self._previous_lstm_output = None
 
-        self.scm_encoder_model = self.create_scm_encoder_model(obs_space, model_config)
+        self.scm_encoder_model = self.create_scm_encoder_model(model_config)
         encoded_space = Box(
             low=-1, high=1, shape=self.scm_encoder_model.output.shape[2:], dtype=np.float32
         )
