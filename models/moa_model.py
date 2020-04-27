@@ -178,7 +178,7 @@ class MOA_LSTM(RecurrentTFModelV2):
         # Divide by 255 to transform [0,255] uint8 rgb pixel values to [0,1] float32.
         last_layer = tf.keras.backend.cast(inputs, tf.float32)
         last_layer = tf.math.divide(last_layer, 255.0)
-        self.postprocessed_input = last_layer
+        self.preprocessed_input = last_layer
 
         # A temp config with custom_model false so that we can get a basic vision model
         # with the desired filters

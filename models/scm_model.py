@@ -43,9 +43,9 @@ class SocialCuriosityModule(MOA_LSTM):
             activation=activation,
             padding="valid",
             name="conv_scm_encoder",
-        )(self.postprocessed_input)
+        )(self.preprocessed_input)
 
-        return tf.keras.Model(self.postprocessed_input, conv_out)
+        return tf.keras.Model(self.preprocessed_input, conv_out)
 
     # Inputs: [Encoded state at t, Actions at t, LSTM output at t, Social influence at t]
     # Output: Predicted encoded state at t+1
