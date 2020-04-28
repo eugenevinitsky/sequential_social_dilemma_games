@@ -19,7 +19,7 @@ from algorithms.ppo_moa import build_ppo_moa_trainer
 from algorithms.ppo_scm import build_ppo_scm_trainer
 from config.default_args import add_default_args
 from models.baseline_model import BaselineModel
-from models.moa_model import MOA_LSTM
+from models.moa_model import MOAModel
 from models.scm_model import SocialCuriosityModule
 from social_dilemmas.envs.env_creator import get_env_creator
 from utility_funcs import update_nested_dict
@@ -41,7 +41,7 @@ def setup(args):
     if args.model == "scm":
         ModelCatalog.register_custom_model(model_name, SocialCuriosityModule)
     elif args.model == "moa":
-        ModelCatalog.register_custom_model(model_name, MOA_LSTM)
+        ModelCatalog.register_custom_model(model_name, MOAModel)
     elif args.model == "baseline":
         ModelCatalog.register_custom_model(model_name, BaselineModel)
 

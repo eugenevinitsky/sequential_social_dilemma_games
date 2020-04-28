@@ -3,12 +3,12 @@ from gym.spaces import Box
 from ray.rllib.models.tf.misc import get_activation_fn, normc_initializer
 from ray.rllib.utils import try_import_tf
 
-from models.moa_model import MOA_LSTM
+from models.moa_model import MOAModel
 
 tf = try_import_tf()
 
 
-class SocialCuriosityModule(MOA_LSTM):
+class SocialCuriosityModule(MOAModel):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
         super(SocialCuriosityModule, self).__init__(
             obs_space, action_space, num_outputs, model_config, name
