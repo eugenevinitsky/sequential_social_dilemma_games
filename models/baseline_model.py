@@ -5,7 +5,7 @@ from ray.rllib.policy.rnn_sequencing import add_time_dimension
 from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.annotations import override
 
-from models.lstm import ActorCriticLSTM
+from models.actor_critic_lstm import ActorCriticLSTM
 
 tf = try_import_tf()
 
