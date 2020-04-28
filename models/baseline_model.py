@@ -28,6 +28,26 @@ class BaselineModel(RecurrentTFModelV2):
         last_layer = tf.math.divide(last_layer, 255.0)
 
         # Build the CNN layers
+        last_layer = self.build_conv_layers(model_config, last_layer)
+
+        # Add the fully connected layers
+        last_layer, last_size = self.build_fc_layers(model_config, last_layer, name)
+
+        self.encoder_model = tf.keras.Model(inputs, [last_layer])
+        self.register_variables(self.encoder_model.variables)
+        self.encoder_model.summary()
+
+        # Action selection/value function
+        cell_size = model_config["custom_options"].get("cell_size")
+        self.policy_model = ActorCriticLSTM(
+            last_size, action_space, num_outputs, model_config, "policy", cell_size=cell_size,
+        )
+
+        self.register_variables(self.policy_model.rnn_model.variables)
+        self.policy_model.rnn_model.summary()
+
+    @staticmethod
+    def build_conv_layers(model_config, last_layer):
         activation = get_activation_fn(model_config.get("conv_activation"))
         filters = model_config.get("conv_filters")
         for i, (out_size, kernel, stride) in enumerate(filters[:-1], 1):
@@ -54,33 +74,22 @@ class BaselineModel(RecurrentTFModelV2):
             name="conv{}".format(i + 1),
         )(last_layer)
 
-        last_layer = tf.keras.layers.Flatten()(conv_out)
+        flattened_conv_out = tf.keras.layers.Flatten()(conv_out)
 
-        # Add the fully connected layers
+        return flattened_conv_out
+
+    @staticmethod
+    def build_fc_layers(model_config, last_layer, name):
         hiddens = model_config.get("fcnet_hiddens")
-        i = 1
         activation = get_activation_fn(model_config.get("fcnet_activation"))
-        for size in hiddens:
+        for i, size in enumerate(hiddens):
             last_layer = tf.keras.layers.Dense(
                 size,
-                name="fc_{}_{}".format(i, name),
+                name="fc_{}_{}".format(i + 1, name),
                 activation=activation,
                 kernel_initializer=normc_initializer(1.0),
             )(last_layer)
-            i += 1
-
-        self.encoder_model = tf.keras.Model(inputs, [last_layer])
-        self.register_variables(self.encoder_model.variables)
-        self.encoder_model.summary()
-
-        # Action selection/value function
-        cell_size = model_config["custom_options"].get("cell_size")
-        self.policy_model = ActorCriticLSTM(
-            size, action_space, num_outputs, model_config, "policy", cell_size=cell_size,
-        )
-
-        self.register_variables(self.policy_model.rnn_model.variables)
-        self.policy_model.rnn_model.summary()
+        return last_layer, size
 
     @override(ModelV2)
     def forward(self, input_dict, state, seq_lens):
