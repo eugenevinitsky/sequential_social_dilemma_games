@@ -180,7 +180,7 @@ class MOAModel(RecurrentTFModelV2):
         obs_dict = restore_original_dimensions(train_batch["obs"], self.obs_space)
         curr_obs = obs_dict["curr_obs"]
         seq_lens = train_batch.get("seq_lens")
-        ac_trunk, moa_trunk = self.moa_encoder_model(curr_obs)
+        _, moa_trunk = self.moa_encoder_model(curr_obs)
 
         # Concat the agent actions together
         other_agent_actions = obs_dict["other_agent_actions"]
