@@ -120,8 +120,10 @@ class MOAModel(RecurrentTFModelV2):
         # To do this: cycle through all possible actions and get predictions for what other
         # agents would do if this action was taken at each trajectory step.
 
-        # First we have to compute it over the trajectory to give us the hidden state
-        # that we will actually use
+        # First we have to evaluate the MOA over the true trajectory to obtain the hidden state
+        # that we will use for the next timestep's counterfactual predictions.
+        # The agent's own action at the current timestep isn't known here, hence the rnn must be
+        # evaluated again later in moa_preds_from_batch to obtain the loss.
         other_actions = input_dict["other_agent_actions"]
         agent_action = tf.expand_dims(input_dict["prev_actions"], axis=-1)
         all_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_true_actions")
