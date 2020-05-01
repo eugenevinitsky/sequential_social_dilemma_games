@@ -218,8 +218,8 @@ class MOAModel(RecurrentTFModelV2):
     def _reshaped_one_hot_actions(self, actions_layer, name):
         """
         Converts the collection of all actions from a number encoding to a one-hot encoding.
-        Then, flattens the one-hot encoding so that all one-hot vectors are in the same dimension.
-        E.g. with a num_outputs (action_space.n) of 3:
+        Then, flattens the one-hot encoding so that all concatenated one-hot vectors are the same
+        dimension. E.g. with a num_outputs (action_space.n) of 3:
         _reshaped_one_hot_actions([0,1,2]) returns [1,0,0,0,1,0,0,0,1]
         :param actions_layer: The tensor containing actions.
         :return: Tensor containing one-hot reshaped action values.
