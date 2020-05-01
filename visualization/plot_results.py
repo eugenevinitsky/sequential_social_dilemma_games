@@ -10,7 +10,7 @@ ray_results_path = os.path.expanduser("~/ray_results")
 plot_path = os.path.expanduser("~/ray_results_plot")
 
 
-class PlotDetails(object):
+class PlotGraphics(object):
     def __init__(self, column_name, legend_name, color):
         self.column_name = column_name
         self.legend_name = legend_name
@@ -21,7 +21,7 @@ class PlotData(object):
     def __init__(self, x_data, y_data, column_name, legend_name, color):
         self.x_data = x_data
         self.y_data = y_data
-        self.plot_details = PlotDetails(column_name, legend_name, color)
+        self.plot_details = PlotGraphics(column_name, legend_name, color)
 
 
 def plot_and_save(fn, path, file_name_addition):
@@ -65,10 +65,14 @@ def plot_with_mean(x_lists, y_lists, color, y_label):
     plt.ticklabel_format(useOffset=False)
 
 
-def extract_stats(dfs, keys):
-    column_names = dfs[0].columns.values.tolist()
+def extract_stats(dfs, requested_keys):
+    column_names = [df.columns.values.tolist() for df in dfs]
+    column_names = [item for sublist in column_names for item in sublist]
     available_keys = [name.split("/")[-1] for name in column_names]
-    keys = [key for key in keys if key in available_keys]
+    unique_keys = set()
+    [unique_keys.add(key) for key in available_keys]
+    available_keys = list(unique_keys)
+    keys = [key for key in requested_keys if key in available_keys]
 
     all_df_lists = {}
     for key in keys:
@@ -120,19 +124,20 @@ def plot_csvs_results(paths):
     )
 
     metric_details = [
-        PlotDetails("cur_lr", "Learning rate", "purple"),
-        PlotDetails("policy_entropy", "Policy Entropy", "b"),
-        PlotDetails("policy_loss", "Policy loss", "r"),
-        PlotDetails("vf_loss", "Value function loss", "orange"),
-        PlotDetails("total_a3c_loss", "Total A3C loss", "yellow"),
-        PlotDetails("moa_loss", "MOA loss", "black"),
-        PlotDetails("total_influence_reward", "MOA reward", "black"),
-        PlotDetails("total_successes_mean", "Total successes", "black"),
-        PlotDetails("switches_on_at_termination_mean", "Switches on at termination", "black"),
-        PlotDetails("total_pulled_on_mean", "Total switched on", "black"),
-        PlotDetails("total_pulled_off_mean", "Total switched off", "black"),
-        PlotDetails("timestep_first_switch_pull_mean", "Time at first switch pull", "black"),
-        PlotDetails("timestep_last_switch_pull_mean", "Time at last switch pull", "black"),
+        PlotGraphics("cur_lr", "Learning rate", "purple"),
+        PlotGraphics("policy_entropy", "Policy Entropy", "b"),
+        PlotGraphics("policy_loss", "Policy loss", "r"),
+        PlotGraphics("vf_loss", "Value function loss", "orange"),
+        PlotGraphics("total_a3c_loss", "Total A3C loss", "yellow"),
+        PlotGraphics("moa_loss", "MOA loss", "black"),
+        PlotGraphics("total_influence_reward", "MOA reward", "black"),
+        PlotGraphics("extrinsic_reward", "Extrinsic reward", "g"),
+        PlotGraphics("total_successes_mean", "Total successes", "black"),
+        PlotGraphics("switches_on_at_termination_mean", "Switches on at termination", "black"),
+        PlotGraphics("total_pulled_on_mean", "Total switched on", "black"),
+        PlotGraphics("total_pulled_off_mean", "Total switched off", "black"),
+        PlotGraphics("timestep_first_switch_pull_mean", "Time at first switch pull", "black"),
+        PlotGraphics("timestep_last_switch_pull_mean", "Time at last switch pull", "black"),
     ]
 
     extracted_data = extract_stats(dfs, [detail.column_name for detail in metric_details])
@@ -173,13 +178,11 @@ def plot_csvs_results(paths):
                     )
 
 
-category_folders = get_all_subdirs(ray_results_path)
-experiment_folders = [get_all_subdirs(category_folder) for category_folder in category_folders]
-
-for experiment_folder in experiment_folders:
+for category_folder in get_all_subdirs(ray_results_path):
     csvs = []
-    for subdir in experiment_folder:
-        csv_path = subdir + "/progress.csv"
+    experiment_folders = get_all_subdirs(category_folder)
+    for experiment_folder in experiment_folders:
+        csv_path = experiment_folder + "/progress.csv"
         if os.path.getsize(csv_path) > 0:
             csvs.append(csv_path)
     plot_csvs_results(csvs)
