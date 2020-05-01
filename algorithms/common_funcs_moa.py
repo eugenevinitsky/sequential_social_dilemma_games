@@ -14,6 +14,7 @@ OTHERS_ACTIONS = "others_actions"
 ALL_ACTIONS = "all_actions"
 VISIBILITY = "others_visibility"
 VISIBILITY_MATRIX = "visibility_matrix"
+SOCIAL_INFLUENCE_REWARD = "total_influence_reward"
 
 # Frozen logits of the policy that computed the action
 ACTION_LOGITS = "action_logits"
@@ -188,7 +189,7 @@ def compute_influence_reward(policy, trajectory):
     influence = influence * cur_influence_reward_weight
 
     # Add to trajectory
-    trajectory["total_influence_reward"] = influence
+    trajectory[SOCIAL_INFLUENCE_REWARD] = influence
     trajectory["extrinsic_reward"] = trajectory["rewards"]
     trajectory["rewards"] = trajectory["rewards"] + influence
 

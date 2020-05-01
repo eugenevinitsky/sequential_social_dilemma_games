@@ -14,6 +14,7 @@ from ray.rllib.utils.explained_variance import explained_variance
 from ray.rllib.utils.tf_ops import make_tf_callable
 
 from algorithms.common_funcs_moa import (
+    SOCIAL_INFLUENCE_REWARD,
     get_moa_mixins,
     moa_fetches,
     moa_postprocess_trajectory,
@@ -104,7 +105,7 @@ def stats(policy, train_batch):
         "cur_influence_reward_weight": tf.cast(
             policy.cur_influence_reward_weight_tensor, tf.float32
         ),
-        "total_influence_reward": train_batch["total_influence_reward"],
+        SOCIAL_INFLUENCE_REWARD: train_batch[SOCIAL_INFLUENCE_REWARD],
         "extrinsic_reward": train_batch["extrinsic_reward"],
         "moa_loss": policy.moa_loss * policy.moa_loss_weight,
     }
