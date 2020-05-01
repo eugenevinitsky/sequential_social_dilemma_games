@@ -2,7 +2,6 @@
 """
 
 import random
-from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -91,8 +90,6 @@ class MapEnv(MultiAgentEnv):
         self.return_agent_actions = return_agent_actions
         self.all_actions = _MAP_ENV_ACTIONS.copy()
         self.all_actions.update(extra_actions)
-        if self.return_agent_actions:
-            self.prev_actions = defaultdict(lambda: [0] * self.num_agents)
         # Map without agents or beams
         self.world_map = np.full(
             (len(self.base_map), len(self.base_map[0])), fill_value=b" ", dtype="c"
@@ -124,38 +121,24 @@ class MapEnv(MultiAgentEnv):
 
     @property
     def observation_space(self):
+        obs_space = {
+            "curr_obs": Box(
+                low=0,
+                high=255,
+                shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
+                dtype=np.uint8,
+            )
+        }
         if self.return_agent_actions:
             # Append the actions of other agents
-            return Dict(
-                {
-                    "curr_obs": Box(
-                        low=0,
-                        high=255,
-                        shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
-                        dtype=np.uint8,
-                    ),
-                    "other_agent_actions": Box(
-                        low=0,
-                        high=len(self.all_actions),
-                        shape=(self.num_agents - 1,),
-                        dtype=np.uint8,
-                    ),
-                    "visible_agents": Box(
-                        low=0, high=1, shape=(self.num_agents - 1,), dtype=np.uint8,
-                    ),
-                }
-            )
-        else:
-            return Dict(
-                {
-                    "curr_obs": Box(
-                        low=0,
-                        high=255,
-                        shape=(2 * self.view_len + 1, 2 * self.view_len + 1, 3),
-                        dtype=np.uint8,
-                    )
-                }
-            )
+            obs_space = {
+                **obs_space,
+                "other_agent_actions": Box(
+                    low=0, high=len(self.all_actions), shape=(self.num_agents - 1,), dtype=np.uint8,
+                ),
+                "visible_agents": Box(low=0, high=1, shape=(self.num_agents - 1,), dtype=np.uint8,),
+            }
+        return Dict(obs_space)
 
     def custom_reset(self):
         """Reset custom elements of the map. For example, spawn apples and build walls"""
