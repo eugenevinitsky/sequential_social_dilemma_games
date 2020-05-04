@@ -1,8 +1,8 @@
-from ray.rllib.models.model import restore_original_dimensions
+import sys
+
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
 from ray.rllib.policy.rnn_sequencing import add_time_dimension
-from ray.rllib.policy.sample_batch import SampleBatch
 from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.annotations import override
 
@@ -28,6 +28,20 @@ class MOAModel(RecurrentTFModelV2):
         # Currently we assume all the agents have equally sized action spaces.
         self.num_outputs = num_outputs
         self.num_other_agents = model_config["custom_options"]["num_other_agents"]
+        self.influence_divergence_measure = model_config["custom_options"][
+            "influence_divergence_measure"
+        ]
+
+        # Declare variables that will later be used as loss fetches
+        # It's
+        self._model_out = None
+        self._value_out = None
+        self._action_pred = None
+        self._counterfactuals = None
+        self._other_agent_actions = None
+        self._visibility = None
+        self._social_influence_reward = None
+        self._true_one_hot_actions = None
 
         self.moa_encoder_model = self.create_moa_encoder_model(obs_space, model_config)
         self.register_variables(self.moa_encoder_model.variables)
@@ -51,6 +65,9 @@ class MOAModel(RecurrentTFModelV2):
         self.train_moa_only_when_visible = model_config["custom_options"][
             "train_moa_only_when_visible"
         ]
+        self.influence_only_when_visible = model_config["custom_options"][
+            "influence_only_when_visible"
+        ]
         self.moa_weight = model_config["custom_options"]["moa_loss_weight"]
 
         self.moa_model = MoaLSTM(
@@ -66,14 +83,14 @@ class MOAModel(RecurrentTFModelV2):
         self.actions_model.rnn_model.summary()
         self.moa_model.rnn_model.summary()
 
-    def create_moa_encoder_model(self, obs_space, model_config):
+    @staticmethod
+    def create_moa_encoder_model(obs_space, model_config):
         original_obs_dims = obs_space.original_space.spaces["curr_obs"].shape
         inputs = tf.keras.layers.Input(original_obs_dims, name="observations", dtype=tf.uint8)
 
         # Divide by 255 to transform [0,255] uint8 rgb pixel values to [0,1] float32.
         last_layer = tf.keras.backend.cast(inputs, tf.float32)
         last_layer = tf.math.divide(last_layer, 255.0)
-        self.preprocessed_input = last_layer
 
         # Build the CNN layer
         conv_out = build_conv_layers(model_config, last_layer)
@@ -106,12 +123,21 @@ class MOAModel(RecurrentTFModelV2):
             rnn_input_dict[k] = add_time_dimension(v, seq_lens)
 
         output, new_state = self.forward_rnn(rnn_input_dict, state, seq_lens)
-        return tf.reshape(output, [-1, self.num_outputs]), new_state
+        action_logits = tf.reshape(output, [-1, self.num_outputs])
+        counterfactuals = tf.reshape(
+            self._counterfactuals,
+            [-1, self._counterfactuals.shape[-2], self._counterfactuals.shape[-1]],
+        )
+        new_state.extend([action_logits, counterfactuals])
+
+        self.compute_influence_reward(input_dict, state[4], state[5])
+
+        return action_logits, new_state
 
     def forward_rnn(self, input_dict, state, seq_lens):
         # Evaluate the actor-critic model
         pass_dict = {"curr_obs": input_dict["ac_trunk"]}
-        h1, c1, h2, c2 = state
+        h1, c1, h2, c2, _, _ = state
         (self._model_out, self._value_out, output_h1, output_c1,) = self.actions_model.forward_rnn(
             pass_dict, [h1, c1], seq_lens
         )
@@ -122,8 +148,6 @@ class MOAModel(RecurrentTFModelV2):
 
         # First we have to evaluate the MOA over the true trajectory to obtain the hidden state
         # that we will use for the next timestep's counterfactual predictions.
-        # The agent's own action at the current timestep isn't known here, hence the rnn must be
-        # evaluated again later in moa_preds_from_batch to obtain the loss.
         other_actions = input_dict["other_agent_actions"]
         agent_action = tf.expand_dims(input_dict["prev_actions"], axis=-1)
         all_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_true_actions")
@@ -135,7 +159,7 @@ class MOAModel(RecurrentTFModelV2):
 
         # Compute the action prediction. This is unused in the actual rollout and is only to generate
         # a series of hidden states for the counterfactuals
-        action_pred, output_h2, output_c2 = self.moa_model.forward_rnn(
+        self._action_pred, output_h2, output_c2 = self.moa_model.forward_rnn(
             true_action_pass_dict, [h2, c2], seq_lens
         )
 
@@ -154,7 +178,7 @@ class MOAModel(RecurrentTFModelV2):
             pass_dict = {"curr_obs": input_dict["moa_trunk"], "prev_total_actions": one_hot_actions}
             counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
             counterfactual_preds.append(tf.expand_dims(counterfactual_pred, axis=-2))
-        self._counterfactual_preds = tf.concat(
+        self._counterfactuals = tf.concat(
             counterfactual_preds, axis=-2, name="concat_counterfactuals"
         )
 
@@ -164,80 +188,135 @@ class MOAModel(RecurrentTFModelV2):
 
         return self._model_out, [output_h1, output_c1, output_h2, output_c2]
 
-    def value_function(self):
-        return tf.reshape(self._value_out, [-1])
-
-    def counterfactual_actions(self):
-        return self._counterfactual_preds
-
-    def moa_preds_from_batch(self, train_batch):
-        """Convenience function that calls this model with a tensor batch.
-
-        What this does is unpack the tensor batch to call this model with the
-        right input dict, state, and seq len arguments.
-
-        This is used when setting up the loss function.
+    def compute_influence_reward(self, input_dict, prev_action_logits, prev_counterfactual_logits):
+        """Compute influence of this agent on other agents and add to rewards.
         """
+        # Probability of the next action for all other agents. Shape is [B, N, A].
+        # This is the predicted probability given the actions that we DID take.
+        # extract out the probability under the actions we actually did take
 
-        obs_dict = restore_original_dimensions(train_batch["obs"], self.obs_space)
-        curr_obs = obs_dict["curr_obs"]
-        seq_lens = train_batch.get("seq_lens")
-        _, moa_trunk = self.moa_encoder_model(curr_obs)
-
-        # Concat the agent actions together
-        other_agent_actions = obs_dict["other_agent_actions"]
-        agent_actions = tf.expand_dims(
-            tf.cast(train_batch[SampleBatch.PREV_ACTIONS], tf.uint8), axis=1
+        # We don't have the current action yet, so the reward for the previous step is calculated.
+        # This is corrected for in the loss function.
+        prev_agent_actions = tf.reshape(input_dict["prev_actions"], [-1, 1])
+        true_logits = tf.gather_nd(
+            params=prev_counterfactual_logits, indices=prev_agent_actions, batch_dims=1
         )
-        prev_total_actions = tf.concat([agent_actions, other_agent_actions], axis=-1)
-        prev_total_actions = self._reshaped_one_hot_actions(prev_total_actions, "loss_one_hot")
 
-        # Now we add the appropriate time dimension
-        prev_total_actions = add_time_dimension(prev_total_actions, seq_lens)
+        true_probs = tf.reshape(true_logits, [-1, self.num_other_agents, self.num_outputs])
+        true_probs = tf.nn.softmax(true_probs)
+        true_probs = true_probs / tf.reduce_sum(
+            true_probs, axis=-1, keepdims=True
+        )  # reduce numerical inaccuracies
 
-        input_dict = {
-            "curr_obs": add_time_dimension(moa_trunk, seq_lens),
-            "is_training": True,
-            "prev_total_actions": prev_total_actions,
-        }
-        if SampleBatch.PREV_ACTIONS in train_batch:
-            input_dict["prev_actions"] = train_batch[SampleBatch.PREV_ACTIONS]
-        if SampleBatch.PREV_REWARDS in train_batch:
-            input_dict["prev_rewards"] = train_batch[SampleBatch.PREV_REWARDS]
-        states = []
+        # Get marginal predictions where effect of self is marginalized out
+        marginal_probs = self.marginalize_predictions_over_own_actions(
+            prev_action_logits, prev_counterfactual_logits
+        )  # [B, Num agents, Num actions]
 
-        # TODO(@evinitsky) remove the magic number
-        i = 2
-        while "state_in_{}".format(i) in train_batch:
-            states.append(train_batch["state_in_{}".format(i)])
-            i += 1
+        # Compute influence per agent/step ([B, N]) using different metrics
+        if self.influence_divergence_measure == "kl":
+            influence_reward = self.kl_div(true_probs, marginal_probs)
+        elif self.influence_divergence_measure == "jsd":
+            mean_probs = 0.5 * (true_probs + marginal_probs)
+            influence_reward = 0.5 * self.kl_div(true_probs, mean_probs) + 0.5 * self.kl_div(
+                marginal_probs, mean_probs
+            )
+        else:
+            sys.exit("Please specify an influence divergence measure from [kl, jsd]")
 
-        moa_preds, _, _ = self.moa_model.forward_rnn(input_dict, states, seq_lens)
-        return moa_preds
+        # Zero out influence for steps where the other agent isn't visible.
+        if self.influence_only_when_visible:
+            visibility = tf.cast(input_dict["obs"]["visible_agents"], tf.float32)
+            influence_reward *= visibility
+        influence_reward = tf.reduce_sum(influence_reward, axis=-1)
+        self._social_influence_reward = influence_reward
 
-    def _reshaped_one_hot_actions(self, actions_layer, name):
+    def marginalize_predictions_over_own_actions(
+        self, prev_action_logits, prev_counterfactual_logits
+    ):
+        # Probability of each action in original trajectory
+        logits = tf.nn.softmax(prev_action_logits)
+
+        # Normalize to reduce numerical inaccuracies
+        logits = logits / tf.reduce_sum(logits, axis=-1, keepdims=True)
+
+        # Indexing is currently [B, Agent actions, num_other_agents * other_agent_logits]
+        # Change to [B, Agent actions, num other agents, other agent logits]
+        counterfactual_logits = tf.reshape(
+            prev_counterfactual_logits,
+            [-1, self.num_outputs, self.num_other_agents, self.num_outputs],
+        )
+
+        counterfactual_logits = tf.nn.softmax(counterfactual_logits)
+        # Sum over the counterfactual actions
+        summed_counterfactual_logits = tf.reduce_sum(counterfactual_logits, axis=-3)
+
+        logits = tf.expand_dims(logits, axis=-2)
+        logits = tf.tile(logits, [1, self.num_other_agents, 1])
+        # Multiply by probability of each action to renormalize probability
+        marginal_probs = logits * summed_counterfactual_logits
+
+        # Normalize to reduce numerical inaccuracies
+        marginal_probs = marginal_probs / tf.reduce_sum(marginal_probs, axis=-1, keepdims=True)
+
+        return marginal_probs
+
+    @staticmethod
+    def kl_div(x, y):
+        dist_x = tf.distributions.Categorical(probs=x)
+        dist_y = tf.distributions.Categorical(probs=y)
+        result = tf.distributions.kl_divergence(dist_x, dist_y)
+
+        # Don't return nans or infs
+        is_finite = tf.reduce_all(tf.is_finite(result))
+
+        def true_fn():
+            return result
+
+        def false_fn():
+            return tf.zeros(tf.shape(result))
+
+        result = tf.cond(is_finite, true_fn=true_fn, false_fn=false_fn)
+        return result
+
+    def _reshaped_one_hot_actions(self, actions_tensor, name):
         """
         Converts the collection of all actions from a number encoding to a one-hot encoding.
         Then, flattens the one-hot encoding so that all concatenated one-hot vectors are the same
         dimension. E.g. with a num_outputs (action_space.n) of 3:
         _reshaped_one_hot_actions([0,1,2]) returns [1,0,0,0,1,0,0,0,1]
-        :param actions_layer: The tensor containing actions.
+        :param actions_tensor: The tensor containing actions.
         :return: Tensor containing one-hot reshaped action values.
         """
-        one_hot_actions = tf.keras.backend.one_hot(actions_layer, self.num_outputs)
+        one_hot_actions = tf.keras.backend.one_hot(actions_tensor, self.num_outputs)
         # Extract partially known tensor shape and combine with actions_layer known shape
         # This combination is a bit contrived for a reason: the shape cannot be determined otherwise
         batch_time_dims = [
             tf.shape(one_hot_actions)[k] for k in range(one_hot_actions.shape.rank - 2)
         ]
-        reshape_dims = batch_time_dims + [actions_layer.shape[-1] * self.num_outputs]
+        reshape_dims = batch_time_dims + [actions_tensor.shape[-1] * self.num_outputs]
         reshaped = tf.reshape(one_hot_actions, shape=reshape_dims, name=name)
         return reshaped
+
+    def value_function(self):
+        return tf.reshape(self._value_out, [-1])
+
+    def counterfactual_actions(self):
+        return self._counterfactuals
 
     def action_logits(self):
         return self._model_out
 
-    # TODO(@evinitsky) pull out the time slice
+    def social_influence_reward(self):
+        return self._social_influence_reward
+
+    def predicted_actions(self):
+        """ :returns Predicted actions. NB: Since the true action is not known when evaluating this
+         model, the timestep is off by one (too late). Thus, to get to the correct index:
+         When index is i, use predicted_actions[i + 1]. predicted_actions[0] does not contain
+         output."""
+        return self._action_pred
+
     def visibility(self):
         return tf.reshape(self._visibility, [-1, self.num_other_agents])
 

@@ -9,7 +9,6 @@ dependencies:
         - opencv-python
         - ray==0.7.6
         - tensorflow==2.0.0
-        - scipy==1.2.0
         - setproctitle
         - psutil
         - lz4

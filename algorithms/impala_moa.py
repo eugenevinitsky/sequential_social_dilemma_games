@@ -137,7 +137,7 @@ def build_vtrace_loss(policy, model, dist_class, train_batch):
         clip_pg_rho_threshold=policy.config["vtrace_clip_pg_rho_threshold"],
     )
 
-    moa_loss = setup_moa_loss(logits, model, policy, train_batch)
+    moa_loss = setup_moa_loss(logits, policy, train_batch)
     policy.loss.total_loss += moa_loss.total_loss
 
     # store this for future statistics

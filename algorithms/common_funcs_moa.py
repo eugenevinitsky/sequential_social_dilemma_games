@@ -1,7 +1,4 @@
-import sys
-
 import numpy as np
-import scipy
 from ray.rllib.models import ModelCatalog
 from ray.rllib.policy.policy import Policy
 from ray.rllib.utils import try_import_tf
@@ -12,6 +9,7 @@ tf = try_import_tf()
 MOA_PREDS = "moa_preds"
 OTHERS_ACTIONS = "others_actions"
 ALL_ACTIONS = "all_actions"
+PREDICTED_ACTIONS = "predicted_actions"
 VISIBILITY = "others_visibility"
 VISIBILITY_MATRIX = "visibility_matrix"
 SOCIAL_INFLUENCE_REWARD = "total_influence_reward"
@@ -58,27 +56,6 @@ class InfluenceScheduleMixIn(object):
         return weight * self.baseline_influence_reward_weight
 
 
-def kl_div(p, q):
-    """Kullback-Leibler divergence D(P || Q) for discrete probability dists
-
-    Assumes the probability dist is over the last dimension.
-
-    Taken from: https://gist.github.com/swayson/86c296aa354a555536e6765bbe726ff7
-
-    p, q : array-like, dtype=float
-    """
-    p = np.asarray(p, dtype=np.float)
-    q = np.asarray(q, dtype=np.float)
-
-    kl = np.sum(np.where(p != 0, p * np.log(p / q), 0), axis=-1)
-
-    # Don't return nans or infs
-    if np.all(np.isfinite(kl)):
-        return kl
-    else:
-        return np.zeros(kl.shape)
-
-
 class MOALoss(object):
     def __init__(self, pred_logits, true_actions, loss_weight=1.0, others_visibility=None):
         """Train MOA model with supervised cross entropy loss on a trajectory.
@@ -87,12 +64,13 @@ class MOALoss(object):
         Returns:
             A scalar loss tensor (cross-entropy loss).
         """
-        # Remove the prediction for the final step, since t+1 is not known for
-        # this step.
-        action_logits = pred_logits[:-1, :, :]  # [B, N, A]
+        # Remove the first prediction, as this value contains no sensible data.
+        # This is done because the pred_logits are delayed by one timestep.
+        action_logits = pred_logits[1:, :, :]  # [B, N, A]
 
-        # # Remove first agent (self) and first action, because we want to predict
-        # # the t+1 actions of other agents from all actions at t.
+        # Remove first agent (self) and first action, because we want to predict
+        # the t+1 actions of other agents from all actions at t.
+        # true_actions are not delayed like pred_logits
         true_actions = tf.cast(true_actions[1:, 1:], tf.int32)  # [B, N]
 
         # Compute softmax cross entropy
@@ -110,9 +88,9 @@ class MOALoss(object):
         tf.Print(self.total_loss, [self.total_loss], message="MOA CE loss")
 
 
-def setup_moa_loss(logits, model, policy, train_batch):
+def setup_moa_loss(logits, policy, train_batch):
     # Instantiate the prediction loss
-    moa_preds = model.moa_preds_from_batch(train_batch)
+    moa_preds = train_batch[PREDICTED_ACTIONS]
     moa_preds = tf.reshape(moa_preds, [-1, policy.model.num_other_agents, logits.shape[-1]])
     true_actions = train_batch[ALL_ACTIONS]
     # 0/1 multiplier array representing whether each agent is visible to
@@ -139,52 +117,16 @@ def moa_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, e
     sample_batch[ALL_ACTIONS] = all_actions
 
     # Compute social influence reward and add to batch.
-    sample_batch = compute_influence_reward(policy, sample_batch)
+    sample_batch = weigh_and_add_influence_reward(policy, sample_batch)
 
     return sample_batch
 
 
-def compute_influence_reward(policy, trajectory):
-    """Compute influence of this agent on other agents and add to rewards.
-    """
-    # Probability of the next action for all other agents. Shape is [B, N, A].
-    # This is the predicted probability given the actions that we DID take.
-    # extract out the probability under the actions we actually did take
-    true_probs = trajectory[COUNTERFACTUAL_ACTIONS]
-    traj_index = list(range(len(trajectory["obs"])))
-    true_probs = true_probs[traj_index, :, trajectory["actions"], :]
-    true_probs = np.reshape(true_probs, [true_probs.shape[0], policy.num_other_agents, -1])
-    true_probs = scipy.special.softmax(true_probs, axis=-1)
-    true_probs = true_probs / true_probs.sum(axis=-1, keepdims=1)  # reduce numerical inaccuracies
-
-    # Get marginal predictions where effect of self is marginalized out
-    marginal_probs = marginalize_predictions_over_own_actions(
-        policy, trajectory
-    )  # [B, Num agents, Num actions]
-
-    # Compute influence per agent/step ([B, N]) using different metrics
-    if policy.influence_divergence_measure == "kl":
-        influence_per_agent_step = kl_div(true_probs, marginal_probs)
-    elif policy.influence_divergence_measure == "jsd":
-        mean_probs = 0.5 * (true_probs + marginal_probs)
-        influence_per_agent_step = 0.5 * kl_div(true_probs, mean_probs) + 0.5 * kl_div(
-            marginal_probs, mean_probs
-        )
-    else:
-        sys.exit("Please specify an influence divergence measure from [kl, jsd]")
-
-    # Zero out influence for steps where the other agent isn't visible.
-    if policy.influence_only_when_visible:
-        # if VISIBILITY in trajectory.keys():
-        visibility = trajectory[VISIBILITY]
-        # else:
-        #     visibility = get_agent_visibility_multiplier(trajectory, policy.num_other_agents)
-        influence_per_agent_step *= visibility
-
+def weigh_and_add_influence_reward(policy, trajectory):
     cur_influence_reward_weight = policy.compute_weight()
+    influence = trajectory[SOCIAL_INFLUENCE_REWARD]
 
     # Summarize and clip influence reward
-    influence = np.sum(influence_per_agent_step, axis=-1)
     influence = np.clip(influence, -policy.influence_reward_clip, policy.influence_reward_clip)
     influence = influence * cur_influence_reward_weight
 
@@ -213,31 +155,6 @@ def get_agent_visibility_multiplier(trajectory, num_other_agents, agent_ids):
         vis_agents = [agent_name_to_idx(a, agent_ids[i]) for a in v]
         visibility[i, vis_agents] = 1
     return visibility
-
-
-def marginalize_predictions_over_own_actions(policy, trajectory):
-    # Probability of each action in original trajectory
-    action_probs = scipy.special.softmax(trajectory[ACTION_LOGITS], axis=-1)
-
-    # Normalize to reduce numerical inaccuracies
-    action_probs = action_probs / action_probs.sum(axis=1, keepdims=1)
-
-    # Indexing of this is [B, Num agents, Agent actions, other agent logits] before we marginalize
-    counter_probs = trajectory[COUNTERFACTUAL_ACTIONS]
-    counter_probs = np.reshape(
-        counter_probs, [counter_probs.shape[0], policy.num_other_agents, -1, action_probs.shape[-1]],
-    )
-    counter_probs = scipy.special.softmax(counter_probs, axis=-1)
-    marginal_probs = np.sum(counter_probs, axis=-2)
-
-    # Multiply by probability of each action to renormalize probability
-    tiled_probs = np.tile(action_probs, [1, policy.num_other_agents, 1])
-    marginal_probs = np.multiply(marginal_probs, tiled_probs)
-
-    # Normalize to reduce numerical inaccuracies
-    marginal_probs = marginal_probs / marginal_probs.sum(axis=2, keepdims=1)
-
-    return marginal_probs
 
 
 def extract_last_actions_from_episodes(episodes, batch_type=False, own_actions=None):
@@ -289,6 +206,8 @@ def moa_fetches(policy):
         # TODO(@evinitsky) remove this once we figure out how to split the obs
         OTHERS_ACTIONS: policy.model.other_agent_actions(),
         VISIBILITY: policy.model.visibility(),
+        SOCIAL_INFLUENCE_REWARD: policy.model.social_influence_reward(),
+        PREDICTED_ACTIONS: policy.model.predicted_actions(),
     }
 
 

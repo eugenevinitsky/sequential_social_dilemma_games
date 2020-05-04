@@ -42,7 +42,7 @@ def loss_with_moa(policy, model, dist_class, train_batch):
     logits, state = model.from_batch(train_batch)
     action_dist = dist_class(logits, model)
 
-    moa_loss = setup_moa_loss(logits, model, policy, train_batch)
+    moa_loss = setup_moa_loss(logits, policy, train_batch)
     policy.moa_loss = moa_loss.total_loss
 
     if state:
