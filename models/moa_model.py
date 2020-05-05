@@ -137,7 +137,7 @@ class MOAModel(RecurrentTFModelV2):
     def forward_rnn(self, input_dict, state, seq_lens):
         # Evaluate the actor-critic model
         pass_dict = {"curr_obs": input_dict["ac_trunk"]}
-        h1, c1, h2, c2, _, _ = state
+        h1, c1, h2, c2, *_ = state
         (self._model_out, self._value_out, output_h1, output_c1,) = self.actions_model.forward_rnn(
             pass_dict, [h1, c1], seq_lens
         )
@@ -198,6 +198,8 @@ class MOAModel(RecurrentTFModelV2):
         # We don't have the current action yet, so the reward for the previous step is calculated.
         # This is corrected for in the loss function.
         prev_agent_actions = tf.reshape(input_dict["prev_actions"], [-1, 1])
+        # Use the agent's actions as indices to select the predicted logits of other agents for
+        # actions that the agent did take, discard the rest.
         true_logits = tf.gather_nd(
             params=prev_counterfactual_logits, indices=prev_agent_actions, batch_dims=1
         )
