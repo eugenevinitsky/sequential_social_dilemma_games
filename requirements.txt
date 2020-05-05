@@ -33,7 +33,7 @@ pyparsing==2.4.6
 pytest==5.4.1
 pytz==2019.3
 python-dateutil==2.8.1
-ray[rllib]==0.8.3
+ray[rllib]==0.8.4
 redis==3.4.1
 requests==2.23.0
 setproctitle==1.1.10
