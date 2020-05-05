@@ -26,6 +26,8 @@ from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.explained_variance import explained_variance
 
 from algorithms.common_funcs_moa import (
+    EXTRINSIC_REWARD,
+    SOCIAL_INFLUENCE_REWARD,
     get_moa_mixins,
     moa_fetches,
     moa_postprocess_trajectory,
@@ -164,8 +166,8 @@ def moa_stats(policy, train_batch):
         "vf_explained_var": explained_variance(
             tf.reshape(policy.loss.value_targets, [-1]), tf.reshape(values_batched, [-1]),
         ),
-        "total_influence": train_batch["total_influence"],
-        "extrinsic_reward": train_batch["extrinsic_reward"],
+        SOCIAL_INFLUENCE_REWARD: train_batch[SOCIAL_INFLUENCE_REWARD],
+        EXTRINSIC_REWARD: train_batch[EXTRINSIC_REWARD],
         "moa_loss": policy.moa_loss / policy.moa_weight,
     }
     return base_stats

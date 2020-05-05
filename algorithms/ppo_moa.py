@@ -23,6 +23,7 @@ from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.utils import try_import_tf
 
 from algorithms.common_funcs_moa import (
+    EXTRINSIC_REWARD,
     SOCIAL_INFLUENCE_REWARD,
     build_model,
     get_moa_mixins,
@@ -92,7 +93,7 @@ def extra_moa_stats(policy, train_batch):
             policy.cur_influence_reward_weight_tensor, tf.float32
         ),
         SOCIAL_INFLUENCE_REWARD: train_batch[SOCIAL_INFLUENCE_REWARD],
-        "extrinsic_reward": train_batch["extrinsic_reward"],
+        EXTRINSIC_REWARD: train_batch[EXTRINSIC_REWARD],
         "moa_loss": policy.moa_loss,
     }
 
