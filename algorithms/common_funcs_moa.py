@@ -116,7 +116,7 @@ def moa_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, e
     all_actions = np.hstack((own_actions, sample_batch[OTHERS_ACTIONS]))
     sample_batch[ALL_ACTIONS] = all_actions
 
-    # Compute social influence reward and add to batch.
+    # Weigh social influence reward and add to batch.
     sample_batch = weigh_and_add_influence_reward(policy, sample_batch)
 
     return sample_batch
