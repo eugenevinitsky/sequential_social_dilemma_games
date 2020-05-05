@@ -93,7 +93,7 @@ def extra_moa_stats(policy, train_batch):
         ),
         SOCIAL_INFLUENCE_REWARD: train_batch[SOCIAL_INFLUENCE_REWARD],
         "extrinsic_reward": train_batch["extrinsic_reward"],
-        "moa_loss": policy.moa_loss * policy.moa_loss_weight,
+        "moa_loss": policy.moa_loss,
     }
 
     return base_stats
