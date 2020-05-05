@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 python train.py \
---exp_name cleanup_baseline_PPO \
+--exp_name cleanup_baseline_ppo \
 --env cleanup \
 --model baseline \
 --algorithm PPO \
