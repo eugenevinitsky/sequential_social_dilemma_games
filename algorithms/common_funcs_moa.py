@@ -122,20 +122,20 @@ def moa_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, e
     return sample_batch
 
 
-def weigh_and_add_influence_reward(policy, trajectory):
+def weigh_and_add_influence_reward(policy, sample_batch):
     cur_influence_reward_weight = policy.compute_weight()
-    influence = trajectory[SOCIAL_INFLUENCE_REWARD]
+    influence = sample_batch[SOCIAL_INFLUENCE_REWARD]
 
     # Summarize and clip influence reward
     influence = np.clip(influence, -policy.influence_reward_clip, policy.influence_reward_clip)
     influence = influence * cur_influence_reward_weight
 
     # Add to trajectory
-    trajectory[SOCIAL_INFLUENCE_REWARD] = influence
-    trajectory["extrinsic_reward"] = trajectory["rewards"]
-    trajectory["rewards"] = trajectory["rewards"] + influence
+    sample_batch[SOCIAL_INFLUENCE_REWARD] = influence
+    sample_batch["extrinsic_reward"] = sample_batch["rewards"]
+    sample_batch["rewards"] = sample_batch["rewards"] + influence
 
-    return trajectory
+    return sample_batch
 
 
 def agent_name_to_idx(agent_num, self_id):
