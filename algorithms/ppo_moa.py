@@ -77,7 +77,7 @@ def loss_with_moa(policy, model, dist_class, train_batch):
     return policy.loss_obj.loss
 
 
-def extra_fetches(policy):
+def extra_moa_fetches(policy):
     """Adds value function, logits, moa predictions to experience train_batches."""
     ppo_fetches = vf_preds_and_logits_fetches(policy)
     ppo_fetches.update(moa_fetches(policy))
@@ -127,7 +127,7 @@ def build_ppo_moa_trainer(moa_config):
         loss_fn=loss_with_moa,
         make_model=build_model,
         stats_fn=extra_moa_stats,
-        extra_action_fetches_fn=extra_fetches,
+        extra_action_fetches_fn=extra_moa_fetches,
         postprocess_fn=postprocess_ppo_moa,
         gradients_fn=clip_gradients,
         before_init=setup_config,

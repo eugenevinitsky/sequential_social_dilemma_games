@@ -17,18 +17,18 @@ class MoaLSTM(RecurrentTFModelV2):
 
         # Define input layers
         # TODO(@evinitsky) add in an option for prev_action_reward
-        self.obs_input_layer = tf.keras.layers.Input(shape=(None, obs_space), name="obs_inputs")
+        obs_input_layer = tf.keras.layers.Input(shape=(None, obs_space), name="obs_inputs")
 
-        self.actions_layer = tf.keras.layers.Input(
+        actions_layer = tf.keras.layers.Input(
             shape=(None, self.num_outputs + self.action_space.n), name="action_input"
         )
-        concat_input = tf.keras.layers.concatenate([self.obs_input_layer, self.actions_layer])
+        concat_input = tf.keras.layers.concatenate([obs_input_layer, actions_layer])
 
         state_in_h = tf.keras.layers.Input(shape=(cell_size,), name="h")
         state_in_c = tf.keras.layers.Input(shape=(cell_size,), name="c")
         seq_in = tf.keras.layers.Input(shape=(), name="seq_in", dtype=tf.int32)
 
-        lstm_out, self.state_h, state_c = tf.keras.layers.LSTM(
+        lstm_out, state_h, state_c = tf.keras.layers.LSTM(
             cell_size, return_sequences=True, return_state=True, name="lstm"
         )(
             inputs=concat_input,
@@ -41,10 +41,10 @@ class MoaLSTM(RecurrentTFModelV2):
             self.num_outputs, activation=tf.keras.activations.linear, name=name
         )(lstm_out)
 
-        inputs = [self.obs_input_layer, seq_in, state_in_h, state_in_c]
-        inputs.insert(1, self.actions_layer)
-        outputs = [logits, self.state_h, state_c]
-        self.rnn_model = tf.keras.Model(inputs=inputs, outputs=outputs)
+        inputs = [obs_input_layer, seq_in, state_in_h, state_in_c]
+        inputs.insert(1, actions_layer)
+        outputs = [logits, state_h, state_c]
+        self.rnn_model = tf.keras.Model(inputs=inputs, outputs=outputs, name="MOA_Model")
 
     @override(RecurrentTFModelV2)
     def forward_rnn(self, input_dict, state, seq_lens):
