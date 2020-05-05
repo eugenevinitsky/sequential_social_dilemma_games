@@ -33,7 +33,7 @@ class BaselineModel(RecurrentTFModelV2):
         # Add the fully connected layers
         last_layer = build_fc_layers(model_config, last_layer, name)
 
-        self.encoder_model = tf.keras.Model(inputs, [last_layer])
+        self.encoder_model = tf.keras.Model(inputs, [last_layer], name="Baseline_Encoder_Model")
         self.register_variables(self.encoder_model.variables)
         self.encoder_model.summary()
 

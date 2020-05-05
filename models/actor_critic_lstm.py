@@ -41,7 +41,7 @@ class ActorCriticLSTM(RecurrentTFModelV2):
         )(lstm_out)
         outputs = [logits, value_out, state_h, state_c]
 
-        self.rnn_model = tf.keras.Model(inputs=inputs, outputs=outputs)
+        self.rnn_model = tf.keras.Model(inputs=inputs, outputs=outputs, name="Actor_Critic_Model")
 
     @override(RecurrentTFModelV2)
     def forward_rnn(self, input_dict, state, seq_lens):

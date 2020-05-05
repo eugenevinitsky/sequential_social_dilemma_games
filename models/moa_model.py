@@ -101,7 +101,7 @@ class MOAModel(RecurrentTFModelV2):
         # Build MOA layers
         moa_fc = build_fc_layers(model_config, conv_out, "moa")
 
-        return tf.keras.Model(inputs, [actor_critic_fc, moa_fc])
+        return tf.keras.Model(inputs, [actor_critic_fc, moa_fc], name="MOA_Encoder_Model")
 
     @override(ModelV2)
     def forward(self, input_dict, state, seq_lens):
