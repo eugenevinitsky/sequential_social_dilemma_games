@@ -162,8 +162,8 @@ def setup(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    if __debug__:
-        print("Debug mode detected, turning on ray local mode.")
+    if sys.gettrace() is not None:
+        print("Debug mode detected through sys.gettrace(), turning on ray local mode.")
         args.local_mode = True
     if args.multi_node and args.local_mode:
         sys.exit("You cannot have both local mode and multi node on at the same time")
