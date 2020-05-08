@@ -126,12 +126,12 @@ def setup(args):
     if args.model == "scm":
         config["model"]["custom_options"].update(
             {
-                # TODO: Add remaining SCM hparams
                 "scm_loss_weight": args.scm_loss_weight,
                 "curiosity_reward_clip": 10,
                 "curiosity_reward_weight": args.curiosity_reward_weight,
                 "curiosity_reward_schedule_steps": args.curiosity_reward_schedule_steps,
                 "curiosity_reward_schedule_weights": args.curiosity_reward_schedule_weights,
+                "scm_forward_vs_inverse_loss_weight": args.scm_forward_vs_inverse_loss_weight,
             }
         )
 

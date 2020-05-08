@@ -49,7 +49,14 @@ class SocialCuriosityScheduleMixIn(object):
 
 
 class SCMLoss(object):
-    def __init__(self, forward_loss, inverse_loss, loss_weight=1.0):
+    def __init__(
+        self,
+        forward_loss,
+        inverse_loss,
+        scm_loss_weight=1.0,
+        forward_loss_weight=0.5,
+        inverse_loss_weight=0.5,
+    ):
         """Surprisal with self-supervised MSE on a trajectory.
 
          The loss is based on the difference between the predicted encoding of the observation x
@@ -63,9 +70,9 @@ class SCMLoss(object):
             A scalar loss tensor.
         """
         # Remove the first value, as this contains no sensible value.
-        loss = forward_loss[1:] + inverse_loss[1:]
+        loss = forward_loss[1:] * forward_loss_weight + inverse_loss[1:] * inverse_loss_weight
 
-        self.total_loss = loss * loss_weight
+        self.total_loss = loss * scm_loss_weight
 
 
 def setup_scm_loss(policy, train_batch):
@@ -73,7 +80,13 @@ def setup_scm_loss(policy, train_batch):
     forward_loss = train_batch[SOCIAL_CURIOSITY_REWARD]
     inverse_loss = train_batch[INVERSE_MODEL_LOSS]
 
-    scm_loss = SCMLoss(forward_loss, inverse_loss, loss_weight=policy.scm_loss_weight,)
+    scm_loss = SCMLoss(
+        forward_loss,
+        inverse_loss,
+        scm_loss_weight=policy.scm_loss_weight,
+        forward_loss_weight=policy.forward_loss_weight,
+        inverse_loss_weight=policy.inverse_loss_weight,
+    )
     return scm_loss
 
 
@@ -114,6 +127,8 @@ class SCMConfigInitializerMixIn(object):
         config = config["model"]["custom_options"]
         self.scm_loss_weight = config["scm_loss_weight"]
         self.curiosity_reward_clip = config["curiosity_reward_clip"]
+        self.forward_loss_weight = config["scm_forward_vs_inverse_loss_weight"]
+        self.inverse_loss_weight = 1 - self.forward_loss_weight
 
 
 def setup_scm_mixins(policy, obs_space, action_space, config):
@@ -122,4 +137,16 @@ def setup_scm_mixins(policy, obs_space, action_space, config):
 
 
 def get_curiosity_mixins():
-    return [SocialCuriosityScheduleMixIn]
+    return [SCMConfigInitializerMixIn, SocialCuriosityScheduleMixIn]
+
+
+def validate_scm_config(config):
+    config = config["model"]["custom_options"]
+    if config["curiosity_reward_weight"] < 0:
+        raise ValueError("Influence reward weight must be >= 0.")
+    weight = config["scm_forward_vs_inverse_loss_weight"]
+    if not 0 <= weight <= 1:
+        raise ValueError(
+            "scm_forward_vs_inverse_loss_weight should have a value in the range"
+            " [0, 1], but has the value " + str(weight)
+        )

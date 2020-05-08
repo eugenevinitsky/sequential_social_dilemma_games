@@ -240,3 +240,9 @@ def setup_moa_mixins(policy, obs_space, action_space, config):
 
 def get_moa_mixins():
     return [MOAConfigInitializerMixIn, InfluenceScheduleMixIn]
+
+
+def validate_moa_config(config):
+    config = config["model"]["custom_options"]
+    if config["influence_reward_weight"] < 0:
+        raise ValueError("Influence reward weight must be >= 0.")

@@ -24,12 +24,14 @@ from algorithms.common_funcs_scm import (
     scm_postprocess_trajectory,
     setup_scm_loss,
     setup_scm_mixins,
+    validate_scm_config,
 )
 from algorithms.ppo_moa import (
     extra_moa_fetches,
     extra_moa_stats,
     loss_with_moa,
     setup_ppo_moa_mixins,
+    validate_moa_config,
 )
 
 tf = try_import_tf()
@@ -79,6 +81,12 @@ def setup_ppo_scm_mixins(policy, obs_space, action_space, config):
     setup_scm_mixins(policy, obs_space, action_space, config)
 
 
+def validate_ppo_scm_config(config):
+    validate_scm_config(config)
+    validate_moa_config(config)
+    validate_config(config)
+
+
 def build_ppo_scm_trainer(scm_config):
     tf.keras.backend.set_floatx("float32")
 
@@ -105,7 +113,7 @@ def build_ppo_scm_trainer(scm_config):
         default_policy=scm_ppo_policy,
         make_policy_optimizer=choose_policy_optimizer,
         default_config=scm_config,
-        validate_config=validate_config,
+        validate_config=validate_ppo_scm_config,
         after_optimizer_step=update_kl,
         after_train_result=warn_about_bad_reward_scales,
     )

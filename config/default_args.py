@@ -243,6 +243,15 @@ def add_default_args(parser):
     )
 
     parser.add_argument(
+        "--scm_forward_vs_inverse_loss_weight",
+        type=float,
+        default=0.5,
+        help="This weight balances forward and inverse loss weights in the following way:"
+        "weight * forward_loss + (1 - weight) * inverse_loss"
+        "Must be in the range [0, 1].",
+    )
+
+    parser.add_argument(
         "--curiosity_reward_weight_tune",
         nargs="+",
         type=float,
