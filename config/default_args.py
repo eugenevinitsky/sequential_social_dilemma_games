@@ -12,7 +12,10 @@ def add_default_args(parser):
         help="Name of the environment to use. Can be switch, cleanup or harvest.",
     )
     parser.add_argument(
-        "--algorithm", type=str, default="PPO", help="Name of the rllib algorithm to use.",
+        "--algorithm",
+        type=str,
+        default="PPO",
+        help="Name of the rllib algorithm to use. Can be A3C or PPO.",
     )
     parser.add_argument(
         "--model",
