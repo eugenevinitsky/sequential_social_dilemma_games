@@ -133,7 +133,6 @@ class SocialCuriosityModule(MOAModel):
         )
 
         influence_reward = tf.expand_dims(self._social_influence_reward, axis=-1)
-        # influence_reward = self._social_influence_reward
 
         forward_model_input = {
             # Encoded state at t
