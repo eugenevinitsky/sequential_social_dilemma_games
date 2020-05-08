@@ -128,11 +128,13 @@ class SocialCuriosityModule(MOAModel):
         self._encoded_state = self.scm_encoder_model(input_dict["obs"]["curr_obs"])
         new_state.append(self._encoded_state)
 
+        influence_reward = tf.expand_dims(self._social_influence_reward, axis=-1)
         one_hot_actions = tf.reshape(
             self._true_one_hot_actions, shape=[-1, self._true_one_hot_actions.shape[-1]]
         )
-
-        influence_reward = tf.expand_dims(self._social_influence_reward, axis=-1)
+        # Stop backpropagation through the LSTM.
+        # This is done because the SCM should not influence what the MOA is modeling
+        lstm_input = tf.stop_gradient(state[2])
 
         forward_model_input = {
             # Encoded state at t
@@ -142,7 +144,7 @@ class SocialCuriosityModule(MOAModel):
             # Actions at t
             "action_input": one_hot_actions,
             # MOA LSTM output at t
-            "lstm_input": state[2],
+            "lstm_input": lstm_input,
         }
 
         inverse_model_input = {
@@ -153,7 +155,7 @@ class SocialCuriosityModule(MOAModel):
             # Actions at t
             "action_input": one_hot_actions,
             # MOA LSTM output at t
-            "lstm_input": state[2],
+            "lstm_input": lstm_input,
         }
 
         self._forward_model_output = self.forward_model(forward_model_input)
