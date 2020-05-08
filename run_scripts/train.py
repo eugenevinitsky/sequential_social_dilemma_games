@@ -178,7 +178,7 @@ if __name__ == "__main__":
     env_name, config = setup(args)
 
     if args.exp_name is None:
-        exp_name = args.env + "_" + args.algorithm
+        exp_name = args.env + "_" + args.model + "_" + args.algorithm
     else:
         exp_name = args.exp_name
     print("Commencing experiment", exp_name)

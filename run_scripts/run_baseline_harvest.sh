@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 python train.py \
---exp_name harvest_baseline_ppo \
 --env harvest \
 --model baseline \
 --algorithm PPO \

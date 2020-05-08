@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 python train.py \
---exp_name curiosity_switch \
 --env switch \
 --model curiosity \
 --algorithm A3C \

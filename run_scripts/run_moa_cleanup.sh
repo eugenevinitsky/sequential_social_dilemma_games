@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 python train.py \
---exp_name cleanup_moa_ppo \
 --env cleanup \
 --model moa \
 --algorithm PPO \

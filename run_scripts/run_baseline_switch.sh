@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 python train.py \
---exp_name switch_baseline_ppo \
 --env switch \
 --model baseline \
 --algorithm PPO \

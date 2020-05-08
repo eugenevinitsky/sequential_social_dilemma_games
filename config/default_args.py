@@ -2,8 +2,9 @@ def add_default_args(parser):
     parser.add_argument(
         "--exp_name",
         type=str,
-        default="nameless_experiment",
-        help="Name experiment will be stored under",
+        default=None,
+        help="Name experiment will be stored under. When left empty, the name is formatted as:"
+        "env_model_algorithm",
     )
     parser.add_argument(
         "--env",

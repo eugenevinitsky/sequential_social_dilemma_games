@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 python train.py \
---exp_name harvest_moa_ppo \
 --env harvest \
 --model moa \
 --algorithm PPO \
