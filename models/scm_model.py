@@ -181,6 +181,9 @@ class SocialCuriosityModule(MOAModel):
 
     @staticmethod
     def batched_mse(true_tensor, pred_tensor):
+        """ Calculate the mean square error on a batched tensor.
+        The output has the same amount of dimensions as the input,
+        but sets the last dimension to 1."""
         squared_difference = tf.squared_difference(true_tensor, pred_tensor)
         mse = tf.reduce_mean(squared_difference, axis=-1, keepdims=True)
         return mse
