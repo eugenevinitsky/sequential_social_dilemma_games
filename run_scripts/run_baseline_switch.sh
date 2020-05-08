@@ -19,5 +19,4 @@ python train.py \
 --lr_schedule_steps 0 \
 --lr_schedule_weights 0.001 \
 --entropy_coeff 0.00176 \
---num_workers_per_device 3 \
 --small_model
