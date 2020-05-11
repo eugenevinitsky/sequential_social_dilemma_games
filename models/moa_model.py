@@ -1,165 +1,330 @@
-from copy import copy
+import sys
 
-from gym.spaces import Box
-import numpy as np
-from ray.rllib.models.catalog import ModelCatalog
-from ray.rllib.models.tf.misc import normc_initializer
 from ray.rllib.models.modelv2 import ModelV2
 from ray.rllib.models.tf.recurrent_tf_modelv2 import RecurrentTFModelV2
-from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.utils.annotations import override
+from ray.rllib.policy.rnn_sequencing import add_time_dimension
 from ray.rllib.utils import try_import_tf
+from ray.rllib.utils.annotations import override
+
+from models.actor_critic_lstm import ActorCriticLSTM
+from models.common_layers import build_conv_layers, build_fc_layers
+from models.moa_lstm import MoaLSTM
 
 tf = try_import_tf()
 
-class KerasRNN(RecurrentTFModelV2):
-    """Example of using the Keras functional API to define a RNN model."""
 
-    def __init__(self,
-                 obs_space,
-                 action_space,
-                 num_outputs,
-                 model_config,
-                 name,
-                 hiddens_size=256,
-                 cell_size=64,
-                 use_value_fn=False):
-        super(KerasRNN, self).__init__(obs_space, action_space, num_outputs,
-                                         model_config, name)
-        self.cell_size = cell_size
-        self.use_value_fn = use_value_fn
+class MOAModel(RecurrentTFModelV2):
+    """An model with convolutional layers connected to two distinct sequences of fully connected
+    layers. These then connect to a respective LSTM, one for an actor-critic policy, and one for
+    modeling the actions of other agents (MOA)"""
 
-        # Define input layers
-        input_layer = tf.keras.layers.Input(
-            shape=(None, obs_space.shape[0]), name="inputs")
-        state_in_h = tf.keras.layers.Input(shape=(cell_size, ), name="h")
-        state_in_c = tf.keras.layers.Input(shape=(cell_size, ), name="c")
-        seq_in = tf.keras.layers.Input(shape=(), name="seq_in")
+    def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+        super(MOAModel, self).__init__(obs_space, action_space, num_outputs, model_config, name)
 
-        # Preprocess observation with a hidden layer and send to LSTM cell
-        dense1 = tf.keras.layers.Dense(
-            hiddens_size, activation=tf.nn.relu, name="dense1")(input_layer)
-        lstm_out, state_h, state_c = tf.keras.layers.LSTM(
-            cell_size, return_sequences=True, return_state=True, name="lstm")(
-                inputs=dense1,
-                mask=tf.sequence_mask(seq_in),
-                initial_state=[state_in_h, state_in_c])
+        self.obs_space = obs_space
 
-        # Postprocess LSTM output with another hidden layer and compute values
-        logits = tf.keras.layers.Dense(
-            self.num_outputs,
-            activation=tf.keras.activations.linear,
-            name="logits")(lstm_out)
-        if use_value_fn:
-            value_out = tf.keras.layers.Dense(
-                1,
-                name="value_out",
-                activation=None,
-                kernel_initializer=normc_initializer(0.01))(lstm_out)
-            self.rnn_model = tf.keras.Model(
-                inputs=[input_layer, seq_in, state_in_h, state_in_c],
-                outputs=[logits, value_out, state_h, state_c])
-        else:
-            self.rnn_model = tf.keras.Model(
-                inputs=[input_layer, seq_in, state_in_h, state_in_c],
-                outputs=[logits, state_h, state_c])
-        self.register_variables(self.rnn_model.variables)
-        self.rnn_model.summary()
-
-    @override(RecurrentTFModelV2)
-    def forward_rnn(self, inputs, state, seq_lens):
-        if self.use_value_fn:
-            model_out, self._value_out, h, c = self.rnn_model([inputs, seq_lens] +
-                                             state)
-        else:
-            model_out, h, c = self.rnn_model([inputs, seq_lens] +
-                                                              state)
-        return model_out, [h, c]
-
-    @override(ModelV2)
-    def get_initial_state(self):
-        return [
-            np.zeros(self.cell_size, np.float32),
-            np.zeros(self.cell_size, np.float32),
+        # The inputs of the shared trunk. We will concatenate the observation space with
+        # shared info about the visibility of agents.
+        # Currently we assume all the agents have equally sized action spaces.
+        self.num_outputs = num_outputs
+        self.num_other_agents = model_config["custom_options"]["num_other_agents"]
+        self.influence_divergence_measure = model_config["custom_options"][
+            "influence_divergence_measure"
         ]
 
+        # Declare variables that will later be used as loss fetches
+        # It's
+        self._model_out = None
+        self._value_out = None
+        self._action_pred = None
+        self._counterfactuals = None
+        self._other_agent_actions = None
+        self._visibility = None
+        self._social_influence_reward = None
+        self._true_one_hot_actions = None
 
-class MOA_LSTM(RecurrentTFModelV2):
-    """An LSTM with two heads, one for taking actions and one for predicting actions. Currently only works for starcraft"""
-    def __init__(self,
-                 obs_space,
-                 action_space,
-                 num_outputs,
-                 model_config,
-                 name,
-                 hiddens_size=256,
-                 cell_size=64):
-        temp_config = copy(model_config)
-        temp_config["custom_model"] = False
-
-        # The inputs of the shared trunk. We will concatenate the observation space with shared info about the
-        # visibility of agents. Currently we assume all the agents have equally sized action spaces.
-        self.num_outputs = num_outputs
-        self.num_other_agents = model_config['num_other_agents']
-        # TODO(@evinitsky) this is going to break for discrete so watch out
-        num_actions = self.num_other_agents * action_space.shape[0]
-        num_prev_action = action_space.shape[0]
-        num_prev_rewards = 1
-        input_size = obs_space.shape[0] + num_actions + num_prev_action + num_prev_rewards
-        input_obs_space = Box(low=-1, high=1, shape=(input_size,))
-
-        # The number of features that will be output by the shared trunk
-        inner_feature_dim = model_config.get("inner_feature_dim")
-        self.trunk = ModelCatalog.get_model_v2(input_obs_space, action_space, inner_feature_dim, temp_config)
+        self.moa_encoder_model = self.create_moa_encoder_model(obs_space, model_config)
+        self.register_variables(self.moa_encoder_model.variables)
+        self.moa_encoder_model.summary()
 
         # now output two heads, one for action selection and one for the prediction of other agents
-        inner_obs_space = Box(low=-1, high=1, shape=(inner_feature_dim))
-        self.actions_model = KerasRNN(inner_obs_space, action_space, num_outputs,
-                                                model_config, "actions", use_value_fn=True)
-        self.moa_model = KerasRNN(inner_obs_space, action_space, num_actions, model_config, "moa_model")
+        inner_obs_space = self.moa_encoder_model.output_shape[0][-1]
 
+        cell_size = model_config["custom_options"].get("cell_size")
+        self.actions_model = ActorCriticLSTM(
+            inner_obs_space,
+            action_space,
+            num_outputs,
+            model_config,
+            "action_logits",
+            cell_size=cell_size,
+        )
+
+        # predicts the actions of all the agents besides itself
+        # create a new input reader per worker
+        self.train_moa_only_when_visible = model_config["custom_options"][
+            "train_moa_only_when_visible"
+        ]
+        self.influence_only_when_visible = model_config["custom_options"][
+            "influence_only_when_visible"
+        ]
+        self.moa_weight = model_config["custom_options"]["moa_loss_weight"]
+
+        self.moa_model = MoaLSTM(
+            inner_obs_space,
+            action_space,
+            self.num_other_agents * num_outputs,
+            model_config,
+            "moa_model",
+            cell_size=cell_size,
+        )
+        self.register_variables(self.actions_model.rnn_model.variables)
+        self.register_variables(self.moa_model.rnn_model.variables)
+        self.actions_model.rnn_model.summary()
+        self.moa_model.rnn_model.summary()
+
+    @staticmethod
+    def create_moa_encoder_model(obs_space, model_config):
+        original_obs_dims = obs_space.original_space.spaces["curr_obs"].shape
+        inputs = tf.keras.layers.Input(original_obs_dims, name="observations", dtype=tf.uint8)
+
+        # Divide by 255 to transform [0,255] uint8 rgb pixel values to [0,1] float32.
+        last_layer = tf.keras.backend.cast(inputs, tf.float32)
+        last_layer = tf.math.divide(last_layer, 255.0)
+
+        # Build the CNN layer
+        conv_out = build_conv_layers(model_config, last_layer)
+
+        # Build Actor-critic FC layers
+        actor_critic_fc = build_fc_layers(model_config, conv_out, "policy")
+
+        # Build MOA layers
+        moa_fc = build_fc_layers(model_config, conv_out, "moa")
+
+        return tf.keras.Model(inputs, [actor_critic_fc, moa_fc], name="MOA_Encoder_Model")
+
+    @override(ModelV2)
     def forward(self, input_dict, state, seq_lens):
-        # we operate on our obs, others previous actions, our previous actions, our previous rewards
-        # TODO(@evinitsky) are we passing seq_lens correctly?
-        h1, c1, h2, c2 = state
-        model_out, self._value_out, h1, c1 = self.actions_model.forward([np.concatenate((input_dict["obs"]["curr_obs"],
-                                                                      input_dict["obs"]["others_actions"],
-                                                         input_dict["prev_actions"], input_dict["prev_rewards"])), seq_lens] + [h1, c1])
+        """ First evaluate non-lstm parts of model. Then add a time dimension to the batch before
+         sending inputs to forward_rnn()"""
+        # Evaluate non-lstm layers
+        actor_critic_fc_output, moa_fc_output = self.moa_encoder_model(input_dict["obs"]["curr_obs"])
 
-        # TODO(@evinitsky) make sure the other_actions only contain the actions of other agents
-
-        possible_actions = np.arange(self.num_outputs)[np.newaxis, :]
-        other_actions = input_dict["obs"]["others_actions"]
-        other_actions_tile = np.repeat(other_actions, self.num_outputs, axis=0)
-        stacked_actions = np.hstack(possible_actions, other_actions_tile)
-        self._conterfactual_preds, h2, c2 = self.moa_model.forward([stacked_actions, seq_lens] + [h2, c2])
-
-        return model_out, [h1, c1, h2, c2]
-
-    def get_batch_outputs(self, train_batch, is_training=True):
-        """Operate over a batch and return the MOA predictions as well as the logits
-        """
-
-        # TODO(@evinitsky) make this output theright thing
-
-        input_dict = {
-            "obs": train_batch[SampleBatch.CUR_OBS],
-            "is_training": is_training,
+        rnn_input_dict = {
+            "ac_trunk": actor_critic_fc_output,
+            "moa_trunk": moa_fc_output,
+            "other_agent_actions": input_dict["obs"]["other_agent_actions"],
+            "visible_agents": input_dict["obs"]["visible_agents"],
+            "prev_actions": tf.cast(input_dict["prev_actions"], dtype=tf.uint8),
         }
-        if SampleBatch.PREV_ACTIONS in train_batch:
-            input_dict["prev_actions"] = train_batch[SampleBatch.PREV_ACTIONS]
-        if SampleBatch.PREV_REWARDS in train_batch:
-            input_dict["prev_rewards"] = train_batch[SampleBatch.PREV_REWARDS]
-        states = []
-        i = 0
-        while "state_in_{}".format(i) in train_batch:
-            states.append(train_batch["state_in_{}".format(i)])
-            i += 1
-        # TODO(@evinitsky) this is probably wrong
-        return self.__call__(input_dict, states, train_batch.get("seq_lens"))
+
+        # Add time dimension to rnn inputs
+        for k, v in rnn_input_dict.items():
+            rnn_input_dict[k] = add_time_dimension(v, seq_lens)
+
+        output, new_state = self.forward_rnn(rnn_input_dict, state, seq_lens)
+        action_logits = tf.reshape(output, [-1, self.num_outputs])
+        counterfactuals = tf.reshape(
+            self._counterfactuals,
+            [-1, self._counterfactuals.shape[-2], self._counterfactuals.shape[-1]],
+        )
+        new_state.extend([action_logits, counterfactuals])
+
+        self.compute_influence_reward(input_dict, state[4], state[5])
+
+        return action_logits, new_state
+
+    def forward_rnn(self, input_dict, state, seq_lens):
+        # Evaluate the actor-critic model
+        pass_dict = {"curr_obs": input_dict["ac_trunk"]}
+        h1, c1, h2, c2, *_ = state
+        (self._model_out, self._value_out, output_h1, output_c1,) = self.actions_model.forward_rnn(
+            pass_dict, [h1, c1], seq_lens
+        )
+
+        # Evaluate the MOA, and generate counterfactual actions.
+        # To do this: cycle through all possible actions and get predictions for what other
+        # agents would do if this action was taken at each trajectory step.
+
+        # First we have to evaluate the MOA over the true trajectory to obtain the hidden state
+        # that we will use for the next timestep's counterfactual predictions.
+        other_actions = input_dict["other_agent_actions"]
+        agent_action = tf.expand_dims(input_dict["prev_actions"], axis=-1)
+        all_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_true_actions")
+        self._true_one_hot_actions = self._reshaped_one_hot_actions(all_actions, "forward_one_hot")
+        true_action_pass_dict = {
+            "curr_obs": input_dict["moa_trunk"],
+            "prev_total_actions": self._true_one_hot_actions,
+        }
+
+        # Compute the action prediction. This is unused in the actual rollout and is only to generate
+        # a series of hidden states for the counterfactuals
+        self._action_pred, output_h2, output_c2 = self.moa_model.forward_rnn(
+            true_action_pass_dict, [h2, c2], seq_lens
+        )
+
+        # Now we can use that cell state to do the counterfactual predictions
+        counterfactual_preds = []
+        for i in range(self.num_outputs):
+            # Shape of other_actions is (num_envs, ?, num_other_agents)
+            # To add the counterfactual action to it, other_actions can be padded with the constant
+            # action value.
+            actions_with_counterfactual = tf.pad(
+                other_actions, paddings=[[0, 0], [0, 0], [1, 0]], mode="CONSTANT", constant_values=i
+            )
+            one_hot_actions = self._reshaped_one_hot_actions(
+                actions_with_counterfactual, "actions_with_counterfactual_one_hot"
+            )
+            pass_dict = {"curr_obs": input_dict["moa_trunk"], "prev_total_actions": one_hot_actions}
+            counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
+            counterfactual_preds.append(tf.expand_dims(counterfactual_pred, axis=-2))
+        self._counterfactuals = tf.concat(
+            counterfactual_preds, axis=-2, name="concat_counterfactuals"
+        )
+
+        # TODO(@evinitsky) move this into ppo_moa by using restore_original_dimensions()
+        self._other_agent_actions = input_dict["other_agent_actions"]
+        self._visibility = input_dict["visible_agents"]
+
+        return self._model_out, [output_h1, output_c1, output_h2, output_c2]
+
+    def compute_influence_reward(self, input_dict, prev_action_logits, prev_counterfactual_logits):
+        """Compute influence of this agent on other agents and add to rewards.
+        """
+        # Probability of the next action for all other agents. Shape is [B, N, A].
+        # This is the predicted probability given the actions that we DID take.
+        # extract out the probability under the actions we actually did take
+
+        # We don't have the current action yet, so the reward for the previous step is calculated.
+        # This is corrected for in the loss function.
+        prev_agent_actions = tf.reshape(input_dict["prev_actions"], [-1, 1])
+        # Use the agent's actions as indices to select the predicted logits of other agents for
+        # actions that the agent did take, discard the rest.
+        true_logits = tf.gather_nd(
+            params=prev_counterfactual_logits, indices=prev_agent_actions, batch_dims=1
+        )
+
+        true_probs = tf.reshape(true_logits, [-1, self.num_other_agents, self.num_outputs])
+        true_probs = tf.nn.softmax(true_probs)
+        true_probs = true_probs / tf.reduce_sum(
+            true_probs, axis=-1, keepdims=True
+        )  # reduce numerical inaccuracies
+
+        # Get marginal predictions where effect of self is marginalized out
+        marginal_probs = self.marginalize_predictions_over_own_actions(
+            prev_action_logits, prev_counterfactual_logits
+        )  # [B, Num agents, Num actions]
+
+        # Compute influence per agent/step ([B, N]) using different metrics
+        if self.influence_divergence_measure == "kl":
+            influence_reward = self.kl_div(true_probs, marginal_probs)
+        elif self.influence_divergence_measure == "jsd":
+            mean_probs = 0.5 * (true_probs + marginal_probs)
+            influence_reward = 0.5 * self.kl_div(true_probs, mean_probs) + 0.5 * self.kl_div(
+                marginal_probs, mean_probs
+            )
+        else:
+            sys.exit("Please specify an influence divergence measure from [kl, jsd]")
+
+        # Zero out influence for steps where the other agent isn't visible.
+        if self.influence_only_when_visible:
+            visibility = tf.cast(input_dict["obs"]["visible_agents"], tf.float32)
+            influence_reward *= visibility
+        influence_reward = tf.reduce_sum(influence_reward, axis=-1)
+        self._social_influence_reward = influence_reward
+
+    def marginalize_predictions_over_own_actions(
+        self, prev_action_logits, prev_counterfactual_logits
+    ):
+        # Probability of each action in original trajectory
+        logits = tf.nn.softmax(prev_action_logits)
+
+        # Normalize to reduce numerical inaccuracies
+        logits = logits / tf.reduce_sum(logits, axis=-1, keepdims=True)
+
+        # Indexing is currently [B, Agent actions, num_other_agents * other_agent_logits]
+        # Change to [B, Agent actions, num other agents, other agent logits]
+        counterfactual_logits = tf.reshape(
+            prev_counterfactual_logits,
+            [-1, self.num_outputs, self.num_other_agents, self.num_outputs],
+        )
+
+        counterfactual_logits = tf.nn.softmax(counterfactual_logits)
+        # Sum over the counterfactual actions
+        summed_counterfactual_logits = tf.reduce_sum(counterfactual_logits, axis=-3)
+
+        logits = tf.expand_dims(logits, axis=-2)
+        logits = tf.tile(logits, [1, self.num_other_agents, 1])
+        # Multiply by probability of each action to renormalize probability
+        marginal_probs = logits * summed_counterfactual_logits
+
+        # Normalize to reduce numerical inaccuracies
+        marginal_probs = marginal_probs / tf.reduce_sum(marginal_probs, axis=-1, keepdims=True)
+
+        return marginal_probs
+
+    @staticmethod
+    def kl_div(x, y):
+        dist_x = tf.distributions.Categorical(probs=x)
+        dist_y = tf.distributions.Categorical(probs=y)
+        result = tf.distributions.kl_divergence(dist_x, dist_y)
+
+        # Don't return nans or infs
+        is_finite = tf.reduce_all(tf.is_finite(result))
+
+        def true_fn():
+            return result
+
+        def false_fn():
+            return tf.zeros(tf.shape(result))
+
+        result = tf.cond(is_finite, true_fn=true_fn, false_fn=false_fn)
+        return result
+
+    def _reshaped_one_hot_actions(self, actions_tensor, name):
+        """
+        Converts the collection of all actions from a number encoding to a one-hot encoding.
+        Then, flattens the one-hot encoding so that all concatenated one-hot vectors are the same
+        dimension. E.g. with a num_outputs (action_space.n) of 3:
+        _reshaped_one_hot_actions([0,1,2]) returns [1,0,0,0,1,0,0,0,1]
+        :param actions_tensor: The tensor containing actions.
+        :return: Tensor containing one-hot reshaped action values.
+        """
+        one_hot_actions = tf.keras.backend.one_hot(actions_tensor, self.num_outputs)
+        # Extract partially known tensor shape and combine with actions_layer known shape
+        # This combination is a bit contrived for a reason: the shape cannot be determined otherwise
+        batch_time_dims = [
+            tf.shape(one_hot_actions)[k] for k in range(one_hot_actions.shape.rank - 2)
+        ]
+        reshape_dims = batch_time_dims + [actions_tensor.shape[-1] * self.num_outputs]
+        reshaped = tf.reshape(one_hot_actions, shape=reshape_dims, name=name)
+        return reshaped
 
     def value_function(self):
         return tf.reshape(self._value_out, [-1])
 
     def counterfactual_actions(self):
-        return self._conterfactual_preds
+        return self._counterfactuals
+
+    def action_logits(self):
+        return self._model_out
+
+    def social_influence_reward(self):
+        return self._social_influence_reward
+
+    def predicted_actions(self):
+        """ :returns Predicted actions. NB: Since the true action is not known when evaluating this
+         model, the timestep is off by one (too late). Thus, to get to the correct index:
+         When index is i, use predicted_actions[i + 1]. predicted_actions[0] does not contain
+         output."""
+        return self._action_pred
+
+    def visibility(self):
+        return tf.reshape(self._visibility, [-1, self.num_other_agents])
+
+    def other_agent_actions(self):
+        return tf.reshape(self._other_agent_actions, [-1, self.num_other_agents])
+
+    @override(ModelV2)
+    def get_initial_state(self):
+        return self.actions_model.get_initial_state() + self.moa_model.get_initial_state()
