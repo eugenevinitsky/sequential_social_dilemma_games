@@ -162,9 +162,19 @@ def setup(args):
 
 if __name__ == "__main__":
     args = parser.parse_args()
+
+    if args.exp_name is None:
+        exp_name = args.env + "_" + args.model + "_" + args.algorithm
+    else:
+        exp_name = args.exp_name
+
     if sys.gettrace() is not None:
-        print("Debug mode detected through sys.gettrace(), turning on ray local mode.")
+        print(
+            "Debug mode detected through sys.gettrace(), turning on ray local mode. Saving"
+            " experiment under ray_results/debug_experiment"
+        )
         args.local_mode = True
+        exp_name = "debug_experiment"
     if args.multi_node and args.local_mode:
         sys.exit("You cannot have both local mode and multi node on at the same time")
     ray.init(
@@ -177,10 +187,6 @@ if __name__ == "__main__":
     )
     env_name, config = setup(args)
 
-    if args.exp_name is None:
-        exp_name = args.env + "_" + args.model + "_" + args.algorithm
-    else:
-        exp_name = args.exp_name
     print("Commencing experiment", exp_name)
 
     config["env"] = env_name
