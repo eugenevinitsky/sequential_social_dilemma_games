@@ -128,7 +128,26 @@ CLEANUP_PROB_MAP = [
 ]
 
 
-# maps used to test different spawn positions and apple positions
+def get_env_test_map(env):
+    """Gets a version of the environment map where generic
+    'P' characters have been replaced with specific agent IDs.
+
+    Returns:
+        2D array of strings representing the map.
+    """
+    grid = np.copy(env.world_map)
+
+    for agent_id, agent in env.agents.items():
+        # If agent is not within map, skip.
+        if not (0 <= agent.pos[0] < grid.shape[0] and 0 <= agent.pos[1] < grid.shape[1]):
+            continue
+
+        grid[agent.pos[0], agent.pos[1]] = b"P"
+
+    for beam_pos in env.beam_pos:
+        grid[beam_pos[0], beam_pos[1]] = beam_pos[2]
+
+    return grid
 
 
 class DummyMapEnv(MapEnv):
@@ -373,7 +392,7 @@ class TestMapEnv(unittest.TestCase):
         # check that stay works properly
         self.env.step({agent_id: ACTION_MAP["STAY"]})
         np.testing.assert_array_equal(self.env.agents[agent_id].pos, [2, 2])
-        self.assertEqual(self.env.test_map[2, 2], b"P")
+        self.assertEqual(get_env_test_map(self.env)[2, 2], b"P")
 
         # quick test of stay
         self.env.step({agent_id: ACTION_MAP["STAY"]})
@@ -435,7 +454,7 @@ class TestMapEnv(unittest.TestCase):
         # test that if there are two agents and two spawning points, they hit both of them
         self.env = DummyMapEnv(ascii_map=BASE_MAP_2, extra_actions={}, view_len=2, num_agents=2)
         self.env.reset()
-        np.testing.assert_array_equal(self.env.base_map, self.env.test_map)
+        np.testing.assert_array_equal(self.env.base_map, get_env_test_map(self.env))
 
         # test that agents can't walk into other agents
         self.move_agent("agent-0", [3, 3])
@@ -462,7 +481,7 @@ class TestMapEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
         # test that agents can walk into other agents if moves are de-conflicting
         # conflict only occurs stochastically so try it 50 times
@@ -479,7 +498,7 @@ class TestMapEnv(unittest.TestCase):
                     [b"@", b"@", b"@", b"@", b"@", b"@"],
                 ]
             )
-            np.testing.assert_array_equal(expected_map, self.env.test_map)
+            np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
             self.env.step({"agent-0": ACTION_MAP["MOVE_LEFT"], "agent-1": ACTION_MAP["MOVE_DOWN"]})
 
         # test that if two agents have a conflicting move then the tie is broken randomly
@@ -514,8 +533,8 @@ class TestMapEnv(unittest.TestCase):
                     [b"@", b"@", b"@", b"@", b"@", b"@"],
                 ]
             )
-            equal_1 = np.array_equal(self.env.test_map, expect_1)
-            equal_2 = np.array_equal(self.env.test_map, expect_2)
+            equal_1 = np.array_equal(get_env_test_map(self.env), expect_1)
+            equal_2 = np.array_equal(get_env_test_map(self.env), expect_2)
             self.assertTrue(equal_1 or equal_2)
         agent_1_percent = num_agent_1 / (num_agent_1 + num_agent_2)
         with_expected_val = (0.53 == agent_1_percent) or (0.47 == agent_1_percent)
@@ -571,9 +590,9 @@ class TestMapEnv(unittest.TestCase):
                     [b"@", b"@", b"@", b"@", b"@", b"@"],
                 ]
             )
-            equal_1 = np.array_equal(self.env.test_map, expect_1)
-            equal_2 = np.array_equal(self.env.test_map, expect_2)
-            equal_3 = np.array_equal(self.env.test_map, expect_3)
+            equal_1 = np.array_equal(get_env_test_map(self.env), expect_1)
+            equal_2 = np.array_equal(get_env_test_map(self.env), expect_2)
+            equal_3 = np.array_equal(get_env_test_map(self.env), expect_3)
             self.assertTrue(equal_1 or equal_2 or equal_3)
         agent_1_percent = num_agent_1 / (num_agent_1 + other_agents)
         within_bounds = (agent_1_percent > 0.27) and (agent_1_percent < 0.39)
@@ -606,7 +625,7 @@ class TestMapEnv(unittest.TestCase):
                         [b"@", b"@", b"@", b"@", b"@", b"@"],
                     ]
                 )
-                np.testing.assert_array_equal(expect_1, self.env.test_map)
+                np.testing.assert_array_equal(expect_1, get_env_test_map(self.env))
             else:
                 percent_accomplished += 1
                 expect_1 = np.array(
@@ -619,7 +638,7 @@ class TestMapEnv(unittest.TestCase):
                         [b"@", b"@", b"@", b"@", b"@", b"@"],
                     ]
                 )
-                np.testing.assert_array_equal(expect_1, self.env.test_map)
+                np.testing.assert_array_equal(expect_1, get_env_test_map(self.env))
         percent_success = percent_accomplished / (percent_accomplished + percent_failed)
         within_bounds = (0.40 < percent_success) and (percent_success < 0.60)
         self.assertTrue(within_bounds)
@@ -679,7 +698,7 @@ class TestMapEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
         # agent 3 wants to move into space [3,2] as does agent-2
         # agent-0 will move out of the way so one of them should successfully
@@ -710,7 +729,7 @@ class TestMapEnv(unittest.TestCase):
                         [b"@", b"@", b"@", b"@", b"@", b"@"],
                     ]
                 )
-                np.testing.assert_array_equal(expected_map, self.env.test_map)
+                np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
             else:
                 expected_map = np.array(
                     [
@@ -722,7 +741,7 @@ class TestMapEnv(unittest.TestCase):
                         [b"@", b"@", b"@", b"@", b"@", b"@"],
                     ]
                 )
-                np.testing.assert_array_equal(expected_map, self.env.test_map)
+                np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
             self.move_agent("agent-0", [3, 2])
             self.move_agent("agent-2", [2, 2])
             # move this agent out of the way
@@ -759,9 +778,9 @@ class TestMapEnv(unittest.TestCase):
         # move these agent out of the way
         self.move_agent("agent-2", [4, 4])
         self.move_agent("agent-3", [3, 3])
-        curr_map = self.env.test_map.copy()
+        curr_map = get_env_test_map(self.env).copy()
         self.env.step({"agent-0": ACTION_MAP["MOVE_UP"], "agent-1": ACTION_MAP["MOVE_LEFT"]})
-        np.testing.assert_array_equal(self.env.test_map, curr_map)
+        np.testing.assert_array_equal(get_env_test_map(self.env), curr_map)
 
     def move_agent(self, agent_id, new_pos):
         self.env.agents[agent_id].set_pos(new_pos)
@@ -821,7 +840,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(self.env.test_map, test_map)
+        np.testing.assert_array_equal(get_env_test_map(self.env), test_map)
 
     def test_apple_spawn(self):
         # render apples a bunch of times and check that the probabilities are within
@@ -834,7 +853,7 @@ class TestHarvestEnv(unittest.TestCase):
         # This should fail maybe one in 1000000 times
         for i in range(300):
             self.env.step({})
-        num_apples = self.env.count_apples(self.env.test_map)
+        num_apples = self.env.count_apples(get_env_test_map(self.env))
         self.assertEqual(num_apples, 5)
 
         # Now, if a point is temporarily obscured by a beam but an apple should spawn there
@@ -858,7 +877,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
         # If an agent is temporarily obscured by a beam, and an apple attempts to spawn there
         # no apple should spawn
@@ -876,7 +895,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
     def test_agent_actions(self):
         # set up the map
@@ -958,7 +977,7 @@ class TestHarvestEnv(unittest.TestCase):
         # test that if there are two agents and two spawning points, they hit both of them
         self.env = HarvestEnv(ascii_map=BASE_MAP_2, num_agents=2)
         self.env.reset()
-        np.testing.assert_array_equal(self.env.base_map, self.env.test_map)
+        np.testing.assert_array_equal(self.env.base_map, get_env_test_map(self.env))
 
         # test that agents can't walk into other agents
         self.move_agent("agent-0", [3, 3])
@@ -979,7 +998,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
         # but by the next step, the agent is visible again
         self.env.step({})
         expected_map = np.array(
@@ -992,7 +1011,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
         # test that if two agents fire on each other than they're still there after
         self.env.agents["agent-0"].update_agent_rot("RIGHT")
@@ -1008,7 +1027,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
     def test_beam_conflict(self):
         """Test that after the beam is fired, obscured apples and agents are returned"""
@@ -1032,7 +1051,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
         # test that by the next step it will be returned
         self.env.step({})
         expected_map = np.array(
@@ -1045,7 +1064,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
     def map_to_colors(self, orientation, unrotated_view, equal_array):
         env = DummyMapEnv(BASE_MAP_1, extra_actions={}, view_len=1, num_agents=0)
@@ -1124,7 +1143,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
         self.rotate_agent("agent-0", "DOWN")
         self.env.step({"agent-0": HARVEST_ACTION_MAP["FIRE"]})
         expected_map = np.array(
@@ -1144,7 +1163,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
         self.rotate_agent("agent-0", "RIGHT")
         self.env.step({"agent-0": HARVEST_ACTION_MAP["FIRE"]})
         expected_map = np.array(
@@ -1164,7 +1183,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
         self.rotate_agent("agent-0", "LEFT")
         self.env.step({"agent-0": HARVEST_ACTION_MAP["FIRE"]})
@@ -1185,7 +1204,7 @@ class TestHarvestEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
 
 class TestCleanupEnv(unittest.TestCase):
@@ -1207,7 +1226,7 @@ class TestCleanupEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(self.env.test_map, test_map)
+        np.testing.assert_array_equal(get_env_test_map(self.env), test_map)
 
     def test_cleanup_beam(self):
         self.env = CleanupEnv(ascii_map=FIRING_CLEANUP_MAP, num_agents=2)
@@ -1231,7 +1250,7 @@ class TestCleanupEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
         np.random.seed(12)
         self.env.step({})
         expected_map = np.array(
@@ -1244,7 +1263,7 @@ class TestCleanupEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
         # check that the cleanup beam doesn't remove apples
         self.env.reset()
@@ -1264,7 +1283,7 @@ class TestCleanupEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
         # check that you can clean up waste that an agent is standing on
         self.move_agent("agent-1", [2, 2])
@@ -1310,7 +1329,7 @@ class TestCleanupEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
         # check that the firing beam is removed correctly after one step
         # it should not remove any waste, rivers, or agents
         self.env.step({})
@@ -1324,7 +1343,7 @@ class TestCleanupEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
         # check that the cleanup beam doesn't remove apples
         self.env.reset()
@@ -1344,7 +1363,7 @@ class TestCleanupEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
     def test_apple_spawn(self):
         """Confirm that apples spawn correctly in cleanup"""
@@ -1362,7 +1381,7 @@ class TestCleanupEnv(unittest.TestCase):
                 [b"@", b"@", b"@", b"@", b"@", b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_map, self.env.test_map)
+        np.testing.assert_array_equal(expected_map, get_env_test_map(self.env))
 
     def test_spawn_probabilities(self):
         """Test that apple and waste spawn probabilities are set correctly"""

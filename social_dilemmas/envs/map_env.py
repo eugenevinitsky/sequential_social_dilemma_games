@@ -303,35 +303,6 @@ class MapEnv(MultiAgentEnv):
     def agent_pos(self):
         return [agent.pos.tolist() for agent in self.agents.values()]
 
-    # This method is just used for testing
-    # FIXME(ev) move into the testing class
-    @property
-    def test_map(self):
-        """Gets a version of the environment map where generic
-        'P' characters have been replaced with specific agent IDs.
-
-        Returns:
-            2D array of strings representing the map.
-        """
-        grid = np.copy(self.world_map)
-
-        for agent_id, agent in self.agents.items():
-            # If agent is not within map, skip.
-            if not (
-                agent.pos[0] >= 0
-                and agent.pos[0] < grid.shape[0]
-                and agent.pos[1] >= 0
-                and agent.pos[1] < grid.shape[1]
-            ):
-                continue
-
-            grid[agent.pos[0], agent.pos[1]] = b"P"
-
-        for beam_pos in self.beam_pos:
-            grid[beam_pos[0], beam_pos[1]] = beam_pos[2]
-
-        return grid
-
     def get_map_with_agents(self):
         """Gets a version of the environment map where generic
         'P' characters have been replaced with specific agent IDs.
