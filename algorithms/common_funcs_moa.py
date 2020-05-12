@@ -203,7 +203,6 @@ def moa_fetches(policy):
         # Be aware that this is frozen here so that we don't
         # propagate agent actions through the reward
         ACTION_LOGITS: policy.model.action_logits(),
-        COUNTERFACTUAL_ACTIONS: policy.model.counterfactual_actions(),
         # TODO(@evinitsky) remove this once we figure out how to split the obs
         OTHERS_ACTIONS: policy.model.other_agent_actions(),
         VISIBILITY: policy.model.visibility(),
