@@ -6,7 +6,6 @@ from ray.rllib.utils.annotations import override
 tf = try_import_tf()
 
 
-ENCODED_OBSERVATIONS = "enc_obs"
 PREDICTED_OBSERVATIONS = "pred_obs"
 SOCIAL_CURIOSITY_REWARD = "social_curiosity_reward"
 INVERSE_MODEL_LOSS = "inverse_model_loss"
@@ -116,7 +115,6 @@ def weigh_and_add_curiosity_reward(policy, sample_batch):
 def scm_fetches(policy):
     """Adds observations and causal influence to experience train_batches."""
     return {
-        ENCODED_OBSERVATIONS: policy.model.true_encoded_observations(),
         SOCIAL_CURIOSITY_REWARD: policy.model.social_curiosity_reward(),
         INVERSE_MODEL_LOSS: policy.model.inverse_model_loss(),
     }
