@@ -1,9 +1,9 @@
 import math
 
 import numpy as np
-from gym.spaces import Discrete
 
 from social_dilemmas.envs.agent import SwitchAgent
+from social_dilemmas.envs.gym.discrete_with_dtype import DiscreteWithDType
 from social_dilemmas.envs.map_env import MapEnv
 from social_dilemmas.maps import SwitchMapElements
 
@@ -98,7 +98,7 @@ class SwitchEnv(MapEnv):
 
     @property
     def action_space(self):
-        return Discrete(8)
+        return DiscreteWithDType(8, dtype=np.uint8)
 
     def setup_agents(self):
         map_with_agents = self.get_map_with_agents()

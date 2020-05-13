@@ -4,7 +4,6 @@ import random
 import unittest
 
 import numpy as np
-from gym.spaces import Discrete
 
 from social_dilemmas.envs.agent import (
     BASE_ACTIONS,
@@ -15,6 +14,7 @@ from social_dilemmas.envs.agent import (
     HarvestAgent,
 )
 from social_dilemmas.envs.cleanup import CleanupEnv
+from social_dilemmas.envs.gym.discrete_with_dtype import DiscreteWithDType
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.map_env import MapEnv
 
@@ -182,7 +182,7 @@ class DummyAgent(Agent):
 
     @property
     def action_space(self):
-        return Discrete(len(ACTION_MAP))
+        return DiscreteWithDType(len(ACTION_MAP), dtype=np.uint8)
 
     def consume(self, char):
         return char

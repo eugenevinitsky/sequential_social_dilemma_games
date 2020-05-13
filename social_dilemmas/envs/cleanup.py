@@ -1,10 +1,10 @@
 import random
 
 import numpy as np
-from gym.spaces import Discrete
 from numpy.random import rand
 
-from social_dilemmas.envs.agent import CleanupAgent  # CLEANUP_VIEW_SIZE
+from social_dilemmas.envs.agent import CleanupAgent
+from social_dilemmas.envs.gym.discrete_with_dtype import DiscreteWithDType
 from social_dilemmas.envs.map_env import MapEnv
 from social_dilemmas.maps import CLEANUP_MAP
 
@@ -74,7 +74,7 @@ class CleanupEnv(MapEnv):
 
     @property
     def action_space(self):
-        return Discrete(9)
+        return DiscreteWithDType(9, dtype=np.uint8)
 
     def custom_reset(self):
         """Initialize the walls and the waste"""
