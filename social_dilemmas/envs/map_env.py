@@ -138,7 +138,12 @@ class MapEnv(MultiAgentEnv):
                 ),
                 "visible_agents": Box(low=0, high=1, shape=(self.num_agents - 1,), dtype=np.uint8,),
             }
-        return Dict(obs_space)
+        obs_space = Dict(obs_space)
+        # Change dtype so that ray can put all observations into one flat batch
+        # with the correct dtype.
+        # See DictFlatteningPreprocessor in ray/rllib/models/preprocessors.py.
+        obs_space.dtype = np.uint8
+        return obs_space
 
     def custom_reset(self):
         """Reset custom elements of the map. For example, spawn apples and build walls"""

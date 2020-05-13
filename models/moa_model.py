@@ -115,7 +115,7 @@ class MOAModel(RecurrentTFModelV2):
             "moa_trunk": moa_fc_output,
             "other_agent_actions": input_dict["obs"]["other_agent_actions"],
             "visible_agents": input_dict["obs"]["visible_agents"],
-            "prev_actions": tf.cast(input_dict["prev_actions"], dtype=tf.uint8),
+            "prev_actions": input_dict["prev_actions"],
         }
 
         # Add time dimension to rnn inputs
@@ -197,7 +197,7 @@ class MOAModel(RecurrentTFModelV2):
 
         # We don't have the current action yet, so the reward for the previous step is calculated.
         # This is corrected for in the loss function.
-        prev_agent_actions = tf.reshape(input_dict["prev_actions"], [-1, 1])
+        prev_agent_actions = tf.cast(tf.reshape(input_dict["prev_actions"], [-1, 1]), tf.int32)
         # Use the agent's actions as indices to select the predicted logits of other agents for
         # actions that the agent did take, discard the rest.
         true_logits = tf.gather_nd(
