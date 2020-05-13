@@ -160,7 +160,7 @@ def setup(args):
     return env_name, config
 
 
-if __name__ == "__main__":
+def run():
     args = parser.parse_args()
 
     if args.exp_name is None:
@@ -230,10 +230,13 @@ if __name__ == "__main__":
         exp_dict["stop"]["timesteps_total"] = args.stop_at_timesteps_total
 
     if args.use_s3:
-        eastern = pytz.timezone("US/Eastern")
         date = datetime.now(tz=pytz.utc)
         date = date.astimezone(pytz.timezone("US/Pacific")).strftime("%m-%d-%Y")
         s3_string = "s3://ssd-reproduce/" + date + "/" + exp_name
         exp_dict["upload_dir"] = s3_string
 
     tune.run(**exp_dict, queue_trials=True)
+
+
+if __name__ == "__main__":
+    run()
