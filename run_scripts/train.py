@@ -183,7 +183,7 @@ def run():
         memory=args.memory,
         object_store_memory=args.object_store_memory,
         redis_max_memory=args.redis_max_memory,
-        webui_host="127.0.0.1",
+        include_webui=False,
     )
     env_name, config = setup(args)
 
