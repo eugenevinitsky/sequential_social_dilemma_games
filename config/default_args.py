@@ -91,7 +91,7 @@ def add_default_args(parser):
 
     parser.add_argument(
         "--num_envs_per_worker",
-        type=float,
+        type=int,
         default=8,
         help="Number of envs to place on a single worker",
     )
@@ -122,9 +122,6 @@ def add_default_args(parser):
         action="store_true",
         default=False,
         help="If true run a grid search over relevant hyperparameters",
-    )
-    parser.add_argument(
-        "--num_switches", type=int, default=6, help="Amount of switches in a switch map environment",
     )
     parser.add_argument(
         "--grad_clip",
@@ -166,6 +163,7 @@ def add_default_args(parser):
                                     parameters. Replaces --entropy_coeff when used.",
     )
 
+    # MOA Parameters
     parser.add_argument(
         "--moa_loss_weight", type=float, default=1.0, help="Loss weight of the moa network",
     )
@@ -208,6 +206,7 @@ def add_default_args(parser):
         " influence_reward_weight parameters. Replaces --entropy_coeff.",
     )
 
+    # SCM parameters
     parser.add_argument(
         "--scm_loss_weight", type=float, default=1.0, help="Loss weight of the scm network",
     )
@@ -266,4 +265,9 @@ def add_default_args(parser):
         type=int,
         default=1000,
         help="Minibatch size for the stochastic gradient descent step in the PPO algorithm",
+    )
+
+    # Env-specific parameters
+    parser.add_argument(
+        "--num_switches", type=int, default=6, help="Amount of switches in a switch map environment",
     )
