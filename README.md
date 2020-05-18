@@ -3,7 +3,7 @@
 # Sequential Social Dilemma Games
 This repo is an open-source implementation of DeepMind's Sequential Social Dilemma (SSD) multi-agent game-theoretic environments [[1]](https://arxiv.org/abs/1702.03037). SSDs can be thought of as analogous to spatially and temporally extended Prisoner's Dilemma-like games. The reward structure poses a dilemma because individual short-term optimal strategies lead to poor long-term outcomes for the group.
 
-The implemented environments are structured to be compatible with OpenAIs gym environments (https://github.com/openai/gym) as well as RLlib's Multiagent Environment (https://github.com/ray-project/ray/blob/master/python/ray/rllib/env/multi_agent_env.py)
+The implemented environments are structured to be compatible with OpenAIs gym environments (https://github.com/openai/gym) as well as RLlib's Multiagent Environment (https://github.com/ray-project/ray/blob/master/rllib/env/multi_agent_env.pyhttps://github.com/ray-project/ray/blob/master/python/ray/rllib/env/multi_agent_env.py)
 
 ## Implemented Games
 
@@ -29,16 +29,39 @@ The above plot shows the empirical Schelling diagrams for both Cleanup (A) and H
 
 
 # Setup instructions
-* Create `causal` virtual environment: `conda env create -n causal environment.yml`
-* Run `python setup.py develop`
-* Activate your environment by running `source activate causal`, or `conda activate causal`.
+```
+git clone -b master https://github.com/internetcoffeephone/sequential_social_dilemma_games
+cd sequential_social_dilemma_games
+python3 -m venv venv # Create a Python virtual environment
+. venv/bin/activate
+pip3 install --upgrade pip setuptools wheel
+python3 setup.py develop
+pip3 install -r requirements.txt
+. ray_uint8_patch.sh # Ray patch due to https://github.com/ray-project/ray/issues/7946 
+cd run_scripts
+```
 
-To then set up the branch of Ray on which we have built the causal influence code, clone the repo to your desired folder:
-`git clone https://github.com/natashamjaques/ray.git`.
+After the setup, you can run experiments like so:
+- To train with default parameters (baseline model cleanup with 2 agents):
+`python3 train.py`
 
-Next, go to the rllib folder:
-` cd ray/python/ray/rllib ` and run the script `python setup-rllib-dev.py`. This will copy the rllib folder into the pip install of Ray and allow you to use the version of RLlib that is in your local folder by creating a softlink. 
+- To train the MOA with 5 agents:
+`python3 train.py --model moa --num_agents 5`
 
+Many more options are available which can be found in [default_args.py](config/default_args.py). A collection preconfigured training scripts can be found in [run_scripts](run_scripts). 
+
+Note that the initialization time is rather high (up to 12 minutes) the more agents you use, possibly due to a [Ray bug](https://github.com/ray-project/ray/issues/5982#issuecomment-629217172).
+
+# CUDA, cuDNN and tensorflow-gpu
+
+If you run into any cuda errors, make sure you've got a [compatible set](https://www.tensorflow.org/install/source#tested_build_configurations) of cuda/cudnn/tensorflow versions installed. However, beware of the following:
+>The compatibility table given in the tensorflow site does not contain specific minor versions for cuda and cuDNN. However, if the specific versions are not met, there will be an error when you try to use tensorflow. [source](https://stackoverflow.com/a/53727997)
+
+A configuration that works for me is:
+- CUDA 10.1.105
+- cuDNN 7.6.5
+- tensorflow-gpu 2.1.0 (this is automatically installed during with the above script, see [requirements.txt](requirements.txt))
+this
 # Tests
 Tests are located in the test folder and can be run individually or run by running `python -m pytest`. Many of the less obviously defined rules for the games can be understood by reading the tests, each of which outline some aspect of the game. 
 
@@ -65,4 +88,4 @@ Every environment that subclasses MapEnv probably needs to implement the followi
         
 # Contributors
 
-This code base was developed by Eugene Vinitsky and Natasha Jaques; help with reproduction was provided by Joel Leibo, Antonio Castenada, and Edward Hughes. 
+This code base was developed by Eugene Vinitsky and Natasha Jaques; help with reproduction was provided by Joel Leibo, Antonio Castenada, and Edward Hughes. Additional development was done by Hugo Heemskerk. 
