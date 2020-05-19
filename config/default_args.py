@@ -58,7 +58,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--stop_at_episode_reward_min",
         type=float,
-        default=1000.0,
+        default=None,
         help="Experiment stops when this is the minimum episode reward within 1 iteration",
     )
     parser.add_argument(
