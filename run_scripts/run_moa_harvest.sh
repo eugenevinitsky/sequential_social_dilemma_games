@@ -21,5 +21,4 @@ python train.py \
 --moa_loss_weight 10.911 \
 --influence_reward_weight 2.521 \
 --influence_reward_schedule_steps 0 100000000 \
---influence_reward_schedule_weights 0.0 1.0 \
---ppo_sgd_minibatch_size 32000
+--influence_reward_schedule_weights 0.0 1.0
