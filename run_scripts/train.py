@@ -253,18 +253,20 @@ def build_experiment_dict(args, experiment_name, trainer, config):
     return experiment_dict
 
 
-def run():
-    args = parser.parse_args()
-
+def create_experiment(args):
     experiment_name = get_experiment_name(args)
     config = build_experiment_config_dict(args)
     trainer = get_trainer(args=args, config=config)
     experiment_dict = build_experiment_dict(args, experiment_name, trainer, config)
-    experiment = Experiment(**experiment_dict)
+    return Experiment(**experiment_dict)
 
+
+def run(args, experiments):
     initialize_ray(args)
-    tune.run_experiments(experiment, queue_trials=args.use_s3)
+    tune.run_experiments(experiments, queue_trials=args.use_s3)
 
 
 if __name__ == "__main__":
-    run()
+    parsed_args = parser.parse_args()
+    experiment = create_experiment(parsed_args)
+    run(parsed_args, experiment)
