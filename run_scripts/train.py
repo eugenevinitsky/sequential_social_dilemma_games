@@ -8,6 +8,7 @@ import ray
 from ray import tune
 from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
+from ray.tune import Experiment
 from ray.tune.registry import register_env
 
 from algorithms.a3c_baseline import build_a3c_baseline_trainer
@@ -28,7 +29,7 @@ parser = argparse.ArgumentParser()
 add_default_args(parser)
 
 
-def setup(args):
+def build_experiment_config_dict(args):
     env_creator = get_env_creator(args.env, args.num_agents, args)
     env_name = args.env + "_env"
     register_env(env_name, env_creator)
@@ -59,6 +60,9 @@ def setup(args):
 
     agent_cls = get_agent_class(args.algorithm)
     config = copy.deepcopy(agent_cls._default_config)
+
+    config["env"] = env_name
+    config["eager"] = args.eager_mode
 
     # information for replay
     config["env_config"]["func_create"] = env_creator
@@ -157,41 +161,10 @@ def setup(args):
     else:
         sys.exit("The only available algorithms are A3C, PPO and IMPALA")
 
-    return env_name, config
+    return config
 
 
-def run():
-    args = parser.parse_args()
-
-    if args.exp_name is None:
-        exp_name = args.env + "_" + args.model + "_" + args.algorithm
-    else:
-        exp_name = args.exp_name
-
-    if sys.gettrace() is not None:
-        print(
-            "Debug mode detected through sys.gettrace(), turning on ray local mode. Saving"
-            " experiment under ray_results/debug_experiment"
-        )
-        args.local_mode = True
-        exp_name = "debug_experiment"
-    if args.multi_node and args.local_mode:
-        sys.exit("You cannot have both local mode and multi node on at the same time")
-    ray.init(
-        address=args.address,
-        local_mode=args.local_mode,
-        memory=args.memory,
-        object_store_memory=args.object_store_memory,
-        redis_max_memory=args.redis_max_memory,
-        include_webui=False,
-    )
-    env_name, config = setup(args)
-
-    print("Commencing experiment", exp_name)
-
-    config["env"] = env_name
-    config["eager"] = args.eager_mode
-
+def get_trainer(args, config):
     if args.model == "baseline":
         if args.algorithm == "A3C":
             trainer = build_a3c_baseline_trainer(config)
@@ -215,27 +188,74 @@ def run():
         if args.algorithm == "IMPALA":
             # trainer = build_impala_scm_trainer(config)
             raise NotImplementedError
+    if trainer is None:
+        raise NotImplementedError("The provided combination of model and algorithm was not found.")
+    return trainer
 
-    exp_dict = {
-        "name": exp_name,
-        "run_or_experiment": trainer,
+
+def initialize_ray(args):
+    if sys.gettrace() is not None:
+        print(
+            "Debug mode detected through sys.gettrace(), turning on ray local mode. Saving"
+            " experiment under ray_results/debug_experiment"
+        )
+        args.local_mode = True
+    if args.multi_node and args.local_mode:
+        sys.exit("You cannot have both local mode and multi node on at the same time")
+    ray.init(
+        address=args.address,
+        local_mode=args.local_mode,
+        memory=args.memory,
+        object_store_memory=args.object_store_memory,
+        redis_max_memory=args.redis_max_memory,
+        include_webui=False,
+    )
+
+
+def get_experiment_name(args):
+    if sys.gettrace() is not None:
+        exp_name = "debug_experiment"
+    elif args.exp_name is None:
+        exp_name = args.env + "_" + args.model + "_" + args.algorithm
+    else:
+        exp_name = args.exp_name
+    return exp_name
+
+
+def build_experiment_dict(args, experiment_name, trainer, config):
+    experiment_dict = {
+        "name": experiment_name,
+        "run": trainer,
         "stop": {},
         "checkpoint_freq": args.checkpoint_frequency,
         "config": config,
         "num_samples": args.num_samples,
     }
     if args.stop_at_episode_reward_min is not None:
-        exp_dict["stop"]["episode_reward_min"] = args.stop_at_episode_reward_min
+        experiment_dict["stop"]["episode_reward_min"] = args.stop_at_episode_reward_min
     if args.stop_at_timesteps_total is not None:
-        exp_dict["stop"]["timesteps_total"] = args.stop_at_timesteps_total
+        experiment_dict["stop"]["timesteps_total"] = args.stop_at_timesteps_total
 
     if args.use_s3:
         date = datetime.now(tz=pytz.utc)
         date = date.astimezone(pytz.timezone("US/Pacific")).strftime("%m-%d-%Y")
-        s3_string = "s3://ssd-reproduce/" + date + "/" + exp_name
-        exp_dict["upload_dir"] = s3_string
+        s3_string = "s3://ssd-reproduce/" + date + "/" + experiment_name
+        experiment_dict["upload_dir"] = s3_string
 
-    tune.run(**exp_dict, queue_trials=True)
+    return experiment_dict
+
+
+def run():
+    args = parser.parse_args()
+
+    experiment_name = get_experiment_name(args)
+    config = build_experiment_config_dict(args)
+    trainer = get_trainer(args=args, config=config)
+    experiment_dict = build_experiment_dict(args, experiment_name, trainer, config)
+    experiment = Experiment(**experiment_dict)
+
+    initialize_ray(args)
+    tune.run_experiments(experiment, queue_trials=args.use_s3)
 
 
 if __name__ == "__main__":
