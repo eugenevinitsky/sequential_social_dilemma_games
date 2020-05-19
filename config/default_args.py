@@ -34,14 +34,16 @@ def add_default_args(parser):
     parser.add_argument(
         "--rollout_fragment_length",
         type=int,
-        default=1000,
-        help="Size of samples taken from single workers, concatenated to size train_batch_size.",
+        default=64,
+        help="Size of samples taken from single workers. These are concatenated with samples of"
+        "other workers to size train_batch_size.",
     )
     parser.add_argument(
         "--train_batch_size",
         type=int,
-        default=1000,
-        help="Size of the total dataset over which one epoch is computed.",
+        default=None,
+        help="Size of the total dataset over which one epoch is computed. If not specified,"
+        "defaults to num_workers * num_envs_per_worker * rollout_fragment_length",
     )
     parser.add_argument(
         "--checkpoint_frequency",
@@ -263,8 +265,9 @@ def add_default_args(parser):
     parser.add_argument(
         "--ppo_sgd_minibatch_size",
         type=int,
-        default=1000,
-        help="Minibatch size for the stochastic gradient descent step in the PPO algorithm",
+        default=None,
+        help="Minibatch size for the stochastic gradient descent step in the PPO algorithm. If not"
+        "specified, defaults to --train_batch_size / 2",
     )
 
     # Env-specific parameters

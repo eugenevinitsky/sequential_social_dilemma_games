@@ -79,6 +79,12 @@ def build_experiment_config_dict(args):
         fcnet_hiddens = [32, 32]
         lstm_cell_size = 128
 
+    train_batch_size = (
+        args.train_batch_size
+        if args.train_batch_size is not None
+        else args.num_workers * args.num_envs_per_worker * args.rollout_fragment_length
+    )
+
     # hyperparams
     update_nested_dict(
         config,
@@ -88,7 +94,7 @@ def build_experiment_config_dict(args):
             "lr": args.lr,
             "lr_schedule": list(zip(args.lr_schedule_steps, args.lr_schedule_weights)),
             "rollout_fragment_length": args.rollout_fragment_length,
-            "train_batch_size": args.train_batch_size,
+            "train_batch_size": train_batch_size,
             "num_workers": args.num_workers,
             "num_envs_per_worker": args.num_envs_per_worker,
             "num_gpus": args.gpus_for_driver,  # The number of GPUs for the driver
@@ -152,7 +158,9 @@ def build_experiment_config_dict(args):
         config.update(
             {
                 "num_sgd_iter": 10,
-                "sgd_minibatch_size": args.ppo_sgd_minibatch_size,
+                "sgd_minibatch_size": args.ppo_sgd_minibatch_size
+                if args.ppo_sgd_minibatch_size is not None
+                else train_batch_size / 2,
                 "vf_loss_coeff": 1e-4,
             }
         )
