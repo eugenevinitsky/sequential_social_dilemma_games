@@ -53,7 +53,7 @@ def extra_scm_stats(policy, train_batch):
     scm_stats = {
         **scm_stats,
         "cur_curiosity_reward_weight": tf.cast(
-            policy.cur_influence_reward_weight_tensor, tf.float32
+            policy.cur_curiosity_reward_weight_tensor, tf.float32
         ),
         SOCIAL_CURIOSITY_REWARD: train_batch[SOCIAL_CURIOSITY_REWARD],
         "scm_loss": policy.scm_loss,
