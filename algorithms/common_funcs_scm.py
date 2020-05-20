@@ -18,7 +18,7 @@ class SocialCuriosityScheduleMixIn(object):
         self.curiosity_reward_schedule_steps = config["curiosity_reward_schedule_steps"]
         self.curiosity_reward_schedule_weights = config["curiosity_reward_schedule_weights"]
         self.timestep = 0
-        self.cur_curiosity_reward_weight = np.float32(self.compute_weight())
+        self.cur_curiosity_reward_weight = np.float32(self.compute_curiosity_reward_weight())
         # This tensor is for logging the weight to progress.csv
         self.cur_curiosity_reward_weight_tensor = tf.get_variable(
             "cur_curiosity_reward_weight",
@@ -30,12 +30,12 @@ class SocialCuriosityScheduleMixIn(object):
     def on_global_var_update(self, global_vars):
         super(SocialCuriosityScheduleMixIn, self).on_global_var_update(global_vars)
         self.timestep = global_vars["timestep"]
-        self.cur_curiosity_reward_weight = self.compute_weight()
+        self.cur_curiosity_reward_weight = self.compute_curiosity_reward_weight()
         self.cur_curiosity_reward_weight_tensor.load(
             self.cur_curiosity_reward_weight, session=self._sess
         )
 
-    def compute_weight(self):
+    def compute_curiosity_reward_weight(self):
         """ Computes multiplier for social_curiosity reward based on training steps
         taken and schedule parameters.
         """
@@ -98,7 +98,7 @@ def scm_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, e
 def weigh_and_add_curiosity_reward(policy, sample_batch):
     """Compute curiosity of this agent and add to rewards.
     """
-    cur_curiosity_reward_weight = policy.compute_weight()
+    cur_curiosity_reward_weight = policy.compute_curiosity_reward_weight()
     curiosity_reward = sample_batch[SOCIAL_CURIOSITY_REWARD]
 
     # Clip curiosity reward
