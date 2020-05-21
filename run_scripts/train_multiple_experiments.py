@@ -19,7 +19,7 @@ def parse_run_script(filename):
     add_default_args(parser)
     run_script = open(filename, "r").read()
     args = run_script.split("\\\n")[1:]
-    replace_bash_args = [evaluate_bash_expression(line) for line in args]
+    replace_bash_args = [evaluate_bash_expression(line).replace("\n", "") for line in args]
     args = "".join(replace_bash_args).split(" ")
     parsed_args = parser.parse_args(args)
     return parsed_args
