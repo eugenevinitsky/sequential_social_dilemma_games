@@ -82,7 +82,7 @@ def build_experiment_config_dict(args):
     train_batch_size = (
         args.train_batch_size
         if args.train_batch_size is not None
-        else args.num_workers * args.num_envs_per_worker * args.rollout_fragment_length
+        else max(1, args.num_workers) * args.num_envs_per_worker * args.rollout_fragment_length
     )
 
     # hyperparams
