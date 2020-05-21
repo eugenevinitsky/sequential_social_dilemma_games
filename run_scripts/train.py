@@ -263,7 +263,7 @@ def create_experiment(args):
 
 def run(args, experiments):
     initialize_ray(args)
-    tune.run_experiments(experiments, queue_trials=args.use_s3)
+    tune.run_experiments(experiments, queue_trials=args.use_s3, resume=args.resume)
 
 
 if __name__ == "__main__":
