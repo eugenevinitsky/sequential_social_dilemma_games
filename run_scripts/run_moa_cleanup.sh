@@ -18,7 +18,7 @@ python train.py \
 --lr_schedule_steps 0 100000000 \
 --lr_schedule_weights 0.00120 0.000044 \
 --entropy_coeff 0.00176 \
---moa_loss_weight 15.007 \
+--moa_loss_weight 0.06663557 \
 --influence_reward_weight 0.620 \
 --influence_reward_schedule_steps 0 100000000 \
 --influence_reward_schedule_weights 0.0 1.0
