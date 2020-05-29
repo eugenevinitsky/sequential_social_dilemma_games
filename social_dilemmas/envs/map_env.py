@@ -6,6 +6,7 @@ import random
 import matplotlib.pyplot as plt
 import numpy as np
 from gym.spaces import Box, Dict
+from ray.rllib.agents.callbacks import DefaultCallbacks
 from ray.rllib.env import MultiAgentEnv
 
 _MAP_ENV_ACTIONS = {
@@ -862,4 +863,4 @@ class MapEnv(MultiAgentEnv):
 
     @staticmethod
     def get_environment_callbacks():
-        return {}
+        return DefaultCallbacks

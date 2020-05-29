@@ -15,12 +15,12 @@ from ray.rllib.agents.impala.impala import (
     make_aggregators_and_optimizer,
     validate_config,
 )
-from ray.rllib.agents.impala.vtrace_policy import VTraceLoss, choose_optimizer, clip_gradients
-from ray.rllib.agents.impala.vtrace_policy import validate_config as validate_config_policy
+from ray.rllib.agents.impala.vtrace_tf_policy import VTraceLoss, choose_optimizer, clip_gradients
+from ray.rllib.agents.impala.vtrace_tf_policy import validate_config as validate_config_policy
 from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.models.tf.tf_action_dist import Categorical
 from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.policy.tf_policy import ACTION_LOGP, EntropyCoeffSchedule, LearningRateSchedule
+from ray.rllib.policy.tf_policy import EntropyCoeffSchedule, LearningRateSchedule
 from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.explained_variance import explained_variance
@@ -100,7 +100,7 @@ def build_vtrace_loss(policy, model, dist_class, train_batch):
     actions = train_batch[SampleBatch.ACTIONS]
     dones = train_batch[SampleBatch.DONES]
     rewards = train_batch[SampleBatch.REWARDS]
-    behaviour_action_logp = train_batch[ACTION_LOGP]
+    behaviour_action_logp = train_batch[SampleBatch.ACTION_LOGP]
     behaviour_logits = train_batch[BEHAVIOUR_LOGITS]
     unpacked_behaviour_logits = tf.split(behaviour_logits, output_hidden_shape, axis=1)
     unpacked_outputs = tf.split(logits, output_hidden_shape, axis=1)

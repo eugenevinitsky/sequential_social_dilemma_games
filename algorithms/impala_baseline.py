@@ -7,7 +7,7 @@ from ray.rllib.agents.impala.impala import (
     make_aggregators_and_optimizer,
     validate_config,
 )
-from ray.rllib.agents.impala.vtrace_policy import VTraceTFPolicy
+from ray.rllib.agents.impala.vtrace_tf_policy import VTraceTFPolicy
 from ray.rllib.agents.trainer_template import build_trainer
 
 

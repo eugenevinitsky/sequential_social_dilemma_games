@@ -1,6 +1,7 @@
 import math
 
 import numpy as np
+from ray.rllib.agents.callbacks import DefaultCallbacks
 
 from social_dilemmas.envs.agent import SwitchAgent
 from social_dilemmas.envs.gym.discrete_with_dtype import DiscreteWithDType
@@ -195,5 +196,9 @@ class SwitchEnv(MapEnv):
 
     @staticmethod
     def get_environment_callbacks():
-        callbacks = {"on_episode_end": SwitchEnv.on_episode_end}
-        return callbacks
+        class SwitchCallback(DefaultCallbacks):
+            def on_episode_end(self, info):
+                super().on_episode_end(info)
+                SwitchEnv.on_episode_end(info)
+
+        return SwitchCallback

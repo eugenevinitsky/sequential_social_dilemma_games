@@ -1,5 +1,6 @@
-from ray.rllib.models.tf.misc import get_activation_fn, normc_initializer
+from ray.rllib.models.tf.misc import normc_initializer
 from ray.rllib.utils import try_import_tf
+from ray.rllib.utils.framework import get_activation_fn
 
 tf = try_import_tf()
 

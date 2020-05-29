@@ -1,6 +1,7 @@
 import numpy as np
-from ray.rllib.models.tf.misc import get_activation_fn, normc_initializer
+from ray.rllib.models.tf.misc import normc_initializer
 from ray.rllib.utils import override, try_import_tf
+from ray.rllib.utils.framework import get_activation_fn
 
 from models.moa_model import MOAModel
 

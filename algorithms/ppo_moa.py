@@ -5,7 +5,6 @@ from ray.rllib.agents.ppo.ppo import (
     warn_about_bad_reward_scales,
 )
 from ray.rllib.agents.ppo.ppo_tf_policy import (
-    BEHAVIOUR_LOGITS,
     KLCoeffMixin,
     PPOLoss,
     ValueNetworkMixin,
@@ -13,12 +12,12 @@ from ray.rllib.agents.ppo.ppo_tf_policy import (
     kl_and_loss_stats,
     postprocess_ppo_gae,
     setup_config,
-    vf_preds_and_logits_fetches,
+    vf_preds_fetches,
 )
 from ray.rllib.agents.trainer_template import build_trainer
 from ray.rllib.evaluation.postprocessing import Postprocessing
 from ray.rllib.policy.sample_batch import SampleBatch
-from ray.rllib.policy.tf_policy import ACTION_LOGP, EntropyCoeffSchedule, LearningRateSchedule
+from ray.rllib.policy.tf_policy import EntropyCoeffSchedule, LearningRateSchedule
 from ray.rllib.policy.tf_policy_template import build_tf_policy
 from ray.rllib.utils import try_import_tf
 
@@ -60,8 +59,8 @@ def loss_with_moa(policy, model, dist_class, train_batch):
         train_batch[Postprocessing.VALUE_TARGETS],
         train_batch[Postprocessing.ADVANTAGES],
         train_batch[SampleBatch.ACTIONS],
-        train_batch[BEHAVIOUR_LOGITS],
-        train_batch[ACTION_LOGP],
+        train_batch[SampleBatch.ACTION_DIST_INPUTS],
+        train_batch[SampleBatch.ACTION_LOGP],
         train_batch[SampleBatch.VF_PREDS],
         action_dist,
         model.value_function(),
@@ -80,7 +79,7 @@ def loss_with_moa(policy, model, dist_class, train_batch):
 
 def extra_moa_fetches(policy):
     """Adds value function, logits, moa predictions to experience train_batches."""
-    ppo_fetches = vf_preds_and_logits_fetches(policy)
+    ppo_fetches = vf_preds_fetches(policy)
     ppo_fetches.update(moa_fetches(policy))
     return ppo_fetches
 
