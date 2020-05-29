@@ -129,6 +129,14 @@ def get_all_files(path):
 
 
 def update_nested_dict(d0, d1):
+    """
+    Recursively updates a nested dictionary with a second nested dictionary.
+    This function exists because the standard dict update overwrites nested dictionaries instead of
+    recursively updating them.
+    :param d0: The dict that receives the new values
+    :param d1: The dict providing new values
+    :return: Nothing, d0 is updated in place
+    """
     for k, v in d1.items():
         if k in d0 and type(v) is dict:
             if type(d0[k]) is dict:
