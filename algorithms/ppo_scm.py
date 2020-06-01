@@ -19,6 +19,7 @@ from ray.rllib.utils import try_import_tf
 from algorithms.common_funcs_moa import build_model, get_moa_mixins, moa_postprocess_trajectory
 from algorithms.common_funcs_scm import (
     SOCIAL_CURIOSITY_REWARD,
+    SCMResetConfigMixin,
     get_curiosity_mixins,
     scm_fetches,
     scm_postprocess_trajectory,
@@ -116,6 +117,6 @@ def build_ppo_scm_trainer(scm_config):
         validate_config=validate_ppo_scm_config,
         after_optimizer_step=update_kl,
         after_train_result=warn_about_bad_reward_scales,
+        mixins=[SCMResetConfigMixin],
     )
-
     return scm_ppo_trainer

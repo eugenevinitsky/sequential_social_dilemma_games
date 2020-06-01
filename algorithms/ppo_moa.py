@@ -24,6 +24,7 @@ from ray.rllib.utils import try_import_tf
 from algorithms.common_funcs_moa import (
     EXTRINSIC_REWARD,
     SOCIAL_INFLUENCE_REWARD,
+    MOAResetConfigMixin,
     build_model,
     get_moa_mixins,
     moa_fetches,
@@ -149,6 +150,7 @@ def build_ppo_moa_trainer(moa_config):
         validate_config=validate_ppo_moa_config,
         after_optimizer_step=update_kl,
         after_train_result=warn_about_bad_reward_scales,
+        mixins=[MOAResetConfigMixin],
     )
 
     return moa_ppo_trainer

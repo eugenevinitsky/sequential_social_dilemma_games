@@ -4,6 +4,8 @@ from ray.rllib.policy.policy import Policy
 from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.annotations import override
 
+from algorithms.common_funcs_baseline import BaselineResetConfigMixin
+
 tf = try_import_tf()
 
 MOA_PREDS = "moa_preds"
@@ -25,10 +27,15 @@ class InfluenceScheduleMixIn(object):
     def __init__(self, config):
         config = config["model"]["custom_options"]
         self.baseline_influence_reward_weight = config["influence_reward_weight"]
+        if any(
+            config[key] is None
+            for key in ["influence_reward_schedule_steps", "influence_reward_schedule_weights"]
+        ):
+            self.compute_influence_reward_weight = lambda: self.baseline_influence_reward_weight
         self.influence_reward_schedule_steps = config["influence_reward_schedule_steps"]
         self.influence_reward_schedule_weights = config["influence_reward_schedule_weights"]
         self.timestep = 0
-        self.cur_influence_reward_weight = np.float32(self.compute_weight())
+        self.cur_influence_reward_weight = np.float32(self.compute_influence_reward_weight())
         # This tensor is for logging the weight to progress.csv
         self.cur_influence_reward_weight_tensor = tf.get_variable(
             "cur_influence_reward_weight",
@@ -40,12 +47,12 @@ class InfluenceScheduleMixIn(object):
     def on_global_var_update(self, global_vars):
         super(InfluenceScheduleMixIn, self).on_global_var_update(global_vars)
         self.timestep = global_vars["timestep"]
-        self.cur_influence_reward_weight = self.compute_weight()
+        self.cur_influence_reward_weight = self.compute_influence_reward_weight()
         self.cur_influence_reward_weight_tensor.load(
             self.cur_influence_reward_weight, session=self._sess
         )
 
-    def compute_weight(self):
+    def compute_influence_reward_weight(self):
         """ Computes multiplier for influence reward based on training steps
         taken and schedule parameters.
         """
@@ -124,7 +131,7 @@ def moa_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, e
 
 
 def weigh_and_add_influence_reward(policy, sample_batch):
-    cur_influence_reward_weight = policy.compute_weight()
+    cur_influence_reward_weight = policy.compute_influence_reward_weight()
     influence = sample_batch[SOCIAL_INFLUENCE_REWARD]
 
     # Summarize and clip influence reward
@@ -215,11 +222,31 @@ class MOAConfigInitializerMixIn(object):
     def __init__(self, config):
         config = config["model"]["custom_options"]
         self.num_other_agents = config["num_other_agents"]
-        self.moa_loss_weight = config["moa_loss_weight"]
+        self.moa_loss_weight = tf.get_variable(
+            "moa_loss_weight", initializer=config["moa_loss_weight"], trainable=False
+        )
         self.influence_reward_clip = config["influence_reward_clip"]
         self.train_moa_only_when_visible = config["train_moa_only_when_visible"]
         self.influence_divergence_measure = config["influence_divergence_measure"]
         self.influence_only_when_visible = config["influence_only_when_visible"]
+
+
+class MOAResetConfigMixin(object):
+    @staticmethod
+    def reset_policies(policies, new_config, session):
+        custom_options = new_config["model"]["custom_options"]
+        for policy in policies:
+            policy.moa_loss_weight.load(custom_options["moa_loss_weight"], session=session)
+            policy.compute_influence_reward_weight = lambda: custom_options[
+                "influence_reward_weight"
+            ]
+
+    def reset_config(self, new_config):
+        policies = self.optimizer.policies.values()
+        BaselineResetConfigMixin.reset_policies(policies, new_config)
+        self.reset_policies(policies, new_config, self.optimizer.sess)
+        self.config = new_config
+        return True
 
 
 def build_model(policy, obs_space, action_space, config):
@@ -238,7 +265,10 @@ def setup_moa_mixins(policy, obs_space, action_space, config):
 
 
 def get_moa_mixins():
-    return [MOAConfigInitializerMixIn, InfluenceScheduleMixIn]
+    return [
+        MOAConfigInitializerMixIn,
+        InfluenceScheduleMixIn,
+    ]
 
 
 def validate_moa_config(config):

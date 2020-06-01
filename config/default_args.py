@@ -123,10 +123,10 @@ def add_default_args(parser):
     )
     parser.add_argument("--use_s3", action="store_true", default=False, help="If true upload to s3")
     parser.add_argument(
-        "--grid_search",
+        "--tune_hparams",
         action="store_true",
         default=False,
-        help="If true run a grid search over relevant hyperparameters",
+        help="When provided, run population-based training over hyperparameters",
     )
     parser.add_argument(
         "--grad_clip",
@@ -139,13 +139,13 @@ def add_default_args(parser):
         "--lr",
         type=float,
         default=0.0001,
-        help="Default learning rate. Not used due to lr_schedule, only exists for debugging.",
+        help="Default learning rate. Used when lr_schedule_steps/weights are not provided.",
     )
     parser.add_argument(
         "--lr_schedule_steps",
         nargs="+",
         type=int,
-        default=[0, int(2e7)],
+        default=None,
         help="Amounts of environment steps at which the learning rate has a value specified in"
         "--lr_schedule_weights",
     )
@@ -153,20 +153,12 @@ def add_default_args(parser):
         "--lr_schedule_weights",
         nargs="+",
         type=float,
-        default=[0.001, 0.0001],
+        default=None,
         help="Values for the learning rate schedule. Linearly interpolates using "
         "--lr_schedule_steps",
     )
 
     parser.add_argument("--entropy_coeff", type=float, default=0.001, help="Entropy reward weight.")
-    parser.add_argument(
-        "--entropy_tune",
-        nargs="+",
-        type=float,
-        default=[0.001],
-        help="When --grid_search is provided, perform a grid search over these entropy_coeff\
-                                    parameters. Replaces --entropy_coeff when used.",
-    )
 
     # MOA Parameters
     parser.add_argument(
@@ -180,7 +172,7 @@ def add_default_args(parser):
         "--influence_reward_schedule_steps",
         nargs="+",
         type=int,
-        default=[0, int(1e7), int(1e8)],
+        default=None,
         help="Amounts of environment steps at which the moa reward has a value specified in"
         "--influence_reward_schedule_weights",
     )
@@ -188,27 +180,10 @@ def add_default_args(parser):
         "--influence_reward_schedule_weights",
         nargs="+",
         type=float,
-        default=[0, 1.0, 0.5],
+        default=None,
         help="Values for the moa reward schedule. Linearly interpolates using "
         "--influence_reward_schedule_steps. The final value is"
         " --influence_reward_weight * interpolated_value",
-    )
-
-    parser.add_argument(
-        "--moa_loss_weight_tune",
-        nargs="+",
-        type=float,
-        default=[1.0],
-        help="When --grid_search is provided, perform a grid search over these moa_loss_weight\
-                                parameters. Replaces --influence_reward_weight when used.",
-    )
-    parser.add_argument(
-        "--influence_reward_weight_tune",
-        nargs="+",
-        type=float,
-        default=[0.001],
-        help="When --grid_search is provided, perform a grid search over these"
-        " influence_reward_weight parameters. Replaces --entropy_coeff.",
     )
 
     # SCM parameters
@@ -223,7 +198,7 @@ def add_default_args(parser):
         "--curiosity_reward_schedule_steps",
         nargs="+",
         type=int,
-        default=[0, int(1e7), int(1e8)],
+        default=None,
         help="Amounts of environment steps at which the scm reward has a value specified in"
         "--curiosity_reward_schedule_weights",
     )
@@ -231,19 +206,10 @@ def add_default_args(parser):
         "--curiosity_reward_schedule_weights",
         nargs="+",
         type=float,
-        default=[0, 1.0, 0.5],
+        default=None,
         help="Values for the scm reward schedule. Linearly interpolates using "
         "--curiosity_reward_schedule_steps. The final value is"
         " --curiosity_reward_weight * interpolated_value",
-    )
-
-    parser.add_argument(
-        "--scm_loss_weight_tune",
-        nargs="+",
-        type=float,
-        default=[1.0],
-        help="When --grid_search is provided, perform a grid search over these scm_loss_weight\
-                                    parameters. Replaces --curiosity_reward_weight when used.",
     )
 
     parser.add_argument(
@@ -253,15 +219,6 @@ def add_default_args(parser):
         help="This weight balances forward and inverse loss weights in the following way:"
         "weight * forward_loss + (1 - weight) * inverse_loss"
         "Must be in the range [0, 1].",
-    )
-
-    parser.add_argument(
-        "--curiosity_reward_weight_tune",
-        nargs="+",
-        type=float,
-        default=[0.001],
-        help="When --grid_search is provided, perform a grid search over these"
-        " curiosity_reward_weight parameters. Replaces --entropy_coeff.",
     )
 
     # PPO parameters

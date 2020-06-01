@@ -1,5 +1,6 @@
 import argparse
 import copy
+import random
 import sys
 from datetime import datetime
 
@@ -10,6 +11,7 @@ from ray.rllib.agents.registry import get_agent_class
 from ray.rllib.models import ModelCatalog
 from ray.tune import Experiment
 from ray.tune.registry import register_env
+from ray.tune.schedulers import PopulationBasedTraining
 
 from algorithms.a3c_baseline import build_a3c_baseline_trainer
 from algorithms.a3c_moa import build_a3c_moa_trainer
@@ -71,9 +73,9 @@ def build_experiment_config_dict(args):
         config["env_config"]["num_switches"] = args.num_switches
 
     if args.small_model:
-        conv_filters = [[3, [3, 3], 1]]
-        fcnet_hiddens = [8, 8]
-        lstm_cell_size = 16
+        conv_filters = [[1, [1, 1], 1]]
+        fcnet_hiddens = [1, 1]
+        lstm_cell_size = 1
     else:
         conv_filters = [[6, [3, 3], 1]]
         fcnet_hiddens = [32, 32]
@@ -85,6 +87,12 @@ def build_experiment_config_dict(args):
         else max(1, args.num_workers) * args.num_envs_per_worker * args.rollout_fragment_length
     )
 
+    lr_schedule = (
+        list(zip(args.lr_schedule_steps, args.lr_schedule_weights))
+        if args.lr_schedule_steps is not None and args.lr_schedule_weights is not None
+        else None
+    )
+
     # hyperparams
     update_nested_dict(
         config,
@@ -92,7 +100,7 @@ def build_experiment_config_dict(args):
             "horizon": 1000,
             "gamma": 0.99,
             "lr": args.lr,
-            "lr_schedule": list(zip(args.lr_schedule_steps, args.lr_schedule_weights)),
+            "lr_schedule": lr_schedule,
             "rollout_fragment_length": args.rollout_fragment_length,
             "train_batch_size": train_batch_size,
             "num_workers": args.num_workers,
@@ -145,14 +153,9 @@ def build_experiment_config_dict(args):
             }
         )
 
-    if args.grid_search:
-        config["entropy_coeff"] = tune.grid_search(args.entropy_tune)
-        config["model"]["custom_options"]["moa_loss_weight"] = tune.grid_search(
-            args.moa_loss_weight_tune
-        )
-        config["model"]["custom_options"]["influence_reward_weight"] = tune.grid_search(
-            args.influence_reward_weight_tune
-        )
+    if args.tune_hparams:
+        tune_dict = create_hparam_tune_dict(is_config=True)
+        update_nested_dict(config, tune_dict)
 
     if args.algorithm == "PPO":
         config.update(
@@ -261,9 +264,52 @@ def create_experiment(args):
     return Experiment(**experiment_dict)
 
 
+def create_hparam_tune_dict(is_config=False):
+    def wrapper(fn):
+        if is_config:
+            return tune.sample_from(lambda spec: fn)
+        else:
+            return lambda: fn
+
+    hparam_dict = {
+        "entropy_coeff": wrapper(random.expovariate(1000)),
+        "lr": wrapper(random.uniform(0.00001, 0.01)),
+        "model": {
+            "custom_options": {
+                "moa_loss_weight": wrapper(random.expovariate(2)),
+                "influence_reward_weight": wrapper(random.expovariate(2)),
+                "scm_loss_weight": wrapper(random.expovariate(2)),
+                "curiosity_reward_weight": wrapper(random.expovariate(2)),
+                "scm_forward_vs_inverse_loss_weight": wrapper(random.uniform(0, 1)),
+            }
+        },
+    }
+    return hparam_dict
+
+
+def create_pbt_scheduler():
+    hyperparam_mutations = create_hparam_tune_dict()
+
+    pbt = PopulationBasedTraining(
+        time_attr="training_iteration",
+        perturbation_interval=1,
+        metric="episode_reward_mean",
+        mode="max",
+        hyperparam_mutations=hyperparam_mutations,
+    )
+    return pbt
+
+
 def run(args, experiments):
     initialize_ray(args)
-    tune.run_experiments(experiments, queue_trials=args.use_s3, resume=args.resume)
+    scheduler = create_pbt_scheduler() if args.tune_hparams else None
+    tune.run_experiments(
+        experiments,
+        queue_trials=args.use_s3,
+        resume=args.resume,
+        scheduler=scheduler,
+        reuse_actors=args.tune_hparams,
+    )
 
 
 if __name__ == "__main__":

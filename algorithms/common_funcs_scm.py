@@ -3,6 +3,9 @@ from ray.rllib.policy.policy import Policy
 from ray.rllib.utils import try_import_tf
 from ray.rllib.utils.annotations import override
 
+from algorithms.common_funcs_baseline import BaselineResetConfigMixin
+from algorithms.common_funcs_moa import MOAResetConfigMixin
+
 tf = try_import_tf()
 
 
@@ -15,6 +18,12 @@ class SocialCuriosityScheduleMixIn(object):
     def __init__(self, config):
         config = config["model"]["custom_options"]
         self.baseline_curiosity_reward_weight = config["curiosity_reward_weight"]
+        if any(
+            config[key] is None
+            for key in ["curiosity_reward_schedule_steps", "curiosity_reward_schedule_weights"]
+        ):
+            self.compute_curiosity_reward_weight = lambda: self.baseline_curiosity_reward_weight
+
         self.curiosity_reward_schedule_steps = config["curiosity_reward_schedule_steps"]
         self.curiosity_reward_schedule_weights = config["curiosity_reward_schedule_weights"]
         self.timestep = 0
@@ -123,10 +132,45 @@ def scm_fetches(policy):
 class SCMConfigInitializerMixIn(object):
     def __init__(self, config):
         config = config["model"]["custom_options"]
-        self.scm_loss_weight = config["scm_loss_weight"]
+        self.scm_loss_weight = tf.get_variable(
+            "scm_loss_weight", initializer=config["scm_loss_weight"], trainable=False
+        )
         self.curiosity_reward_clip = config["curiosity_reward_clip"]
-        self.forward_loss_weight = config["scm_forward_vs_inverse_loss_weight"]
-        self.inverse_loss_weight = 1 - self.forward_loss_weight
+        self.forward_loss_weight = tf.get_variable(
+            "forward_loss_weight",
+            initializer=config["scm_forward_vs_inverse_loss_weight"],
+            trainable=False,
+        )
+        self.inverse_loss_weight = tf.get_variable(
+            "inverse_loss_weight",
+            initializer=1 - config["scm_forward_vs_inverse_loss_weight"],
+            trainable=False,
+        )
+
+
+class SCMResetConfigMixin(object):
+    @staticmethod
+    def reset_policies(policies, new_config, session):
+        custom_options = new_config["model"]["custom_options"]
+        for policy in policies:
+            policy.scm_loss_weight.load(custom_options["scm_loss_weight"], session=session)
+            policy.compute_curiosity_reward_weight = lambda: custom_options[
+                "curiosity_reward_weight"
+            ]
+            policy.forward_loss_weight.load(
+                custom_options["scm_forward_vs_inverse_loss_weight"], session=session
+            )
+            policy.inverse_loss_weight.load(
+                1 - custom_options["scm_forward_vs_inverse_loss_weight"], session=session
+            )
+
+    def reset_config(self, new_config):
+        policies = self.optimizer.policies.values()
+        BaselineResetConfigMixin.reset_policies(policies, new_config)
+        MOAResetConfigMixin.reset_policies(policies, new_config, self.optimizer.sess)
+        self.reset_policies(policies, new_config, self.optimizer.sess)
+        self.config = new_config
+        return True
 
 
 def setup_scm_mixins(policy, obs_space, action_space, config):
