@@ -36,6 +36,8 @@ def parse_filenames():
             "run_moa_harvest.sh",
             "run_scm_cleanup.sh",
             "run_scm_harvest.sh",
+            "run_baseline_cleanup.sh",
+            "run_baseline_harvest.sh",
         ],
         help="Names of scripts to run concurrently, as resources allow.",
     )
