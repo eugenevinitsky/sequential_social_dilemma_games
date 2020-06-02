@@ -292,7 +292,7 @@ def create_pbt_scheduler():
 
     pbt = PopulationBasedTraining(
         time_attr="training_iteration",
-        perturbation_interval=1,
+        perturbation_interval=80,
         metric="episode_reward_mean",
         mode="max",
         hyperparam_mutations=hyperparam_mutations,
