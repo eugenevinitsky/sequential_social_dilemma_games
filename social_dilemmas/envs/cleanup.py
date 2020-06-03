@@ -27,12 +27,14 @@ class CleanupEnv(MapEnv):
     def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False,
                  shuffle_spawn=True, global_ref_point=None,
                  view_size=7, random_orientation=True,
-                 cleanup_params=cleanup_params_default):
+                 cleanup_params=cleanup_params_default,
+                 beam_width=3):
         self.global_ref_point = global_ref_point
         self.view_size = view_size
         super().__init__(ascii_map, num_agents, render,
                          shuffle_spawn=shuffle_spawn,
-                         random_orientation=random_orientation)
+                         random_orientation=random_orientation,
+                         beam_width=beam_width)
 
         self.thresholdDepletion = cleanup_params['thresholdDepletion']
         self.thresholdRestoration = cleanup_params['thresholdRestoration']

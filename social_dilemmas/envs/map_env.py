@@ -58,7 +58,8 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
 class MapEnv(MultiAgentEnv):
 
     def __init__(self, ascii_map, num_agents=1, render=True, color_map=None,
-                 shuffle_spawn=True, random_orientation=True):
+                 shuffle_spawn=True, random_orientation=True,
+                 beam_width=3):
         """
 
         Parameters
@@ -80,6 +81,9 @@ class MapEnv(MultiAgentEnv):
         self.beam_pos = []
         self.shuffle_spawn = shuffle_spawn
         self.random_orientation = random_orientation
+        assert beam_width % 2 == 1  # must be odd
+        # e.g., beam_width = 3 has 1-pixel beams on both sides of the agent
+        self.beam_shift = int((beam_width - 1)/2)
 
         self.agents = {}
 
@@ -601,8 +605,10 @@ class MapEnv(MultiAgentEnv):
         firing_direction = ORIENTATIONS[firing_orientation]
         # compute the other two starting positions
         right_shift = self.rotate_right(firing_direction)
-        firing_pos = [start_pos, start_pos + right_shift - firing_direction,
-                      start_pos - right_shift - firing_direction]
+        if self.beam_shift == 0:
+            firing_pos = [start_pos]
+        else:
+            firing_pos = [start_pos, start_pos + self.beam_shift*right_shift - firing_direction, start_pos - self.beam_shift*right_shift - firing_direction]
         firing_points = []
         updates = []
         for pos in firing_pos:
