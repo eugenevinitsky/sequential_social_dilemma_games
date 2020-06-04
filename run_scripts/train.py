@@ -241,6 +241,7 @@ def build_experiment_dict(args, experiment_name, trainer, config):
         "checkpoint_freq": args.checkpoint_frequency,
         "config": config,
         "num_samples": args.num_samples,
+        "max_failures": -1,
     }
     if args.stop_at_episode_reward_min is not None:
         experiment_dict["stop"]["episode_reward_min"] = args.stop_at_episode_reward_min
