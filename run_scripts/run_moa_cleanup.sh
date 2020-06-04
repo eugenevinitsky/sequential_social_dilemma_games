@@ -17,5 +17,8 @@ python train.py \
 --num_samples 5 \
 --entropy_coeff 0.00176 \
 --moa_loss_weight 0.06663557 \
---influence_reward_weight 0.620 \
---tune_hparams
+--lr_schedule_steps 0 20000000 \
+--lr_schedule_weights 0.00126 0.000012 \
+--influence_reward_weight 1.0 \
+--influence_reward_schedule_steps 0 10000000 100000000 300000000 \
+--influence_reward_schedule_weights 0.0 0.0 1.0 0.5
