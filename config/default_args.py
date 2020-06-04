@@ -51,7 +51,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--checkpoint_frequency",
         type=int,
-        default=500,
+        default=100,
         help="Number of steps before a checkpoint is saved.",
     )
     parser.add_argument(
