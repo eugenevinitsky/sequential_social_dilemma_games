@@ -343,6 +343,20 @@ class TestMapEnv(unittest.TestCase):
         )
         np.testing.assert_array_equal(expected_view, agent_view)
 
+    def test_agent_visibility(self):
+        self.env = DummyMapEnv(
+            TEST_MAP_1.copy(), extra_actions={}, view_len=2, num_agents=0, return_agent_actions=True
+        )
+        self.env.reset()
+        self.add_agent("agent-0", [1, 1], "UP", self.env, 2)
+        self.add_agent("agent-1", [1, 3], "UP", self.env, 2)
+        self.add_agent("agent-2", [1, 5], "UP", self.env, 2)
+        obs, *_ = self.env.step({})
+        visibility = [agent_obs["visible_agents"] for agent_obs in obs.values()]
+        np.testing.assert_array_equal(visibility[0], [1, 0])
+        np.testing.assert_array_equal(visibility[1], [1, 1])
+        np.testing.assert_array_equal(visibility[2], [0, 1])
+
     def test_agent_actions(self):
         # set up the map
         agent_id = "agent-0"
