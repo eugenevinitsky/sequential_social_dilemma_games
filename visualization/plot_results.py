@@ -54,7 +54,8 @@ def plot_with_mean(x_lists, y_lists, color, y_label):
     for x, y in zip(x_lists, y_lists):
         interp_y = np.interp(interp_x, x, y, left=np.nan, right=np.nan)
         interpolated.append(interp_y)
-        plt.plot(interp_x, interp_y, color=color, alpha=0.2)
+        light_color = change_color_luminosity(color, 0.5)
+        plt.plot(interp_x, interp_y, color=light_color)
     means = np.nanmean(interpolated, axis=0)
     plt.plot(interp_x, means, color=color, label=y_label, alpha=1)
 
@@ -182,6 +183,27 @@ def plot_csvs_results(paths):
                         plot.plot_details.color,
                         plot.plot_details.legend_name,
                     )
+
+
+def change_color_luminosity(color, amount=0.5):
+    """
+    Lightens the given color by multiplying (1-luminosity) by the given amount.
+    Input can be matplotlib color string, hex string, or RGB tuple.
+    Taken from https://stackoverflow.com/a/49601444
+    Examples:
+    >> lighten_color('g', 0.3)
+    >> lighten_color('#F034A3', 0.6)
+    >> lighten_color((.3,.55,.1), 0.5)
+    """
+    import matplotlib.colors as mc
+    import colorsys
+
+    try:
+        c = mc.cnames[color]
+    except IndexError:
+        c = color
+    c = colorsys.rgb_to_hls(*mc.to_rgb(c))
+    return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
 
 for category_folder in get_all_subdirs(ray_results_path):
