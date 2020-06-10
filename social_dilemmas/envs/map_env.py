@@ -847,7 +847,7 @@ class MapEnv(MultiAgentEnv):
 
         # keep this sorted so the visibility matrix is always in order
         other_agent_pos = [
-            self.agents[agent_id].pos
+            self.agents[other_agent_id].pos
             for other_agent_id in sorted(self.agents.keys())
             if other_agent_id != agent_id
         ]
