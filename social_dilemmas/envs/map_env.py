@@ -363,7 +363,7 @@ class MapEnv(MultiAgentEnv):
         elif agent.orientation == "DOWN":
             rotated_view = np.rot90(view_slice, k=2)
         elif agent.orientation == "RIGHT":
-            rotated_view = np.rot90(view_slice, k=2, axes=(1, 0))
+            rotated_view = np.rot90(view_slice, k=1, axes=(1, 0))
         return rotated_view
 
     def map_to_colors(self, mmap, color_map, rgb_arr, orientation="UP"):
