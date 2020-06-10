@@ -21,7 +21,7 @@ class PlotData(object):
     def __init__(self, x_data, y_data, column_name, legend_name, color):
         self.x_data = x_data
         self.y_data = y_data
-        self.plot_details = PlotGraphics(column_name, legend_name, color)
+        self.plot_graphics = PlotGraphics(column_name, legend_name, color)
 
 
 def plot_and_save(fn, path, file_name_addition):
@@ -43,26 +43,44 @@ def plot_and_save(fn, path, file_name_addition):
     plt.savefig(epsfile)
 
 
-def plot_with_mean(x_lists, y_lists, color, y_label):
+def plot_multiple_category_result(plotdata_list):
+    for plotdata in plotdata_list:
+        plot_single_category_result(
+            plotdata.x_data,
+            plotdata.y_data,
+            plotdata.plot_graphics.color,
+            plotdata.plot_graphics.legend_name,
+            plotdata.plot_graphics.column_name,
+            with_mean=False,
+            with_label=True,
+        )
+
+
+def plot_single_category_result(
+    x_lists, y_lists, color, legend_name, y_label_name, with_mean=True, with_label=False
+):
     most_timesteps = np.max(list(map(len, x_lists)))
     x_min = np.nanmin(list(map(np.nanmin, x_lists)))
     x_max = np.nanmax(list(map(np.nanmax, x_lists)))
-    y_min = np.nanmin(list(map(np.nanmin, y_lists)))
     y_max = np.nanmax(list(map(np.nanmax, y_lists)))
     interp_x = np.linspace(x_min, x_max, most_timesteps)
     interpolated = []
     for x, y in zip(x_lists, y_lists):
         interp_y = np.interp(interp_x, x, y, left=np.nan, right=np.nan)
         interpolated.append(interp_y)
-        light_color = change_color_luminosity(color, 0.5)
-        plt.plot(interp_x, interp_y, color=light_color)
-    means = np.nanmean(interpolated, axis=0)
-    plt.plot(interp_x, means, color=color, label=y_label)
+        light_color = change_color_luminosity(color, 0.5) if with_mean else color
+        label_name = legend_name if with_label else None
+        plt.plot(interp_x, interp_y, color=light_color, label=label_name)
+    if with_mean:
+        means = np.nanmean(interpolated, axis=0)
+        plt.plot(interp_x, means, color=color, label=legend_name)
 
     plt.xlabel("Environment steps (1e8)")
-    plt.ylabel(y_label)
-    bottom = 0 if "reward" in y_label else None
-    plt.ylim(bottom=bottom, top=y_max + (y_max - y_min) / 100)
+    plt.ylabel(y_label_name)
+    bottom = 0 if "reward" in y_label_name else None
+    old_bot, old_top = plt.ylim()
+    y_max = max(y_max, old_top)
+    plt.ylim(bottom=bottom, top=y_max)
     plt.ticklabel_format(useOffset=False)
 
 
@@ -162,25 +180,60 @@ def plot_csvs_results(paths):
     for plot in plots:
 
         def plot_fn():
-            plot_with_mean(
-                plot.x_data, plot.y_data, plot.plot_details.color, plot.plot_details.legend_name,
+            plot_single_category_result(
+                plot.x_data,
+                plot.y_data,
+                plot.plot_graphics.color,
+                plot.plot_graphics.legend_name,
+                plot.plot_graphics.column_name,
             )
 
         try:
-            plot_and_save(plot_fn, path, plot.plot_details.column_name)
+            plot_and_save(plot_fn, path, plot.plot_graphics.column_name)
         except ZeroDivisionError:
             pass
 
-    def plot_losses():
-        for plot in plots:
-            if "loss" in plot.plot_details.column_name or "reward" == plot.plot_details.column_name:
-                if len(plot.y_data) > 0:
-                    plot_with_mean(
-                        plot.x_data,
-                        plot.y_data,
-                        plot.plot_details.color,
-                        plot.plot_details.legend_name,
-                    )
+
+def get_experiment_reward_means(paths):
+    dfs = []
+    for path in paths:
+        df = pd.read_csv(path, sep=",")
+        # Set NaN values to 0, common at start of training due to ray behavior
+        df = df.fillna(0)
+        dfs.append(df)
+
+    category_path = paths[0].split("/")[-3]
+    if "baseline" in category_path:
+        model_name = "baseline"
+        color = "blue"
+    elif "moa" in category_path:
+        model_name = "MOA"
+        color = "red"
+    elif "scm" in category_path:
+        model_name = "SCM"
+        color = "orange"
+    else:
+        raise NotImplementedError
+
+    env = category_path.split("_")[0]
+
+    # Convert environment steps to 1e8 representation
+    timesteps_totals = [df.timesteps_total for df in dfs]
+    timesteps_totals = [
+        [timestep / 1e8 for timestep in timesteps_total] for timesteps_total in timesteps_totals
+    ]
+
+    most_timesteps = np.max(list(map(len, timesteps_totals)))
+    x_min = np.nanmin(list(map(np.nanmin, timesteps_totals)))
+    x_max = np.nanmax(list(map(np.nanmax, timesteps_totals)))
+    interp_x = np.linspace(x_min, x_max, most_timesteps)
+    interpolated = []
+    for x, y, in zip(timesteps_totals, [df.episode_reward_mean for df in dfs]):
+        interp_y = np.interp(interp_x, x, y, left=np.nan, right=np.nan)
+        interpolated.append(interp_y)
+    means = np.nanmean(interpolated, axis=0)
+    mean_plotdata = PlotData([interp_x], [means], "Collective reward", model_name, color)
+    return mean_plotdata, env
 
 
 def change_color_luminosity(color, amount=0.5):
@@ -201,11 +254,42 @@ def change_color_luminosity(color, amount=0.5):
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
 
-for category_folder in get_all_subdirs(ray_results_path):
-    csvs = []
-    experiment_folders = get_all_subdirs(category_folder)
-    for experiment_folder in experiment_folders:
-        csv_path = experiment_folder + "/progress.csv"
-        if os.path.getsize(csv_path) > 0:
-            csvs.append(csv_path)
-    plot_csvs_results(csvs)
+def plot_separate_results():
+    # Plot separate experiment results
+    for category_folder in get_all_subdirs(ray_results_path):
+        csvs = []
+        experiment_folders = get_all_subdirs(category_folder)
+        for experiment_folder in experiment_folders:
+            csv_path = experiment_folder + "/progress.csv"
+            if os.path.getsize(csv_path) > 0:
+                csvs.append(csv_path)
+        plot_csvs_results(csvs)
+
+
+def plot_combined_results():
+    # Plot combined experiment rewards per environment, with means per model
+    env_means = {}
+    for category_folder in get_all_subdirs(ray_results_path):
+        csvs = []
+        experiment_folders = get_all_subdirs(category_folder)
+        for experiment_folder in experiment_folders:
+            csv_path = experiment_folder + "/progress.csv"
+            if os.path.getsize(csv_path) > 0:
+                csvs.append(csv_path)
+
+        reward_means, env = get_experiment_reward_means(csvs)
+        if env not in env_means:
+            env_means[env] = []
+        env_means[env].append(reward_means)
+
+    for env, reward_means in env_means.items():
+
+        def plot_fn():
+            plot_multiple_category_result(reward_means)
+
+        collective_env_path = env + "_collective/filler/"
+        plot_and_save(plot_fn, collective_env_path, reward_means[0].plot_graphics.column_name)
+
+
+plot_separate_results()
+plot_combined_results()
