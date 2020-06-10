@@ -97,8 +97,6 @@ def extract_stats(dfs, requested_keys):
 
 # Plot the results for a given generated progress.csv file, found in your ray_results folder.
 def plot_csvs_results(paths):
-    # Remove curly braces and their contents, as they are nested and contain commas.
-    # Commas are delimiters, and replacing them with quotechars does not help as they are nested.
     dfs = []
     for path in paths:
         df = pd.read_csv(path, sep=",")
