@@ -165,6 +165,7 @@ def build_experiment_config_dict(args):
                 if args.ppo_sgd_minibatch_size is not None
                 else train_batch_size / 2,
                 "vf_loss_coeff": 0.5,
+                "vf_share_layers": True,
             }
         )
     elif args.algorithm == "A3C" or args.algorithm == "IMPALA":
