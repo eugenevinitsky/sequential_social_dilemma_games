@@ -176,6 +176,8 @@ def plot_csvs_results(paths):
                 )
             )
     path = paths[0]
+    env = path.split("/")[-3].split("_")[0]
+    model = path.split("/")[-3].split("_")[1]
 
     for plot in plots:
 
@@ -189,7 +191,7 @@ def plot_csvs_results(paths):
             )
 
         try:
-            plot_and_save(plot_fn, path, plot.plot_graphics.column_name)
+            plot_and_save(plot_fn, path, plot.plot_graphics.column_name + "_" + env + "_" + model)
         except ZeroDivisionError:
             pass
 
@@ -287,8 +289,8 @@ def plot_combined_results():
         def plot_fn():
             plot_multiple_category_result(reward_means)
 
-        collective_env_path = env + "_collective/filler/"
-        plot_and_save(plot_fn, collective_env_path, reward_means[0].plot_graphics.column_name)
+        collective_env_path = "collective/filler/"
+        plot_and_save(plot_fn, collective_env_path, env + "_collective_reward")
 
 
 plot_separate_results()
