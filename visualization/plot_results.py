@@ -57,7 +57,7 @@ def plot_with_mean(x_lists, y_lists, color, y_label):
         light_color = change_color_luminosity(color, 0.5)
         plt.plot(interp_x, interp_y, color=light_color)
     means = np.nanmean(interpolated, axis=0)
-    plt.plot(interp_x, means, color=color, label=y_label, alpha=1)
+    plt.plot(interp_x, means, color=color, label=y_label)
 
     plt.xlabel("Environment steps (1e8)")
     plt.ylabel(y_label)
@@ -198,10 +198,7 @@ def change_color_luminosity(color, amount=0.5):
     import matplotlib.colors as mc
     import colorsys
 
-    try:
-        c = mc.cnames[color]
-    except IndexError:
-        c = color
+    c = mc.cnames[color] if color in mc.cnames else color
     c = colorsys.rgb_to_hls(*mc.to_rgb(c))
     return colorsys.hls_to_rgb(c[0], 1 - amount * (1 - c[1]), c[2])
 
