@@ -60,4 +60,5 @@ class MoaLSTM(RecurrentTFModelV2):
             np.zeros(self.cell_size, np.float32),
             np.zeros(self.action_space.n, np.float32),
             np.zeros([self.action_space.n, self.num_outputs], np.float32),
+            np.zeros([self.obs_space], np.float32),
         ]

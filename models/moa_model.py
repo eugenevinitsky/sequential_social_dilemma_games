@@ -112,7 +112,7 @@ class MOAModel(RecurrentTFModelV2):
 
         rnn_input_dict = {
             "ac_trunk": actor_critic_fc_output,
-            "moa_trunk": moa_fc_output,
+            "prev_moa_trunk": state[6],
             "other_agent_actions": input_dict["obs"]["other_agent_actions"],
             "visible_agents": input_dict["obs"]["visible_agents"],
             "prev_actions": input_dict["prev_actions"],
@@ -128,7 +128,7 @@ class MOAModel(RecurrentTFModelV2):
             self._counterfactuals,
             [-1, self._counterfactuals.shape[-2], self._counterfactuals.shape[-1]],
         )
-        new_state.extend([action_logits, counterfactuals])
+        new_state.extend([action_logits, counterfactuals, moa_fc_output])
 
         self.compute_influence_reward(input_dict, state[4], state[5])
 
@@ -148,22 +148,22 @@ class MOAModel(RecurrentTFModelV2):
 
         # First we have to evaluate the MOA over the true trajectory to obtain the hidden state
         # that we will use for the next timestep's counterfactual predictions.
+        prev_moa_trunk = input_dict["prev_moa_trunk"]
         other_actions = input_dict["other_agent_actions"]
         agent_action = tf.expand_dims(input_dict["prev_actions"], axis=-1)
         all_actions = tf.concat([agent_action, other_actions], axis=-1, name="concat_true_actions")
         self._true_one_hot_actions = self._reshaped_one_hot_actions(all_actions, "forward_one_hot")
         true_action_pass_dict = {
-            "curr_obs": input_dict["moa_trunk"],
+            "curr_obs": prev_moa_trunk,
             "prev_total_actions": self._true_one_hot_actions,
         }
 
-        # Compute the action prediction. This is unused in the actual rollout and is only to generate
-        # a series of hidden states for the counterfactuals
+        # Compute the true action prediction, used to determine the MOA loss.
         self._action_pred, output_h2, output_c2 = self.moa_model.forward_rnn(
             true_action_pass_dict, [h2, c2], seq_lens
         )
 
-        # Now we can use that cell state to do the counterfactual predictions
+        # Make counterfactual predictions, used for computing the influence reward.
         counterfactual_preds = []
         for i in range(self.num_outputs):
             # Shape of other_actions is (num_envs, ?, num_other_agents)
@@ -175,7 +175,7 @@ class MOAModel(RecurrentTFModelV2):
             one_hot_actions = self._reshaped_one_hot_actions(
                 actions_with_counterfactual, "actions_with_counterfactual_one_hot"
             )
-            pass_dict = {"curr_obs": input_dict["moa_trunk"], "prev_total_actions": one_hot_actions}
+            pass_dict = {"curr_obs": prev_moa_trunk, "prev_total_actions": one_hot_actions}
             counterfactual_pred, _, _ = self.moa_model.forward_rnn(pass_dict, [h2, c2], seq_lens)
             counterfactual_preds.append(tf.expand_dims(counterfactual_pred, axis=-2))
         self._counterfactuals = tf.concat(
@@ -315,10 +315,11 @@ class MOAModel(RecurrentTFModelV2):
         return self._social_influence_reward
 
     def predicted_actions(self):
-        """ :returns Predicted actions. NB: Since the true action is not known when evaluating this
-         model, the timestep is off by one (too late). Thus, to get to the correct index:
-         When index is i, use predicted_actions[i + 1]. predicted_actions[0] does not contain
-         output."""
+        """ :returns Predicted actions. NB: Since the agent's own true action is not known when
+         evaluating this model, the timestep is off by one (too late). Thus, for any index n > 0,
+         the value at n is a prediction made at n-1, about the actions taken at n.
+         predicted_actions[0] contains no sensible value, as this would have to be a prediction made
+         at timestep -1, but we start time at 0."""
         return self._action_pred
 
     def visibility(self):
