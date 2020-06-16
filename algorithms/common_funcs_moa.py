@@ -10,7 +10,6 @@ tf = try_import_tf()
 
 MOA_PREDS = "moa_preds"
 OTHERS_ACTIONS = "others_actions"
-ALL_ACTIONS = "all_actions"
 PREDICTED_ACTIONS = "predicted_actions"
 VISIBILITY = "others_visibility"
 VISIBILITY_MATRIX = "visibility_matrix"
@@ -73,13 +72,12 @@ class MOALoss(object):
             A scalar loss tensor (cross-entropy loss).
         """
         # Remove the first prediction, as this value contains no sensible data.
-        # This is done because the pred_logits are delayed by one timestep.
+        # In other words, pred_logits[n] contains the prediction made at n-1 for actions taken at n,
+        # and a prediction for t=0 cannot have been made at timestep -1, as we start time at 0.
         action_logits = pred_logits[1:, :, :]  # [B, N, A]
 
-        # Remove first agent (self) and first action, because we want to predict
-        # the t+1 actions of other agents from all actions at t.
-        # true_actions are not delayed like pred_logits
-        true_actions = tf.cast(true_actions[1:, 1:], tf.int32)  # [B, N]
+        # Remove the first true action, as there can be no prediction for this.
+        true_actions = tf.cast(true_actions[1:, :], tf.int32)  # [B, N]
 
         # Compute softmax cross entropy
         self.ce_per_entry = tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -100,7 +98,7 @@ def setup_moa_loss(logits, policy, train_batch):
     # Instantiate the prediction loss
     moa_preds = train_batch[PREDICTED_ACTIONS]
     moa_preds = tf.reshape(moa_preds, [-1, policy.model.num_other_agents, logits.shape[-1]])
-    true_actions = train_batch[ALL_ACTIONS]
+    true_actions = train_batch[OTHERS_ACTIONS]
     # 0/1 multiplier array representing whether each agent is visible to
     # the current agent.
     if policy.train_moa_only_when_visible:
@@ -118,12 +116,6 @@ def setup_moa_loss(logits, policy, train_batch):
 
 
 def moa_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, episode=None):
-    # Extract matrix of self and other agents' actions.
-    own_actions = np.atleast_2d(np.array(sample_batch["actions"]))
-    own_actions = np.reshape(own_actions, [-1, 1])
-    all_actions = np.hstack((own_actions, sample_batch[OTHERS_ACTIONS]))
-    sample_batch[ALL_ACTIONS] = all_actions
-
     # Weigh social influence reward and add to batch.
     sample_batch = weigh_and_add_influence_reward(policy, sample_batch)
 
