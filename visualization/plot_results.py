@@ -149,7 +149,7 @@ def plot_csvs_results(paths):
         PlotGraphics("total_loss", "Total loss", "yellow"),
         PlotGraphics("moa_loss", "MOA loss", "black"),
         PlotGraphics("scm_loss", "SCM loss", "black"),
-        PlotGraphics("total_influence_reward", "MOA reward", "black"),
+        PlotGraphics("social_influence_reward", "MOA reward", "black"),
         PlotGraphics("social_curiosity_reward", "Curiosity reward", "black"),
         PlotGraphics("cur_influence_reward_weight", "Influence reward weight", "orange"),
         PlotGraphics("cur_curiosity_reward_weight", "Curiosity reward weight", "orange"),

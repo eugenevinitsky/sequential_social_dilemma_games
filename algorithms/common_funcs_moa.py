@@ -14,7 +14,7 @@ ALL_ACTIONS = "all_actions"
 PREDICTED_ACTIONS = "predicted_actions"
 VISIBILITY = "others_visibility"
 VISIBILITY_MATRIX = "visibility_matrix"
-SOCIAL_INFLUENCE_REWARD = "total_influence_reward"
+SOCIAL_INFLUENCE_REWARD = "social_influence_reward"
 EXTRINSIC_REWARD = "extrinsic_reward"
 
 # Frozen logits of the policy that computed the action
