@@ -200,28 +200,30 @@ class MOAModel(RecurrentTFModelV2):
         prev_agent_actions = tf.cast(tf.reshape(input_dict["prev_actions"], [-1, 1]), tf.int32)
         # Use the agent's actions as indices to select the predicted logits of other agents for
         # actions that the agent did take, discard the rest.
-        true_logits = tf.gather_nd(
+        predicted_logits = tf.gather_nd(
             params=prev_counterfactual_logits, indices=prev_agent_actions, batch_dims=1
         )
 
-        true_probs = tf.reshape(true_logits, [-1, self.num_other_agents, self.num_outputs])
-        true_probs = tf.nn.softmax(true_probs)
-        true_probs = true_probs / tf.reduce_sum(
-            true_probs, axis=-1, keepdims=True
+        predicted_logits = tf.reshape(
+            predicted_logits, [-1, self.num_other_agents, self.num_outputs]
+        )
+        predicted_logits = tf.nn.softmax(predicted_logits)
+        predicted_logits = predicted_logits / tf.reduce_sum(
+            predicted_logits, axis=-1, keepdims=True
         )  # reduce numerical inaccuracies
 
         # Get marginal predictions where effect of self is marginalized out
-        marginal_probs = self.marginalize_predictions_over_own_actions(
+        marginal_logits = self.marginalize_predictions_over_own_actions(
             prev_action_logits, prev_counterfactual_logits
         )  # [B, Num agents, Num actions]
 
         # Compute influence per agent/step ([B, N]) using different metrics
         if self.influence_divergence_measure == "kl":
-            influence_reward = self.kl_div(true_probs, marginal_probs)
+            influence_reward = self.kl_div(predicted_logits, marginal_logits)
         elif self.influence_divergence_measure == "jsd":
-            mean_probs = 0.5 * (true_probs + marginal_probs)
-            influence_reward = 0.5 * self.kl_div(true_probs, mean_probs) + 0.5 * self.kl_div(
-                marginal_probs, mean_probs
+            mean_probs = 0.5 * (predicted_logits + marginal_logits)
+            influence_reward = 0.5 * self.kl_div(predicted_logits, mean_probs) + 0.5 * self.kl_div(
+                marginal_logits, mean_probs
             )
         else:
             sys.exit("Please specify an influence divergence measure from [kl, jsd]")
