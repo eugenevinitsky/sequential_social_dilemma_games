@@ -124,9 +124,13 @@ def moa_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, e
 
 def weigh_and_add_influence_reward(policy, sample_batch):
     cur_influence_reward_weight = policy.compute_influence_reward_weight()
-    influence = sample_batch[SOCIAL_INFLUENCE_REWARD]
+    # Since the reward calculation is delayed by 1 step, sample_batch[SOCIAL_INFLUENCE_REWARD][0]
+    # contains the reward for timestep -1, which does not exist. Hence we shift the array.
+    # Then, pad with a 0-value at the end to make the influence rewards align with sample_batch.
+    # This leaks some information about the episode end though.
+    influence = np.concatenate((sample_batch[SOCIAL_INFLUENCE_REWARD][1:], [0]))
 
-    # Summarize and clip influence reward
+    # Clip and weigh influence reward
     influence = np.clip(influence, -policy.influence_reward_clip, policy.influence_reward_clip)
     influence = influence * cur_influence_reward_weight
 

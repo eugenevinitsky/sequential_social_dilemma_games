@@ -196,7 +196,7 @@ class MOAModel(RecurrentTFModelV2):
         # extract out the probability under the actions we actually did take
 
         # We don't have the current action yet, so the reward for the previous step is calculated.
-        # This is corrected for in the loss function.
+        # This is corrected for in the function weigh_and_add_influence_reward
         prev_agent_actions = tf.cast(tf.reshape(input_dict["prev_actions"], [-1, 1]), tf.int32)
         # Use the agent's actions as indices to select the predicted logits of other agents for
         # actions that the agent did take, discard the rest.
