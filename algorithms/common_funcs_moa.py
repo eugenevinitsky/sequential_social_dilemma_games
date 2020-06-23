@@ -71,13 +71,16 @@ class MOALoss(object):
         Returns:
             A scalar loss tensor (cross-entropy loss).
         """
-        # Remove the first prediction, as this value contains no sensible data.
-        # In other words, pred_logits[n] contains the prediction made at n-1 for actions taken at n,
-        # and a prediction for t=0 cannot have been made at timestep -1, as we start time at 0.
-        action_logits = pred_logits[1:, :, :]  # [B, N, A]
+        # Pred_logits[n] contains the prediction made at n-1 for actions taken at n, and a prediction
+        # for t=0 cannot have been made at timestep -1, as the simulation starts at timestep 0.
+        # Thus we remove the first prediction, as this value contains no sensible data.
+        # NB: This means we start at n=1.
+        action_logits = pred_logits[1:-1, :, :]  # [B, N, A]
 
-        # Remove the first true action, as there can be no prediction for this.
-        true_actions = tf.cast(true_actions[1:, :], tf.int32)  # [B, N]
+        # true_actions[n] contains the actions made by other agents at n-1.
+        # Therefore, true_actions[2] contains actions made at time 1,
+        # which is where action_logits starts.
+        true_actions = tf.cast(true_actions[2:, :], tf.int32)  # [B, N]
 
         # Compute softmax cross entropy
         self.ce_per_entry = tf.nn.sparse_softmax_cross_entropy_with_logits(
@@ -86,10 +89,12 @@ class MOALoss(object):
 
         # Zero out the loss if the other agent isn't visible to this one.
         if others_visibility is not None:
-            # Remove first entry in ground truth visibility and flatten
-            others_visibility = others_visibility[1:, :]
+            # others_visibility[n] contains agents visible at time n. We start at n=1,
+            # so the first and last values have to be removed to maintain equal array size.
+            others_visibility = others_visibility[1:-1, :]
             self.ce_per_entry *= tf.cast(others_visibility, tf.float32)
 
+        # Flatten loss to one value for the entire batch
         self.total_loss = tf.reduce_mean(self.ce_per_entry) * loss_weight
         tf.Print(self.total_loss, [self.total_loss], message="MOA CE loss")
 
