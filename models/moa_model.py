@@ -230,7 +230,7 @@ class MOAModel(RecurrentTFModelV2):
 
         # Zero out influence for steps where the other agent isn't visible.
         if self.influence_only_when_visible:
-            visibility = tf.cast(input_dict["obs"]["visible_agents"], tf.float32)
+            visibility = tf.cast(input_dict["obs"]["prev_visible_agents"], tf.float32)
             influence_reward *= visibility
         influence_reward = tf.reduce_sum(influence_reward, axis=-1)
         self._social_influence_reward = influence_reward

@@ -138,6 +138,9 @@ class MapEnv(MultiAgentEnv):
                     low=0, high=len(self.all_actions), shape=(self.num_agents - 1,), dtype=np.uint8,
                 ),
                 "visible_agents": Box(low=0, high=1, shape=(self.num_agents - 1,), dtype=np.uint8,),
+                "prev_visible_agents": Box(
+                    low=0, high=1, shape=(self.num_agents - 1,), dtype=np.uint8,
+                ),
             }
         obs_space = Dict(obs_space)
         # Change dtype so that ray can put all observations into one flat batch
@@ -255,11 +258,14 @@ class MapEnv(MultiAgentEnv):
                 prev_actions = np.array(
                     [actions[key] for key in sorted(actions.keys()) if key != agent.agent_id]
                 ).astype(np.uint8)
+                visible_agents = self.find_visible_agents(agent.agent_id)
                 observations[agent.agent_id] = {
                     "curr_obs": rgb_arr,
                     "other_agent_actions": prev_actions,
-                    "visible_agents": self.find_visible_agents(agent.agent_id),
+                    "visible_agents": visible_agents,
+                    "prev_visible_agents": agent.prev_visible_agents,
                 }
+                agent.prev_visible_agents = visible_agents
             else:
                 observations[agent.agent_id] = {"curr_obs": rgb_arr}
             rewards[agent.agent_id] = agent.compute_reward()
@@ -294,13 +300,16 @@ class MapEnv(MultiAgentEnv):
             rgb_arr = self.color_view(agent)
             # concatenate on the prev_actions to the observations
             if self.return_agent_actions:
-                # No previous actions so just pass in zeros
-                prev_actions = np.array([0 for _ in range(self.num_agents - 1)]).astype(np.uint8)
+                # No previous actions so just pass in "wait" action
+                prev_actions = np.array([4 for _ in range(self.num_agents - 1)]).astype(np.uint8)
+                visible_agents = self.find_visible_agents(agent.agent_id)
                 observations[agent.agent_id] = {
                     "curr_obs": rgb_arr,
                     "other_agent_actions": prev_actions,
-                    "visible_agents": self.find_visible_agents(agent.agent_id),
+                    "visible_agents": visible_agents,
+                    "prev_visible_agents": visible_agents,
                 }
+                agent.prev_visible_agents = visible_agents
             else:
                 observations[agent.agent_id] = {"curr_obs": rgb_arr}
         return observations
