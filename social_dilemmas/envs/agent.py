@@ -42,6 +42,7 @@ class Agent(object):
         self.row_size = row_size
         self.col_size = col_size
         self.reward_this_turn = 0
+        self.prev_visible_agents = None
 
     @property
     def action_space(self):

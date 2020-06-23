@@ -263,7 +263,7 @@ class MapEnv(MultiAgentEnv):
                     "curr_obs": rgb_arr,
                     "other_agent_actions": prev_actions,
                     "visible_agents": visible_agents,
-                    "prev_visible_agents": agent.prev_visible_agents,
+                    "prev_visible_agents": agent.prev_visible_agents or visible_agents,
                 }
                 agent.prev_visible_agents = visible_agents
             else:
