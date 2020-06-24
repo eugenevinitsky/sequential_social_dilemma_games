@@ -59,7 +59,7 @@ class SocialCuriosityModule(MOAModel):
         encoder_output_size = encoder.output_shape[-1]
         inputs = [
             self.create_encoded_input_layer(encoder_output_size, "encoded_input_now"),
-            self.create_action_input_layer(),
+            self.create_action_input_layer(self.action_space.n, self.num_other_agents + 1),
             self.create_lstm_input_layer(model_config),
             tf.keras.layers.Input(shape=1, name="influence_reward_input"),
         ]
