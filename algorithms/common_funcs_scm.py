@@ -77,8 +77,10 @@ class SCMLoss(object):
         Returns:
             A scalar loss tensor.
         """
-        # Remove the first value, as this contains no sensible value.
-        loss = forward_loss[1:] * forward_loss_weight + inverse_loss[1:] * inverse_loss_weight
+        # Remove the first value, as this contains no sensible data.
+        loss = tf.reduce_mean(
+            forward_loss[1:] * forward_loss_weight + inverse_loss[1:] * inverse_loss_weight
+        )
 
         self.total_loss = loss * scm_loss_weight
 
@@ -108,7 +110,8 @@ def weigh_and_add_curiosity_reward(policy, sample_batch):
     """Compute curiosity of this agent and add to rewards.
     """
     cur_curiosity_reward_weight = policy.compute_curiosity_reward_weight()
-    curiosity_reward = sample_batch[SOCIAL_CURIOSITY_REWARD]
+    # Align the reward, as the reward for timestep n is calculated at timestep n+1.
+    curiosity_reward = np.concatenate((sample_batch[SOCIAL_CURIOSITY_REWARD][1:], [0]))
 
     # Clip curiosity reward
     reward = np.clip(curiosity_reward, -policy.curiosity_reward_clip, policy.curiosity_reward_clip)

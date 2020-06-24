@@ -81,8 +81,6 @@ class SocialCuriosityModule(MOAModel):
     #         Actions at t,
     #         MOA LSTM output at t]
     # Output: Predicted social influence at t
-    # Note that this is different from the paper: we can only work with historical values, so the
-    # results of this model are "behind" by 1 timestep, which is corrected for in the loss function.
     def create_inverse_model(self, model_config, encoder):
         encoder_output_size = encoder.output_shape[-1]
         inputs = [
@@ -133,25 +131,28 @@ class SocialCuriosityModule(MOAModel):
 
         # TODO(@internetcoffeephone): Change state[7] magic number to something that does not depend
         #  on the order
+        # Note that the inputs are different from the paper: we can only work with historical values,
+        # so the inputs of the forward and inverse models are "behind" by 1 timestep, which is
+        # corrected for in the reward function.
         forward_model_input = {
-            # Encoded state at t
+            # Encoded state at t-1
             "encoded_input_now": state[7],
-            # Social influence at t
+            # Social influence at t-1
             "influence_reward_input": influence_reward,
-            # Actions at t
+            # Actions at t-1
             "action_input": one_hot_actions,
-            # MOA LSTM output at t
+            # MOA LSTM output at t-1
             "lstm_input": lstm_input,
         }
 
         inverse_model_input = {
-            # Encoded state at t
+            # Encoded state at t-1
             "encoded_input_now": state[7],
-            # Encoded state at t + 1
+            # Encoded state at t
             "encoded_input_next": encoded_state,
-            # Actions at t
+            # Actions at t-1
             "action_input": one_hot_actions,
-            # MOA LSTM output at t
+            # MOA LSTM output at t-1
             "lstm_input": lstm_input,
         }
 
@@ -159,12 +160,11 @@ class SocialCuriosityModule(MOAModel):
         inverse_model_output = self.inverse_model(inverse_model_input)
 
         curiosity_reward = self.compute_curiosity_reward(encoded_state, forward_model_output)
-        curiosity_reward = tf.reduce_sum(curiosity_reward, axis=-1)
+        curiosity_reward = tf.reshape(curiosity_reward, [-1])
         self._social_curiosity_reward = curiosity_reward
 
-        self._inverse_model_loss = self.compute_inverse_model_loss(
-            influence_reward, inverse_model_output
-        )
+        inverse_model_loss = self.compute_inverse_model_loss(influence_reward, inverse_model_output)
+        self._inverse_model_loss = tf.reshape(inverse_model_loss, [-1])
 
         return output, new_state
 
