@@ -13,11 +13,6 @@ class SocialCuriosityModule(MOAModel):
         super(SocialCuriosityModule, self).__init__(
             obs_space, action_space, num_outputs, model_config, name
         )
-
-        self._encoded_state = None
-        self._current_lstm_hidden_state = None
-        self._forward_model_output = None
-        self._inverse_model_output = None
         self._social_curiosity_reward = None
         self._inverse_model_loss = None
 
@@ -126,8 +121,8 @@ class SocialCuriosityModule(MOAModel):
     def forward(self, input_dict, state, seq_lens):
         output, new_state = super(SocialCuriosityModule, self).forward(input_dict, state, seq_lens)
 
-        self._encoded_state = self.scm_encoder_model(input_dict["obs"]["curr_obs"])
-        new_state.append(self._encoded_state)
+        encoded_state = self.scm_encoder_model(input_dict["obs"]["curr_obs"])
+        new_state.append(encoded_state)
 
         influence_reward = tf.expand_dims(self._social_influence_reward, axis=-1)
         one_hot_actions = tf.reshape(
@@ -154,24 +149,22 @@ class SocialCuriosityModule(MOAModel):
             # Encoded state at t
             "encoded_input_now": state[7],
             # Encoded state at t + 1
-            "encoded_input_next": self._encoded_state,
+            "encoded_input_next": encoded_state,
             # Actions at t
             "action_input": one_hot_actions,
             # MOA LSTM output at t
             "lstm_input": lstm_input,
         }
 
-        self._forward_model_output = self.forward_model(forward_model_input)
-        self._inverse_model_output = self.inverse_model(inverse_model_input)
+        forward_model_output = self.forward_model(forward_model_input)
+        inverse_model_output = self.inverse_model(inverse_model_input)
 
-        curiosity_reward = self.compute_curiosity_reward(
-            self._encoded_state, self._forward_model_output
-        )
+        curiosity_reward = self.compute_curiosity_reward(encoded_state, forward_model_output)
         curiosity_reward = tf.reduce_sum(curiosity_reward, axis=-1)
         self._social_curiosity_reward = curiosity_reward
 
         self._inverse_model_loss = self.compute_inverse_model_loss(
-            influence_reward, self._inverse_model_output
+            influence_reward, inverse_model_output
         )
 
         return output, new_state
@@ -192,15 +185,6 @@ class SocialCuriosityModule(MOAModel):
         squared_difference = tf.squared_difference(true_tensor, pred_tensor)
         mse = tf.reduce_mean(squared_difference, axis=-1, keepdims=True)
         return mse
-
-    def true_encoded_observations(self):
-        return self._encoded_state
-
-    def forward_model_output(self):
-        return self._forward_model_output
-
-    def inverse_model_output(self):
-        return self._inverse_model_output
 
     def social_curiosity_reward(self):
         return self._social_curiosity_reward
