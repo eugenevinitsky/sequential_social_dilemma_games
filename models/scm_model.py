@@ -88,7 +88,7 @@ class SocialCuriosityModule(MOAModel):
         inputs = [
             self.create_encoded_input_layer(encoder_output_size, "encoded_input_now"),
             self.create_encoded_input_layer(encoder_output_size, "encoded_input_next"),
-            self.create_action_input_layer(),
+            self.create_action_input_layer(self.action_space.n, self.num_other_agents + 1),
             self.create_lstm_input_layer(model_config),
         ]
         inputs_concatenated = tf.keras.layers.concatenate(inputs)
@@ -113,10 +113,9 @@ class SocialCuriosityModule(MOAModel):
         cell_size = model_config["custom_options"].get("cell_size")
         return tf.keras.layers.Input(shape=cell_size, name="lstm_input")
 
-    def create_action_input_layer(self):
-        return tf.keras.layers.Input(
-            shape=(self.action_space.n * (self.num_other_agents + 1)), name="action_input"
-        )
+    @staticmethod
+    def create_action_input_layer(action_space_size, num_agents):
+        return tf.keras.layers.Input(shape=(action_space_size * num_agents), name="action_input")
 
     def forward(self, input_dict, state, seq_lens):
         output, new_state = super(SocialCuriosityModule, self).forward(input_dict, state, seq_lens)
