@@ -252,13 +252,11 @@ class MOAModel(RecurrentTFModelV2):
         )
 
         counterfactual_logits = tf.nn.softmax(counterfactual_logits)
-        # Sum over the counterfactual actions
-        summed_counterfactual_logits = tf.reduce_sum(counterfactual_logits, axis=-3)
-
-        logits = tf.expand_dims(logits, axis=-2)
-        logits = tf.tile(logits, [1, self.num_other_agents, 1])
-        # Multiply by probability of each action to renormalize probability
-        marginal_probs = logits * summed_counterfactual_logits
+        # Change shape to broadcast probability of each action over counterfactual actions
+        logits = tf.reshape(logits, [-1, self.num_outputs, 1, 1])
+        normalized_counterfactual_logits = logits * counterfactual_logits
+        # Remove counterfactual action dimension
+        marginal_probs = tf.reduce_sum(normalized_counterfactual_logits, axis=-3)
 
         # Normalize to reduce numerical inaccuracies
         marginal_probs = marginal_probs / tf.reduce_sum(marginal_probs, axis=-1, keepdims=True)
