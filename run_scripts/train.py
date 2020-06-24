@@ -163,8 +163,8 @@ def build_experiment_config_dict(args):
                 "num_sgd_iter": 10,
                 "sgd_minibatch_size": args.ppo_sgd_minibatch_size
                 if args.ppo_sgd_minibatch_size is not None
-                else train_batch_size / 2,
-                "vf_loss_coeff": 0.5,
+                else train_batch_size / 4,
+                "vf_loss_coeff": 1e-4,
                 "vf_share_layers": True,
             }
         )
