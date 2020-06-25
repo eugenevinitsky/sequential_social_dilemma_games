@@ -39,6 +39,10 @@ tf = try_import_tf()
 
 
 def loss_with_scm(policy, model, dist_class, train_batch):
+    """
+    Calculate PPO loss with SCM and MOA loss
+    :return: Combined PPO+MOA+SCM loss
+    """
     _ = loss_with_moa(policy, model, dist_class, train_batch)
 
     scm_loss = setup_scm_loss(policy, train_batch)
@@ -49,7 +53,21 @@ def loss_with_scm(policy, model, dist_class, train_batch):
     return policy.loss_obj.loss
 
 
+def extra_scm_fetches(policy):
+    """
+    Adds value function, logits, moa predictions, SCM loss/reward to experience train_batches.
+    :return: Updated fetches
+    """
+    ppo_fetches = extra_moa_fetches(policy)
+    ppo_fetches.update(scm_fetches(policy))
+    return ppo_fetches
+
+
 def extra_scm_stats(policy, train_batch):
+    """
+    Add stats that are logged in progress.csv
+    :return: Combined PPO+MOA+SCM stats
+    """
     scm_stats = extra_moa_stats(policy, train_batch)
     scm_stats = {
         **scm_stats,
@@ -62,15 +80,12 @@ def extra_scm_stats(policy, train_batch):
     return scm_stats
 
 
-def extra_scm_fetches(policy):
-    """Adds value function, logits, moa predictions to experience train_batches."""
-    ppo_fetches = extra_moa_fetches(policy)
-    ppo_fetches.update(scm_fetches(policy))
-    return ppo_fetches
-
-
 def postprocess_ppo_scm(policy, sample_batch, other_agent_batches=None, episode=None):
-    """Adds the policy logits, VF preds, and advantages to the trajectory."""
+    """
+    Add the influence and curiosity reward to the trajectory.
+    Then, add the policy logits, VF preds, and advantages to the trajectory.
+    :return: Updated trajectory (batch)
+    """
     batch = moa_postprocess_trajectory(policy, sample_batch)
     batch = scm_postprocess_trajectory(policy, batch)
     batch = postprocess_ppo_gae(policy, batch)
@@ -78,17 +93,29 @@ def postprocess_ppo_scm(policy, sample_batch, other_agent_batches=None, episode=
 
 
 def setup_ppo_scm_mixins(policy, obs_space, action_space, config):
+    """
+        Calls init on all PPO+MOA+SCM mixins in the policy
+        """
     setup_ppo_moa_mixins(policy, obs_space, action_space, config)
     setup_scm_mixins(policy, obs_space, action_space, config)
 
 
 def validate_ppo_scm_config(config):
+    """
+    Validates the PPO+MOA+SCM config
+    :param config: The config to validate
+    """
     validate_scm_config(config)
     validate_moa_config(config)
     validate_config(config)
 
 
 def build_ppo_scm_trainer(scm_config):
+    """
+    Creates a SCM+MOA+PPO policy class, then creates a trainer with this policy.
+    :param scm_config: The configuration dictionary.
+    :return: A new SCM+MOA+PPO trainer.
+    """
     tf.keras.backend.set_floatx("float32")
 
     trainer_name = "SCMPPOTrainer"

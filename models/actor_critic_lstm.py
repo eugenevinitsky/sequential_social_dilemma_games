@@ -9,11 +9,19 @@ tf = try_import_tf()
 
 
 class ActorCriticLSTM(RecurrentTFModelV2):
-    """Maps the input direct to an LSTM cell"""
-
     def __init__(
         self, obs_space, action_space, num_outputs, model_config, name, cell_size=64,
     ):
+        """
+        Create a LSTM with an actor-critic output: an output head with size num_outputs for the
+        policy, and an output head of size 1 for the value function.
+        :param obs_space: The size of the previous layer.
+        :param action_space: The amount of actions available to the agent.
+        :param num_outputs: The amount of actions available to the agent.
+        :param model_config: The config dict for the model, unused.
+        :param name: The name of the model.
+        :param cell_size: The amount of LSTM units.
+        """
         super(ActorCriticLSTM, self).__init__(
             obs_space, action_space, num_outputs, model_config, name
         )
@@ -45,6 +53,13 @@ class ActorCriticLSTM(RecurrentTFModelV2):
 
     @override(RecurrentTFModelV2)
     def forward_rnn(self, input_dict, state, seq_lens):
+        """
+        Forward pass through the LSTM.
+        :param input_dict: The input tensors.
+        :param state: The model state.
+        :param seq_lens: LSTM sequence lengths.
+        :return: The model output.
+        """
         input = [input_dict["curr_obs"], seq_lens] + state
 
         model_out, self._value_out, h, c = self.rnn_model(input)
@@ -52,6 +67,9 @@ class ActorCriticLSTM(RecurrentTFModelV2):
 
     @override(ModelV2)
     def get_initial_state(self):
+        """
+        :return: Initial state of this model: all-zeros for the LSTM layer's hidden and cell states.
+        """
         return [
             np.zeros(self.cell_size, np.float32),
             np.zeros(self.cell_size, np.float32),

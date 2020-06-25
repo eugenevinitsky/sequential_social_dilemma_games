@@ -14,11 +14,19 @@ tf = try_import_tf()
 
 
 class MOAModel(RecurrentTFModelV2):
-    """An model with convolutional layers connected to two distinct sequences of fully connected
-    layers. These then connect to a respective LSTM, one for an actor-critic policy, and one for
-    modeling the actions of other agents (MOA)"""
-
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+        """
+        A model with convolutional layers connected to two distinct sequences of fully connected
+        layers. These then each connect to their own respective LSTM, one for an actor-critic policy,
+        and one for modeling the actions of other agents (MOA).
+        :param obs_space: The agent's observation space.
+        :param action_space: The agent's action space.
+        :param num_outputs: The amount of actions available to the agent.
+        :param model_config: The model config dict. Contains settings dictating layer sizes/amounts,
+        amount of other agents, divergence measure used for social influence, and other experiment
+        parameters.
+        :param name: The model name.
+        """
         super(MOAModel, self).__init__(obs_space, action_space, num_outputs, model_config, name)
 
         self.obs_space = obs_space
@@ -85,6 +93,13 @@ class MOAModel(RecurrentTFModelV2):
 
     @staticmethod
     def create_moa_encoder_model(obs_space, model_config):
+        """
+        Creates the convolutional part of the MOA model.
+        Also casts the input uint8 observations to float32 and normalizes them to the range [0,1].
+        :param obs_space: The agent's observation space.
+        :param model_config: The config dict containing parameters for the convolution type/shape.
+        :return: A new Model object containing the convolution.
+        """
         original_obs_dims = obs_space.original_space.spaces["curr_obs"].shape
         inputs = tf.keras.layers.Input(original_obs_dims, name="observations", dtype=tf.uint8)
 
@@ -105,8 +120,14 @@ class MOAModel(RecurrentTFModelV2):
 
     @override(ModelV2)
     def forward(self, input_dict, state, seq_lens):
-        """ First evaluate non-lstm parts of model. Then add a time dimension to the batch before
-         sending inputs to forward_rnn()"""
+        """
+        First evaluate non-LSTM parts of model. Then add a time dimension to the batch before
+        sending inputs to forward_rnn(), which evaluates the LSTM parts of the model.
+        :param input_dict: The input tensors.
+        :param state: The model state.
+        :param seq_lens: LSTM sequence lengths.
+        :return: The agent's own action logits and the new model state.
+        """
         # Evaluate non-lstm layers
         actor_critic_fc_output, moa_fc_output = self.moa_encoder_model(input_dict["obs"]["curr_obs"])
 
@@ -135,6 +156,14 @@ class MOAModel(RecurrentTFModelV2):
         return action_logits, new_state
 
     def forward_rnn(self, input_dict, state, seq_lens):
+        """
+        Forward pass through the MOA LSTMs.
+        Implicitly assigns the value function output to self_value_out, and does not return this.
+        :param input_dict: The input tensors.
+        :param state: The model state.
+        :param seq_lens: LSTM sequence lengths.
+        :return: The policy logits and new LSTM states.
+        """
         # Evaluate the actor-critic model
         pass_dict = {"curr_obs": input_dict["ac_trunk"]}
         h1, c1, h2, c2, *_ = state
@@ -189,7 +218,12 @@ class MOAModel(RecurrentTFModelV2):
         return self._model_out, [output_h1, output_c1, output_h2, output_c2]
 
     def compute_influence_reward(self, input_dict, prev_action_logits, counterfactual_logits):
-        """Compute influence of this agent on other agents and add to rewards.
+        """
+        Compute influence of this agent on other agents.
+        :param input_dict: The model input tensors.
+        :param prev_action_logits: Logits for the agent's own policy/actions at t-1
+        :param counterfactual_logits: The counterfactual action logits for actions made by other
+        agents at t.
         """
         # Probability of the next action for all other agents. Shape is [B, N, A].
         # This is the predicted probability given the actions that we DID take.
@@ -235,9 +269,14 @@ class MOAModel(RecurrentTFModelV2):
         influence_reward = tf.reduce_sum(influence_reward, axis=-1)
         self._social_influence_reward = influence_reward
 
-    def marginalize_predictions_over_own_actions(
-        self, prev_action_logits, prev_counterfactual_logits
-    ):
+    def marginalize_predictions_over_own_actions(self, prev_action_logits, counterfactual_logits):
+        """
+        Calculates marginal policies for all other agents.
+        :param prev_action_logits: The agent's own policy logits at time t-1 .
+        :param counterfactual_logits: The counterfactual action predictions made at time t-1 for
+        other agents' actions at t.
+        :return: The marginal policies for all other agents.
+        """
         # Probability of each action in original trajectory
         logits = tf.nn.softmax(prev_action_logits)
 
@@ -247,8 +286,7 @@ class MOAModel(RecurrentTFModelV2):
         # Indexing is currently [B, Agent actions, num_other_agents * other_agent_logits]
         # Change to [B, Agent actions, num other agents, other agent logits]
         counterfactual_logits = tf.reshape(
-            prev_counterfactual_logits,
-            [-1, self.num_outputs, self.num_other_agents, self.num_outputs],
+            counterfactual_logits, [-1, self.num_outputs, self.num_other_agents, self.num_outputs],
         )
 
         counterfactual_logits = tf.nn.softmax(counterfactual_logits)
@@ -265,6 +303,13 @@ class MOAModel(RecurrentTFModelV2):
 
     @staticmethod
     def kl_div(x, y):
+        """
+        Calculate KL divergence between two distributions.
+        :param x: A distribution
+        :param y: A distribution
+        :return: The KL-divergence between x and y. Returns zeros if the KL-divergence contains NaN
+        or Infinity.
+        """
         dist_x = tf.distributions.Categorical(probs=x)
         dist_y = tf.distributions.Categorical(probs=y)
         result = tf.distributions.kl_divergence(dist_x, dist_y)

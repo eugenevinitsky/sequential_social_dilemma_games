@@ -11,12 +11,20 @@ class MoaLSTM(RecurrentTFModelV2):
     def __init__(
         self, obs_space, action_space, num_outputs, model_config, name, cell_size=64,
     ):
+        """
+        The LSTM in the Model of Other Agents head.
+        :param obs_space: The size of the previous fully-connected layer.
+        :param action_space: The action space of a single agent.
+        :param num_outputs: The number of outputs. Normally num_other_agents * action_space.
+        :param model_config: The model config dict.
+        :param name: The model name.
+        :param cell_size: The amount of LSTM units.
+        """
         super(MoaLSTM, self).__init__(obs_space, action_space, num_outputs, model_config, name)
 
         self.cell_size = cell_size
 
         # Define input layers
-        # TODO(@evinitsky) add in an option for prev_action_reward
         obs_input_layer = tf.keras.layers.Input(shape=(None, obs_space), name="obs_inputs")
 
         actions_layer = tf.keras.layers.Input(
@@ -48,6 +56,13 @@ class MoaLSTM(RecurrentTFModelV2):
 
     @override(RecurrentTFModelV2)
     def forward_rnn(self, input_dict, state, seq_lens):
+        """
+        Forward pass through the MOA LSTM.
+        :param input_dict: The input tensors.
+        :param state: The model state.
+        :param seq_lens: LSTM sequence lengths.
+        :return: The MOA predictions and new state.
+        """
         rnn_input = [input_dict["curr_obs"], seq_lens] + state
         rnn_input.insert(1, input_dict["prev_total_actions"])
         model_out, h, c = self.rnn_model(rnn_input)
@@ -55,6 +70,14 @@ class MoaLSTM(RecurrentTFModelV2):
 
     @override(ModelV2)
     def get_initial_state(self):
+        """
+        The state is supposed to be used for LSTMs, but is abused somewhat to transfer over
+        calculations from previous model evaluations.
+        :return: Initial state of this model.
+        [0] and [1] are LSTM state.
+        [2] is action logits.
+        [3] is the FC output feeding into the LSTM.
+        """
         return [
             np.zeros(self.cell_size, np.float32),
             np.zeros(self.cell_size, np.float32),

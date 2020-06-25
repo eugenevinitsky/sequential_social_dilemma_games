@@ -10,6 +10,15 @@ tf = try_import_tf()
 
 class SocialCuriosityModule(MOAModel):
     def __init__(self, obs_space, action_space, num_outputs, model_config, name):
+        """
+        An extension of the MOA, including a forward and inverse model that together create a
+        "social curiosity reward".
+        :param obs_space: The agent's observation space.
+        :param action_space: The agent's action space.
+        :param num_outputs: The amount of actions available to the agent.
+        :param model_config: The model config dict.
+        :param name: The model name.
+        """
         super(SocialCuriosityModule, self).__init__(
             obs_space, action_space, num_outputs, model_config, name
         )
@@ -28,6 +37,12 @@ class SocialCuriosityModule(MOAModel):
 
     @staticmethod
     def create_scm_encoder_model(obs_space, model_config):
+        """
+        Create the encoder submodel, which is part of the SCM.
+        :param obs_space: A single agent's observation space.
+        :param model_config: The model config dict.
+        :return: A new encoder model.
+        """
         original_obs_dims = obs_space.original_space.spaces["curr_obs"].shape
         input_layer = tf.keras.layers.Input(original_obs_dims, name="observations", dtype=tf.uint8)
 
@@ -50,12 +65,18 @@ class SocialCuriosityModule(MOAModel):
 
         return tf.keras.Model(input_layer, flattened_conv_out, name="SCM_Encoder_Model")
 
-    # Inputs: [Encoded state at t,
-    #          Actions at t,
-    #          LSTM output at t,
-    #          Social influence at t]
-    # Output: Predicted encoded state at t+1
     def create_forward_model(self, model_config, encoder):
+        """
+        Create the forward submodel of the SCM.
+        Inputs: [Encoded state at t - 1,
+                 Actions at t - 1,
+                 LSTM output at t - 1,
+                 Social influence at t - 1]
+        Output: Predicted encoded state at t
+        :param model_config: The model config dict.
+        :param encoder: The SCM encoder submodel.
+        :return: A new forward model.
+        """
         encoder_output_size = encoder.output_shape[-1]
         inputs = [
             self.create_encoded_input_layer(encoder_output_size, "encoded_input_now"),
@@ -76,12 +97,18 @@ class SocialCuriosityModule(MOAModel):
 
         return tf.keras.Model(inputs, output_layer, name="SCM_Forward_Model")
 
-    # Inputs:[Encoded state at t + 1,
-    #         Encoded state at t,
-    #         Actions at t,
-    #         MOA LSTM output at t]
-    # Output: Predicted social influence at t
     def create_inverse_model(self, model_config, encoder):
+        """
+        Create the inverse submodel of the SCM.
+        Inputs:[Encoded state at t,
+                Encoded state at t - 1,
+                Actions at t - 1,
+                MOA LSTM output at t - 1]
+        Output: Predicted social influence reward at t - 1
+        :param model_config: The model config dict.
+        :param encoder: The SCM encoder submodel.
+        :return: A new inverse model.
+        """
         encoder_output_size = encoder.output_shape[-1]
         inputs = [
             self.create_encoded_input_layer(encoder_output_size, "encoded_input_now"),
@@ -116,6 +143,13 @@ class SocialCuriosityModule(MOAModel):
         return tf.keras.layers.Input(shape=(action_space_size * num_agents), name="action_input")
 
     def forward(self, input_dict, state, seq_lens):
+        """
+        The forward pass through the SCM network.
+        :param input_dict: The input tensors.
+        :param state: The model state.
+        :param seq_lens: The LSTM sequence lengths.
+        :return: The SCM output and new model state.
+        """
         output, new_state = super(SocialCuriosityModule, self).forward(input_dict, state, seq_lens)
 
         encoded_state = self.scm_encoder_model(input_dict["obs"]["curr_obs"])
@@ -131,9 +165,9 @@ class SocialCuriosityModule(MOAModel):
 
         # TODO(@internetcoffeephone): Change state[6] magic number to something that does not depend
         #  on the order
-        # Note that the inputs are different from the paper: we can only work with historical values,
-        # so the inputs of the forward and inverse models are "behind" by 1 timestep, which is
-        # corrected for in the reward function.
+        # Note that the inputs are different from the paper: we can only work with historical actions
+        # values, so the inputs of the forward and inverse models are "behind" by 1 timestep, which
+        # is corrected for in the reward function.
         forward_model_input = {
             # Encoded state at t-1
             "encoded_input_now": state[6],
@@ -178,9 +212,14 @@ class SocialCuriosityModule(MOAModel):
 
     @staticmethod
     def batched_mse(true_tensor, pred_tensor):
-        """ Calculate the mean square error on a batched tensor.
+        """
+        Calculate the mean square error on a batched tensor.
         The output has the same amount of dimensions as the input,
-        but sets the last dimension to 1."""
+        but sets the last dimension size to 1, which contains the mean.
+        :param true_tensor: The true values
+        :param pred_tensor: The predicted values
+        :return: The mean square error between the true and predicted tensors.
+        """
         squared_difference = tf.squared_difference(true_tensor, pred_tensor)
         mse = tf.reduce_mean(squared_difference, axis=-1, keepdims=True)
         return mse
@@ -193,5 +232,9 @@ class SocialCuriosityModule(MOAModel):
 
     @override(MOAModel)
     def get_initial_state(self):
+        """
+        :return: This model's initial state. Consists of the MOA initial state, plus the output of
+        the encoder at time t.
+        """
         moa_initial_state = super(SocialCuriosityModule, self).get_initial_state()
         return moa_initial_state + [np.zeros(self.scm_encoder_model.output_shape[-1], np.float32)]

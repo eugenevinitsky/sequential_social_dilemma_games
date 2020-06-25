@@ -40,6 +40,10 @@ POLICY_SCOPE = "func"
 
 
 def loss_with_moa(policy, model, dist_class, train_batch):
+    """
+    Calculate PPO loss with MOA loss
+    :return: Combined PPO+MOA loss
+    """
     # you need to override this bit to pull out the right bits from train_batch
     logits, state = model.from_batch(train_batch)
     action_dist = dist_class(logits, model)
@@ -79,13 +83,20 @@ def loss_with_moa(policy, model, dist_class, train_batch):
 
 
 def extra_moa_fetches(policy):
-    """Adds value function, logits, moa predictions to experience train_batches."""
+    """
+    Adds value function, logits, moa predictions to experience train_batches.
+    :return: Updated fetches
+    """
     ppo_fetches = vf_preds_fetches(policy)
     ppo_fetches.update(moa_fetches(policy))
     return ppo_fetches
 
 
 def extra_moa_stats(policy, train_batch):
+    """
+    Add stats that are logged in progress.csv
+    :return: Combined PPO+MOA stats
+    """
     base_stats = kl_and_loss_stats(policy, train_batch)
     base_stats = {
         **base_stats,
@@ -102,14 +113,20 @@ def extra_moa_stats(policy, train_batch):
 
 
 def postprocess_ppo_moa(policy, sample_batch, other_agent_batches=None, episode=None):
-    """Adds the policy logits, VF preds, and advantages to the trajectory."""
-
+    """
+    Add the influence reward to the trajectory.
+    Then, add the policy logits, VF preds, and advantages to the trajectory.
+    :return: Updated trajectory (batch)
+    """
     batch = moa_postprocess_trajectory(policy, sample_batch)
     batch = postprocess_ppo_gae(policy, batch)
     return batch
 
 
 def setup_ppo_moa_mixins(policy, obs_space, action_space, config):
+    """
+    Calls init on all PPO+MOA mixins in the policy
+    """
     ValueNetworkMixin.__init__(policy, obs_space, action_space, config)
     KLCoeffMixin.__init__(policy, config)
     EntropyCoeffSchedule.__init__(policy, config["entropy_coeff"], config["entropy_coeff_schedule"])
@@ -118,11 +135,20 @@ def setup_ppo_moa_mixins(policy, obs_space, action_space, config):
 
 
 def validate_ppo_moa_config(config):
+    """
+    Validates the PPO+MOA config
+    :param config: The config to validate
+    """
     validate_moa_config(config)
     validate_config(config)
 
 
 def build_ppo_moa_trainer(moa_config):
+    """
+    Creates a MOA+PPO policy class, then creates a trainer with this policy.
+    :param moa_config: The configuration dictionary.
+    :return: A new MOA+PPO trainer.
+    """
     tf.keras.backend.set_floatx("float32")
 
     trainer_name = "MOAPPOTrainer"

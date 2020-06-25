@@ -25,6 +25,11 @@ from algorithms.common_funcs_baseline import BaselineResetConfigMixin
 
 
 def build_ppo_baseline_trainer(config):
+    """
+    Creates a PPO policy class, then creates a trainer with this policy.
+    :param config: The configuration dictionary.
+    :return: A new PPO trainer.
+    """
     policy = build_tf_policy(
         name="PPOTFPolicy",
         get_default_config=lambda: config,

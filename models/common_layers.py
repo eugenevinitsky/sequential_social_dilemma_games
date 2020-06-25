@@ -6,6 +6,14 @@ tf = try_import_tf()
 
 
 def build_fc_layers(model_config, last_layer, name):
+    """
+    Create a sequence of fully-connected (dense) layers.
+    :param model_config: The config dict containing information on what fully-connected layers to
+    create.
+    :param last_layer: The layer that feeds into the fully connected layer(s) constructed here.
+    :param name: The FC layer name.
+    :return: The last constructed FC layer.
+    """
     hiddens = model_config.get("fcnet_hiddens")
     activation = get_activation_fn(model_config.get("fcnet_activation"))
     for i, size in enumerate(hiddens):
@@ -19,6 +27,13 @@ def build_fc_layers(model_config, last_layer, name):
 
 
 def build_conv_layers(model_config, last_layer):
+    """
+    Create a sequence of convoluational layers.
+    :param model_config: The config dict containing information on what convolutional layers to
+    create.
+    :param last_layer: The layer that feeds into the convolutional layer(s) constructed here.
+    :return: The last constructed convolutional layer.
+    """
     activation = get_activation_fn(model_config.get("conv_activation"))
     filters = model_config.get("conv_filters")
     for i, (out_size, kernel, stride) in enumerate(filters[:-1], 1):
@@ -35,7 +50,6 @@ def build_conv_layers(model_config, last_layer):
     if len(filters) == 1:
         i = -1
 
-    # should be batch x time x height x width x channel
     conv_out = tf.keras.layers.Conv2D(
         out_size,
         kernel,

@@ -9,6 +9,9 @@ actions = {}
 
 
 def profile_cleanup():
+    """
+    Profiles environments steps by executing random actions in a cleanup environment with 5 agents.
+    """
     for i in range(1000):
         for agent_id in agent_ids:
             actions[agent_id] = np.random.randint(8)

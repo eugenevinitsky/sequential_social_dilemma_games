@@ -32,6 +32,11 @@ add_default_args(parser)
 
 
 def build_experiment_config_dict(args):
+    """
+    Create a config dict for a single Experiment object.
+    :param args: The parsed arguments.
+    :return: An Experiment config dict.
+    """
     env_creator = get_env_creator(args.env, args.num_agents, args)
     env_name = args.env + "_env"
     register_env(env_name, env_creator)
@@ -177,6 +182,12 @@ def build_experiment_config_dict(args):
 
 
 def get_trainer(args, config):
+    """
+    Creates a trainer depending on what args are specified.
+    :param args: The parsed arguments.
+    :param config: The config dict that is provided to the trainer.
+    :return: A new trainer.
+    """
     if args.model == "baseline":
         if args.algorithm == "A3C":
             trainer = build_a3c_baseline_trainer(config)
@@ -206,6 +217,10 @@ def get_trainer(args, config):
 
 
 def initialize_ray(args):
+    """
+    Initialize ray and automatically turn on local mode when debugging.
+    :param args: The parsed arguments.
+    """
     if sys.gettrace() is not None:
         print(
             "Debug mode detected through sys.gettrace(), turning on ray local mode. Saving"
@@ -225,6 +240,11 @@ def initialize_ray(args):
 
 
 def get_experiment_name(args):
+    """
+    Build an experiment name based on environment, model and algorithm.
+    :param args: The parsed arguments.
+    :return: The experiment name.
+    """
     if sys.gettrace() is not None:
         exp_name = "debug_experiment"
     elif args.exp_name is None:
@@ -235,6 +255,14 @@ def get_experiment_name(args):
 
 
 def build_experiment_dict(args, experiment_name, trainer, config):
+    """
+    Creates all parameters needed to create an Experiment object and puts them into a dict.
+    :param args: The parsed arguments .
+    :param experiment_name: The experiment name.
+    :param trainer: The trainer used for the experiment.
+    :param config: The config dict with experiment parameters.
+    :return: A dict that can be unpacked to create an Experiment object.
+    """
     experiment_dict = {
         "name": experiment_name,
         "run": trainer,
@@ -259,6 +287,11 @@ def build_experiment_dict(args, experiment_name, trainer, config):
 
 
 def create_experiment(args):
+    """
+    Create a single experiment from arguments.
+    :param args: The parsed arguments.
+    :return: A new experiment with its own trainer.
+    """
     experiment_name = get_experiment_name(args)
     config = build_experiment_config_dict(args)
     trainer = get_trainer(args=args, config=config)
@@ -267,6 +300,16 @@ def create_experiment(args):
 
 
 def create_hparam_tune_dict(is_config=False):
+    """
+    Create a hyperparameter tuning dict for population-based training.
+    :param is_config: Whether these hyperparameters are being used in the config dict or not.
+    When used for the config dict, all hyperparameter-generating functions need to be wrapped with
+    tune.sample_from, so we do this automatically here.
+    When it is not used for the config dict, it is for PBT initialization, where a lambda is needed
+    as a function wrapper.
+    :return: The hyperparameter tune dict.
+    """
+
     def wrapper(fn):
         if is_config:
             return tune.sample_from(lambda spec: fn)
@@ -290,6 +333,10 @@ def create_hparam_tune_dict(is_config=False):
 
 
 def create_pbt_scheduler():
+    """
+    Create a population-based training (PBT) scheduler.
+    :return: A new PBT scheduler.
+    """
     hyperparam_mutations = create_hparam_tune_dict()
 
     pbt = PopulationBasedTraining(
@@ -303,6 +350,11 @@ def create_pbt_scheduler():
 
 
 def run(args, experiments):
+    """
+    Run one or more experiments, with ray settings contained in args.
+    :param args: The args to initialize ray with
+    :param experiments: A list of experiments to run
+    """
     initialize_ray(args)
     scheduler = create_pbt_scheduler() if args.tune_hparams else None
     tune.run_experiments(

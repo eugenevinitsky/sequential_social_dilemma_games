@@ -5,6 +5,13 @@ from run_scripts.train import create_experiment, run
 
 
 def evaluate_bash_expression(line):
+    """
+    !UNSAFE! - uses eval.
+    Evaluate a bash expression from a string.
+    Can only handle a single bash expression per line.
+    :param line: The bash line to evaluate
+    :return: The evaluated run script line.
+    """
     if "$((" not in line:
         return line
     else:
@@ -15,6 +22,11 @@ def evaluate_bash_expression(line):
 
 
 def parse_run_script(filename):
+    """
+    Parses the args from a single run script.
+    :param filename: The run script filename.
+    :return: The args belonging to the run script.
+    """
     parser = argparse.ArgumentParser()
     add_default_args(parser)
     run_script = open(filename, "r").read()
@@ -26,6 +38,10 @@ def parse_run_script(filename):
 
 
 def parse_filenames():
+    """
+    Parse filenames that were provided as args.
+    :return: A list of run script filenames.
+    """
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--run_script_filenames",
