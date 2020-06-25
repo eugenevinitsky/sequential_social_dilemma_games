@@ -112,7 +112,7 @@ class MOAModel(RecurrentTFModelV2):
 
         rnn_input_dict = {
             "ac_trunk": actor_critic_fc_output,
-            "prev_moa_trunk": state[6],
+            "prev_moa_trunk": state[5],
             "other_agent_actions": input_dict["obs"]["other_agent_actions"],
             "visible_agents": input_dict["obs"]["visible_agents"],
             "prev_actions": input_dict["prev_actions"],
@@ -128,9 +128,9 @@ class MOAModel(RecurrentTFModelV2):
             self._counterfactuals,
             [-1, self._counterfactuals.shape[-2], self._counterfactuals.shape[-1]],
         )
-        new_state.extend([action_logits, counterfactuals, moa_fc_output])
+        new_state.extend([action_logits, moa_fc_output])
 
-        self.compute_influence_reward(input_dict, state[4], state[5])
+        self.compute_influence_reward(input_dict, state[4], counterfactuals)
 
         return action_logits, new_state
 
@@ -188,7 +188,7 @@ class MOAModel(RecurrentTFModelV2):
 
         return self._model_out, [output_h1, output_c1, output_h2, output_c2]
 
-    def compute_influence_reward(self, input_dict, prev_action_logits, prev_counterfactual_logits):
+    def compute_influence_reward(self, input_dict, prev_action_logits, counterfactual_logits):
         """Compute influence of this agent on other agents and add to rewards.
         """
         # Probability of the next action for all other agents. Shape is [B, N, A].
@@ -201,7 +201,7 @@ class MOAModel(RecurrentTFModelV2):
         # Use the agent's actions as indices to select the predicted logits of other agents for
         # actions that the agent did take, discard the rest.
         predicted_logits = tf.gather_nd(
-            params=prev_counterfactual_logits, indices=prev_agent_actions, batch_dims=1
+            params=counterfactual_logits, indices=prev_agent_actions, batch_dims=1
         )
 
         predicted_logits = tf.reshape(
@@ -214,7 +214,7 @@ class MOAModel(RecurrentTFModelV2):
 
         # Get marginal predictions where effect of self is marginalized out
         marginal_logits = self.marginalize_predictions_over_own_actions(
-            prev_action_logits, prev_counterfactual_logits
+            prev_action_logits, counterfactual_logits
         )  # [B, Num agents, Num actions]
 
         # Compute influence per agent/step ([B, N]) using different metrics

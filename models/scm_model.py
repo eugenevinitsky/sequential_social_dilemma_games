@@ -129,14 +129,14 @@ class SocialCuriosityModule(MOAModel):
         # This is done because the SCM should not influence what the MOA is modeling
         lstm_input = tf.stop_gradient(state[2])
 
-        # TODO(@internetcoffeephone): Change state[7] magic number to something that does not depend
+        # TODO(@internetcoffeephone): Change state[6] magic number to something that does not depend
         #  on the order
         # Note that the inputs are different from the paper: we can only work with historical values,
         # so the inputs of the forward and inverse models are "behind" by 1 timestep, which is
         # corrected for in the reward function.
         forward_model_input = {
             # Encoded state at t-1
-            "encoded_input_now": state[7],
+            "encoded_input_now": state[6],
             # Social influence at t-1
             "influence_reward_input": influence_reward,
             # Actions at t-1
@@ -147,7 +147,7 @@ class SocialCuriosityModule(MOAModel):
 
         inverse_model_input = {
             # Encoded state at t-1
-            "encoded_input_now": state[7],
+            "encoded_input_now": state[6],
             # Encoded state at t
             "encoded_input_next": encoded_state,
             # Actions at t-1
