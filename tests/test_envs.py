@@ -216,46 +216,55 @@ class TestMapEnv(unittest.TestCase):
         np.testing.assert_array_equal(self.env.world_map[:, 0], np.array([b"@"] * 7))
         np.testing.assert_array_equal(self.env.world_map[:, -1], np.array([b"@"] * 7))
 
+    def assert_logical_and_color_view(self, agent_id, expected_view):
+        agent_view = self.env.agents[agent_id].get_state()
+        agent_view = self.convert_empty_cells(agent_view)
+        agent_view_color = self.env.color_view(self.env.agents[agent_id])
+        expected_view_color = self.env.map_to_colors(
+            expected_view,
+            self.env.color_map,
+            np.zeros(shape=(*expected_view.shape, 3), dtype=np.uint8),
+            self.env.agents[agent_id].orientation,
+        )
+        np.testing.assert_array_equal(expected_view, agent_view)
+        np.testing.assert_array_equal(expected_view_color, agent_view_color)
+
+    @staticmethod
+    def convert_empty_cells(view):
+        """Change all empty cells marked with '0' to ' ' for consistency."""
+        # No mask because it doesn't work correctly on byte arrays
+        for x in range(len(view)):
+            for y in range(len(view[0])):
+                view[x, y] = b" " if view[x, y] == b"0" else view[x, y]
+        return view
+
     def test_view(self):
         """Confirm that an agent placed at the right point returns the right view"""
         agent_id = "agent-0"
         self.construct_map(TEST_MAP_1, agent_id, [3, 3], "UP")
 
-        def convert_empty_cells(view):
-            """Change all empty cells marked with '0' to '' for consistency."""
-            # No mask because it doesn't work correctly on byte arrays
-            for x in range(len(view)):
-                for y in range(len(view[0])):
-                    view[x, y] = b"" if view[x, y] == b"0" else view[x, y]
-            return view
-
         # check if the view is correct if there are no walls
-        agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [[b" "] * 5, [b" "] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b" "] * 5, [b" "] * 5]
         )
-        np.testing.assert_array_equal(expected_view, agent_view)
+        self.assert_logical_and_color_view(agent_id, expected_view)
 
         # check if the view is correct if the top wall is just in view
         self.move_agent(agent_id, [2, 3])
-        agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [[b"@"] * 5, [b" "] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b" "] * 5, [b" "] * 5]
         )
-        np.testing.assert_array_equal(expected_view, agent_view)
+        self.assert_logical_and_color_view(agent_id, expected_view)
 
         # check if if the view is correct if the view exceeds the top view
         self.move_agent(agent_id, [1, 3])
-        agent_view = self.env.agents[agent_id].get_state()
-        agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
-            [[b""] * 5, [b"@"] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b" "] * 5, [b" "] * 5]
+            [[b" "] * 5, [b"@"] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b" "] * 5, [b" "] * 5]
         )
-        np.testing.assert_array_equal(expected_view, agent_view)
+        self.assert_logical_and_color_view(agent_id, expected_view)
 
         # check if the view is correct if the left wall is just in view
         self.move_agent(agent_id, [3, 2])
-        agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [
                 [b"@"] + [b" "] * 4,
@@ -265,43 +274,37 @@ class TestMapEnv(unittest.TestCase):
                 [b"@"] + [b" "] * 4,
             ]
         )
-        np.testing.assert_array_equal(expected_view, agent_view)
+        self.assert_logical_and_color_view(agent_id, expected_view)
 
         # check if if the view is correct if the view exceeds the left view
         self.move_agent(agent_id, [3, 1])
-        agent_view = self.env.agents[agent_id].get_state()
-        agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [
-                [b""] + [b"@"] + [b" "] * 3,
-                [b""] + [b"@"] + [b" "] * 3,
-                [b""] + [b"@"] + [b"1"] + [b" "] * 2,
-                [b""] + [b"@"] + [b" "] * 3,
-                [b""] + [b"@"] + [b" "] * 3,
+                [b" "] + [b"@"] + [b" "] * 3,
+                [b" "] + [b"@"] + [b" "] * 3,
+                [b" "] + [b"@"] + [b"1"] + [b" "] * 2,
+                [b" "] + [b"@"] + [b" "] * 3,
+                [b" "] + [b"@"] + [b" "] * 3,
             ]
         )
-        np.testing.assert_array_equal(expected_view, agent_view)
+        self.assert_logical_and_color_view(agent_id, expected_view)
 
         # check if the view is correct if the bot wall is just in view
         self.move_agent(agent_id, [4, 3])
-        agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [[b" "] * 5, [b" "] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b" "] * 5, [b"@"] * 5]
         )
-        np.testing.assert_array_equal(expected_view, agent_view)
+        self.assert_logical_and_color_view(agent_id, expected_view)
 
         # check if if the view is correct if the view exceeds the bot view
         self.move_agent(agent_id, [5, 3])
-        agent_view = self.env.agents[agent_id].get_state()
-        agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
-            [[b" "] * 5, [b" "] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b"@"] * 5, [b""] * 5]
+            [[b" "] * 5, [b" "] * 5, [b" "] * 2 + [b"1"] + [b" "] * 2, [b"@"] * 5, [b" "] * 5]
         )
-        np.testing.assert_array_equal(expected_view, agent_view)
+        self.assert_logical_and_color_view(agent_id, expected_view)
 
         # check if the view is correct if the right wall is just in view
         self.move_agent(agent_id, [3, 4])
-        agent_view = self.env.agents[agent_id].get_state()
         expected_view = np.array(
             [
                 [b" "] * 4 + [b"@"],
@@ -311,37 +314,33 @@ class TestMapEnv(unittest.TestCase):
                 [b" "] * 4 + [b"@"],
             ]
         )
-        np.testing.assert_array_equal(expected_view, agent_view)
+        self.assert_logical_and_color_view(agent_id, expected_view)
 
         # check if if the view is correct if the view exceeds the right view
         self.move_agent(agent_id, [3, 5])
-        agent_view = self.env.agents[agent_id].get_state()
-        agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [
-                [b" "] * 3 + [b"@"] + [b""],
-                [b" "] * 3 + [b"@"] + [b""],
-                [b" "] * 2 + [b"1"] + [b"@"] + [b""],
-                [b" "] * 3 + [b"@"] + [b""],
-                [b" "] * 3 + [b"@"] + [b""],
+                [b" "] * 3 + [b"@"] + [b" "],
+                [b" "] * 3 + [b"@"] + [b" "],
+                [b" "] * 2 + [b"1"] + [b"@"] + [b" "],
+                [b" "] * 3 + [b"@"] + [b" "],
+                [b" "] * 3 + [b"@"] + [b" "],
             ]
         )
-        np.testing.assert_array_equal(expected_view, agent_view)
+        self.assert_logical_and_color_view(agent_id, expected_view)
 
         # check if if the view is correct if the agent is in the bottom right corner
         self.move_agent(agent_id, [5, 5])
-        agent_view = self.env.agents[agent_id].get_state()
-        agent_view = convert_empty_cells(agent_view)
         expected_view = np.array(
             [
-                [b" "] * 3 + [b"@"] + [b""],
-                [b" "] * 3 + [b"@"] + [b""],
-                [b" "] * 2 + [b"1"] + [b"@"] + [b""],
-                [b"@"] * 4 + [b""],
-                [b""] * 5,
+                [b" "] * 3 + [b"@"] + [b" "],
+                [b" "] * 3 + [b"@"] + [b" "],
+                [b" "] * 2 + [b"1"] + [b"@"] + [b" "],
+                [b"@"] * 4 + [b" "],
+                [b" "] * 5,
             ]
         )
-        np.testing.assert_array_equal(expected_view, agent_view)
+        self.assert_logical_and_color_view(agent_id, expected_view)
 
     def test_agent_visibility(self):
         self.env = DummyMapEnv(
@@ -797,11 +796,13 @@ class TestMapEnv(unittest.TestCase):
         np.testing.assert_array_equal(get_env_test_map(self.env), curr_map)
 
     def move_agent(self, agent_id, new_pos):
+        self.remove_agents_from_color_map()
         self.env.agents[agent_id].set_pos(new_pos)
         map_with_agents = self.env.get_map_with_agents()
         agent = self.env.agents[agent_id]
         agent.full_map = map_with_agents
         self.env.agents[agent_id].update_agent_pos(new_pos)
+        self.add_agents_to_color_map()
 
     def rotate_agent(self, agent_id, new_rot):
         self.env.agents[agent_id].update_agent_rot(new_rot)
@@ -825,6 +826,20 @@ class TestMapEnv(unittest.TestCase):
             # Update each agent's view of the world
             agent.full_map = map_with_agents
         self.env.agent_pos.append(start_pos)
+        self.add_agents_to_color_map()
+
+    def remove_agents_from_color_map(self):
+        for agent in self.env.agents.values():
+            row, col = agent.pos[0], agent.pos[1]
+            self.env.single_update_world_color_map(row, col, self.env.world_map[row, col])
+
+    def add_agents_to_color_map(self):
+        # Add agents to color map
+        for agent in self.env.agents.values():
+            row, col = agent.pos[0], agent.pos[1]
+            # Firing beams have priority over agents and should cover them
+            if self.env.world_map[row, col] not in [b"F", b"C"]:
+                self.env.single_update_world_color_map(row, col, agent.get_char_id())
 
 
 class TestHarvestEnv(unittest.TestCase):
