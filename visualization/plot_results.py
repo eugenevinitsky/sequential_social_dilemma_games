@@ -293,5 +293,6 @@ def plot_combined_results():
         plot_and_save(plot_fn, collective_env_path, env + "_collective_reward")
 
 
-plot_separate_results()
-plot_combined_results()
+if __name__ == "__main__":
+    plot_separate_results()
+    plot_combined_results()
