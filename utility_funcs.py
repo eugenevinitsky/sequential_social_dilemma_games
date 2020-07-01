@@ -41,9 +41,6 @@ def make_video_from_rgb_imgs(
     else:
         frame = rgb_arrs[0]
         height, width, _ = frame.shape
-        # Upscale to be more legible
-        height *= 20
-        width *= 20
         resize = width, height
 
     fourcc = cv2.VideoWriter_fourcc(*format)
@@ -53,8 +50,8 @@ def make_video_from_rgb_imgs(
         percent_done = int((i / len(rgb_arrs)) * 100)
         if percent_done % 20 == 0:
             print("\t...", percent_done, "% of frames rendered")
-        if resize is not None:
-            image = cv2.resize(image, resize, interpolation=cv2.INTER_NEAREST)
+        # Always resize, without this line the video does not render properly.
+        image = cv2.resize(image, resize, interpolation=cv2.INTER_NEAREST)
         video.write(image)
 
     video.release()

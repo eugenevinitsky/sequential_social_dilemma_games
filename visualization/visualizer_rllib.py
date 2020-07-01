@@ -470,7 +470,13 @@ def rollout(
         images_path = video_dir + "/images/"
         if not os.path.exists(images_path):
             os.makedirs(images_path)
-        utility_funcs.make_video_from_rgb_imgs(all_obs, video_dir, video_name=video_name)
+        height, width, _ = all_obs[0].shape
+        # Upscale to be more legible
+        width *= 20
+        height *= 20
+        utility_funcs.make_video_from_rgb_imgs(
+            all_obs, video_dir, video_name=video_name, resize=(width, height)
+        )
 
         # Clean up images
         shutil.rmtree(images_path)
