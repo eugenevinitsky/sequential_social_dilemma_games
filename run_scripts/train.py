@@ -159,7 +159,7 @@ def build_experiment_config_dict(args):
         )
 
     if args.tune_hparams:
-        tune_dict = create_hparam_tune_dict(is_config=True)
+        tune_dict = create_hparam_tune_dict(model=args.model, is_config=True)
         update_nested_dict(config, tune_dict)
 
     if args.algorithm == "PPO":
@@ -299,7 +299,7 @@ def create_experiment(args):
     return Experiment(**experiment_dict)
 
 
-def create_hparam_tune_dict(is_config=False):
+def create_hparam_tune_dict(model, is_config=False):
     """
     Create a hyperparameter tuning dict for population-based training.
     :param is_config: Whether these hyperparameters are being used in the config dict or not.
@@ -316,32 +316,42 @@ def create_hparam_tune_dict(is_config=False):
         else:
             return lambda: fn
 
+    baseline_options = {}
+    model_options = {}
+    if model == "baseline":
+        baseline_options = {
+            "entropy_coeff": wrapper(random.expovariate(1000)),
+            "lr": wrapper(random.uniform(0.00001, 0.01)),
+        }
+    if model == "moa":
+        model_options = {
+            "moa_loss_weight": wrapper(random.expovariate(15)),
+            "influence_reward_weight": wrapper(random.expovariate(1)),
+        }
+    elif model == "scm":
+        model_options = {
+            "scm_loss_weight": wrapper(random.expovariate(2)),
+            "curiosity_reward_weight": wrapper(random.expovariate(1)),
+            "scm_forward_vs_inverse_loss_weight": wrapper(random.uniform(0, 1)),
+        }
+
     hparam_dict = {
-        "entropy_coeff": wrapper(random.expovariate(1000)),
-        "lr": wrapper(random.uniform(0.00001, 0.01)),
-        "model": {
-            "custom_options": {
-                "moa_loss_weight": wrapper(random.expovariate(2)),
-                "influence_reward_weight": wrapper(random.expovariate(2)),
-                "scm_loss_weight": wrapper(random.expovariate(2)),
-                "curiosity_reward_weight": wrapper(random.expovariate(2)),
-                "scm_forward_vs_inverse_loss_weight": wrapper(random.uniform(0, 1)),
-            }
-        },
+        **baseline_options,
+        "model": {"custom_options": model_options},
     }
     return hparam_dict
 
 
-def create_pbt_scheduler():
+def create_pbt_scheduler(model):
     """
     Create a population-based training (PBT) scheduler.
     :return: A new PBT scheduler.
     """
-    hyperparam_mutations = create_hparam_tune_dict()
+    hyperparam_mutations = create_hparam_tune_dict(model=model, is_config=False)
 
     pbt = PopulationBasedTraining(
         time_attr="training_iteration",
-        perturbation_interval=80,
+        perturbation_interval=10,
         metric="episode_reward_mean",
         mode="max",
         hyperparam_mutations=hyperparam_mutations,
@@ -356,7 +366,7 @@ def run(args, experiments):
     :param experiments: A list of experiments to run
     """
     initialize_ray(args)
-    scheduler = create_pbt_scheduler() if args.tune_hparams else None
+    scheduler = create_pbt_scheduler(args.model) if args.tune_hparams else None
     tune.run_experiments(
         experiments,
         queue_trials=args.use_s3,
