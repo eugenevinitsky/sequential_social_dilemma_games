@@ -28,7 +28,11 @@ def plot_and_save(fn, path, file_name_addition):
     # Clear plot to prevent slowdown when drawing multiple figures
     plt.clf()
     fn()
-    plt.legend()
+    # Sort legend by label name
+    handles, labels = plt.gca().get_legend_handles_labels()
+    labels, handles = zip(*sorted(zip(labels, handles), key=lambda t: t[0].lower()))
+    plt.legend(handles, labels)
+
     # Strip path of all but last folder
     path_split = os.path.dirname(path).split("/")
     pngpath = plot_path + "/png/" + path_split[-2] + "/"
@@ -228,6 +232,8 @@ def get_experiment_reward_means(paths):
     most_timesteps = np.max(list(map(len, timesteps_totals)))
     x_min = np.nanmin(list(map(np.nanmin, timesteps_totals)))
     x_max = np.nanmax(list(map(np.nanmax, timesteps_totals)))
+    # Cut off plotting at 5e8 steps
+    x_max = min(x_max, 5.0)
     interp_x = np.linspace(x_min, x_max, most_timesteps)
     interpolated = []
     for x, y, in zip(timesteps_totals, [df.episode_reward_mean for df in dfs]):
