@@ -72,14 +72,16 @@ def create_table_per_model(table_contents):
 
         print("% Generated with run_script_to_latex_tables.py.")
         print(
-            "\\begin{{figure}}\
-                    \\centering\
-                    \\caption{{{0} hyperparameters}}\
-                    \\label{{fig:appendix_{1}_hparams}}".format(
+            """\\begin{{figure}}
+\\centering
+\\caption{{{0} hyperparameters}}
+\\label{{fig:appendix_{1}_hparams}}
+\\makebox[\\textwidth][c]""".format(
                 model_name_in_table_title, model
             )
+            + "{"
         )
-        print(latex)
+        print(latex + "}")
         print("\\end{figure}")
 
 
