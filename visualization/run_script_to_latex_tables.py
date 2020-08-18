@@ -18,6 +18,11 @@ print_params = [
 ]
 
 
+def format_large_numbers(number_list):
+    number_list = ["{:g}".format(int(number)) if number != "0" else "0" for number in number_list]
+    return number_list
+
+
 def extract_script_params(script):
     param_lines = {}
     for line in script:
@@ -31,13 +36,19 @@ def extract_script_params(script):
                     hparam_value.remove("\\\n")
                 if len(hparam_value) == 1:
                     hparam_value = hparam_value[0]
+                if "steps" in hparam_name:
+                    hparam_value = format_large_numbers(hparam_value)
                 param_lines[hparam_name] = hparam_value
     return param_lines
 
 
-def is_normal_experiment(filename):
+def is_ssd_experiment(filename):
     base_name = os.path.splitext(os.path.basename(filename))[0]
-    return len(base_name.split("_")) == 3 and filename[-3:] == ".sh"
+    return (
+        len(base_name.split("_")) == 3
+        and filename[-3:] == ".sh"
+        and ("cleanup" in filename or "harvest" in filename)
+    )
 
 
 def get_model_and_env(filename):
@@ -55,9 +66,9 @@ def create_table_per_model(table_contents):
         for line in ["toprule", "midrule", "bottomrule"]:
             latex = latex.replace(line, "hline")
         if model == "moa" or model == "scm":
-            model_name_in_table_title = model.upper()
+            model_name_in_table_title = "PPO " + model.upper()
         else:
-            model_name_in_table_title = "Baseline"
+            model_name_in_table_title = "PPO Baseline"
 
         print("% Generated with run_script_to_latex_tables.py.")
         print(
@@ -76,7 +87,7 @@ def run():
     script_path = "../run_scripts"
 
     all_files = get_all_files(script_path)
-    all_run_scripts = [file for file in all_files if is_normal_experiment(file)]
+    all_run_scripts = sorted([file for file in all_files if is_ssd_experiment(file)])
 
     table_contents = {}
 
