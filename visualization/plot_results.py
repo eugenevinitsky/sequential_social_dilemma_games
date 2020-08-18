@@ -119,6 +119,10 @@ def extract_stats(dfs, requested_keys):
 
 # Plot the results for a given generated progress.csv file, found in your ray_results folder.
 def plot_csvs_results(paths):
+    path = paths[0]
+    env = path.split("/")[-3].split("_")[0]
+    model = path.split("/")[-3].split("_")[1]
+
     dfs = []
     for path in paths:
         df = pd.read_csv(path, sep=",")
@@ -134,8 +138,11 @@ def plot_csvs_results(paths):
         [timestep / 1e8 for timestep in timesteps_total] for timesteps_total in timesteps_totals
     ]
 
+    reward_color = get_color_from_model_name(model)
     reward_means = [df.episode_reward_mean for df in dfs]
-    plots.append(PlotData(timesteps_totals, reward_means, "reward", "Mean episode reward", "g"))
+    plots.append(
+        PlotData(timesteps_totals, reward_means, "reward", "Mean episode reward", reward_color)
+    )
 
     episode_len_means = [df.episode_len_mean for df in dfs]
     plots.append(
@@ -179,9 +186,6 @@ def plot_csvs_results(paths):
                     metric.color,
                 )
             )
-    path = paths[0]
-    env = path.split("/")[-3].split("_")[0]
-    model = path.split("/")[-3].split("_")[1]
 
     for plot in plots:
 
@@ -200,6 +204,19 @@ def plot_csvs_results(paths):
             pass
 
 
+def get_color_from_model_name(model_name):
+    name_to_color = {
+        "baseline": "blue",
+        "moa": "red",
+        "scm": "orange",
+    }
+    name_lower = model_name.lower()
+    if name_lower in name_to_color.keys():
+        return name_to_color[name_lower]
+    else:
+        raise NotImplementedError
+
+
 def get_experiment_reward_means(paths):
     dfs = []
     for path in paths:
@@ -211,15 +228,13 @@ def get_experiment_reward_means(paths):
     category_path = paths[0].split("/")[-3]
     if "baseline" in category_path:
         model_name = "baseline"
-        color = "blue"
     elif "moa" in category_path:
         model_name = "MOA"
-        color = "red"
     elif "scm" in category_path:
         model_name = "SCM"
-        color = "orange"
     else:
         raise NotImplementedError
+    color = get_color_from_model_name(model_name)
 
     env = category_path.split("_")[0]
 
