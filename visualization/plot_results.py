@@ -69,11 +69,18 @@ def plot_single_category_result(
     y_max = np.nanmax(list(map(np.nanmax, y_lists)))
     interp_x = np.linspace(x_min, x_max, most_timesteps)
     interpolated = []
+    individual_experiment_label_added = False
     for x, y in zip(x_lists, y_lists):
         interp_y = np.interp(interp_x, x, y, left=np.nan, right=np.nan)
         interpolated.append(interp_y)
         light_color = change_color_luminosity(color, 0.5) if with_mean else color
-        label_name = legend_name if with_label else None
+        if with_label:
+            label_name = legend_name
+        elif not individual_experiment_label_added:
+            label_name = legend_name + ": Individual experiment"
+            individual_experiment_label_added = True
+        else:
+            label_name = None
         plt.plot(interp_x, interp_y, color=light_color, label=label_name)
     if with_mean:
         means = np.nanmean(interpolated, axis=0)
@@ -81,7 +88,7 @@ def plot_single_category_result(
 
     plt.xlabel("Environment steps (1e8)")
     plt.ylabel(y_label_name)
-    bottom = 0 if "reward" in y_label_name else None
+    bottom = 0 if "reward" in y_label_name.lower() else None
     old_bot, old_top = plt.ylim()
     y_max = max(y_max, old_top)
     plt.ylim(bottom=bottom, top=y_max)
@@ -141,7 +148,9 @@ def plot_csvs_results(paths):
     reward_color = get_color_from_model_name(model)
     reward_means = [df.episode_reward_mean for df in dfs]
     plots.append(
-        PlotData(timesteps_totals, reward_means, "reward", "Mean episode reward", reward_color)
+        PlotData(
+            timesteps_totals, reward_means, "Reward", "Mean collective episode reward", reward_color
+        )
     )
 
     episode_len_means = [df.episode_len_mean for df in dfs]
@@ -255,7 +264,9 @@ def get_experiment_reward_means(paths):
         interp_y = np.interp(interp_x, x, y, left=np.nan, right=np.nan)
         interpolated.append(interp_y)
     means = np.nanmean(interpolated, axis=0)
-    mean_plotdata = PlotData([interp_x], [means], "Collective reward", model_name, color)
+    mean_plotdata = PlotData(
+        [interp_x], [means], "Mean collective reward", model_name + " experiment mean", color
+    )
     return mean_plotdata, env
 
 
