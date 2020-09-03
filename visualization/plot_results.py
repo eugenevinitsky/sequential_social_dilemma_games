@@ -254,7 +254,14 @@ def get_color_from_model_name(model_name):
     if name_lower in name_to_color.keys():
         return name_to_color[name_lower]
     else:
-        raise NotImplementedError
+        default_color = "darkgreen"
+        print(
+            "Warning: model name "
+            + model_name
+            + " has no default plotting color. Defaulting to "
+            + default_color
+        )
+        return default_color
 
 
 def get_experiment_rewards(paths):
