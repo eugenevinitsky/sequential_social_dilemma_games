@@ -37,7 +37,7 @@ def add_default_args(parser):
     parser.add_argument(
         "--rollout_fragment_length",
         type=int,
-        default=64,
+        default=1000,
         help="Size of samples taken from single workers. These are concatenated with samples of"
         "other workers to size train_batch_size.",
     )
