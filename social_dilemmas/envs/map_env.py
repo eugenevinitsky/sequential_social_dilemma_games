@@ -67,6 +67,7 @@ class MapEnv(MultiAgentEnv):
         num_agents=1,
         color_map=None,
         return_agent_actions=False,
+        use_collective_reward=False,
     ):
         """
 
@@ -89,6 +90,7 @@ class MapEnv(MultiAgentEnv):
         self.view_len = view_len
         self.map_padding = view_len
         self.return_agent_actions = return_agent_actions
+        self.use_collective_reward = use_collective_reward
         self.all_actions = _MAP_ENV_ACTIONS.copy()
         self.all_actions.update(extra_actions)
         # Map without agents or beams
@@ -270,6 +272,11 @@ class MapEnv(MultiAgentEnv):
                 observations[agent.agent_id] = {"curr_obs": rgb_arr}
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
+
+        if self.use_collective_reward:
+            collective_reward = sum(rewards.values())
+            for agent in rewards.keys():
+                rewards[agent] = collective_reward
 
         dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, info

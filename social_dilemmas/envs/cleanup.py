@@ -31,7 +31,11 @@ appleRespawnProbability = 0.05
 
 class CleanupEnv(MapEnv):
     def __init__(
-        self, ascii_map=CLEANUP_MAP, num_agents=1, return_agent_actions=False,
+        self,
+        ascii_map=CLEANUP_MAP,
+        num_agents=1,
+        return_agent_actions=False,
+        use_collective_reward=False,
     ):
         super().__init__(
             ascii_map,
@@ -39,6 +43,7 @@ class CleanupEnv(MapEnv):
             CLEANUP_VIEW_SIZE,
             num_agents,
             return_agent_actions=return_agent_actions,
+            use_collective_reward=use_collective_reward,
         )
 
         # compute potential waste area

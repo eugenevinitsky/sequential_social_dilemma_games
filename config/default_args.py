@@ -160,6 +160,13 @@ def add_default_args(parser):
 
     parser.add_argument("--entropy_coeff", type=float, default=0.001, help="Entropy reward weight.")
 
+    parser.add_argument(
+        "--use_collective_reward",
+        action="store_true",
+        default=False,
+        help="Train using collective reward instead of individual reward.",
+    )
+
     # MOA Parameters
     parser.add_argument(
         "--moa_loss_weight", type=float, default=1.0, help="Loss weight of the moa network",
