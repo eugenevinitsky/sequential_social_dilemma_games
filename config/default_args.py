@@ -27,12 +27,6 @@ def add_default_args(parser):
     parser.add_argument(
         "--resume", action="store_true", default=False, help="Resume previous experiment.",
     )
-    parser.add_argument(
-        "--small_model",
-        action="store_true",
-        default=False,
-        help="Set to true to use a neural network with smaller layers.",
-    )
     parser.add_argument("--num_agents", type=int, default=2, help="Number of agent policies")
     parser.add_argument(
         "--rollout_fragment_length",

@@ -77,14 +77,9 @@ def build_experiment_config_dict(args):
     if env_name == "switch_env":
         config["env_config"]["num_switches"] = args.num_switches
 
-    if args.small_model:
-        conv_filters = [[1, [1, 1], 1]]
-        fcnet_hiddens = [1, 1]
-        lstm_cell_size = 1
-    else:
-        conv_filters = [[6, [3, 3], 1]]
-        fcnet_hiddens = [32, 32]
-        lstm_cell_size = 128
+    conv_filters = [[6, [3, 3], 1]]
+    fcnet_hiddens = [32, 32]
+    lstm_cell_size = 128
 
     train_batch_size = (
         args.train_batch_size

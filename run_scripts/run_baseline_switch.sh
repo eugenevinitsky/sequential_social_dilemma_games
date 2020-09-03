@@ -17,5 +17,4 @@ python train.py \
 --num_envs_per_worker 2 \
 --lr_schedule_steps 0 \
 --lr_schedule_weights 0.001 \
---entropy_coeff 0.00176 \
---small_model
+--entropy_coeff 0.00176
