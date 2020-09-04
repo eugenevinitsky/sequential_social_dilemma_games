@@ -17,27 +17,20 @@ The implemented environments are structured to be compatible with [OpenAIs gym e
 
 <img src="images/schelling.png" alt="Schelling diagrams for Harvest and Cleanup" width="953" height="352"/>
 
-The above plot shows the empirical Schelling diagrams for both Cleanup (A) and Harvest (B) (from [[2]](https://arxiv.org/abs/1803.08884)). These diagrams show the payoff that an individual agent can expect if it follows a defecting/exploitative strategy (red) vs a cooperative strategy (blue), given the number of other agents that are cooperating.  We can see that an individual agent can almost always greedily benefit from detecting, but the more agents that defect, the worse the outcomes for all agents. 
-
-## Relevant papers
-
-1. Leibo, J. Z., Zambaldi, V., Lanctot, M., Marecki, J., & Graepel, T. (2017). [Multi-agent reinforcement learning in sequential social dilemmas](https://arxiv.org/abs/1702.03037). In Proceedings of the 16th Conference on Autonomous Agents and MultiAgent Systems (pp. 464-473).
-
-2.  Hughes, E., Leibo, J. Z., Phillips, M., Tuyls, K., Dueñez-Guzman, E., Castañeda, A. G., Dunning, I., Zhu, T., McKee, K., Koster, R., Tina Zhu, Roff, H., Graepel, T. (2018). [Inequity aversion improves cooperation in intertemporal social dilemmas](https://arxiv.org/abs/1803.08884). In Advances in Neural Information Processing Systems (pp. 3330-3340).
-
-3. Jaques, N., Lazaridou, A., Hughes, E., Gulcehre, C., Ortega, P. A., Strouse, D. J., Leibo, J. Z. & de Freitas, N. (2018). [Intrinsic Social Motivation via Causal Influence in Multi-Agent RL](https://arxiv.org/abs/1810.08647). arXiv preprint arXiv:1810.08647. 
-
+The above plot shows the empirical Schelling diagrams for both Cleanup (A) and Harvest (B) (from [[2]](https://arxiv.org/abs/1803.08884)). These diagrams show the payoff that an individual agent can expect if it follows a defecting/exploitative strategy (red) vs a cooperative strategy (blue), given the number of other agents that are cooperating.  We can see that an individual agent can almost always greedily benefit from detecting, but the more agents that defect, the worse the outcomes for all agents.  
 
 # Setup instructions
 ```
-git clone -b master https://github.com/internetcoffeephone/sequential_social_dilemma_games
+git clone -b master https://github.com/eugenevinitsky/sequential_social_dilemma_games
 cd sequential_social_dilemma_games
 python3 -m venv venv # Create a Python virtual environment
 . venv/bin/activate
 pip3 install --upgrade pip setuptools wheel
 python3 setup.py develop
 pip3 install -r requirements.txt
-. ray_uint8_patch.sh # Ray patch due to https://github.com/ray-project/ray/issues/7946 
+# Patch ray due to https://github.com/ray-project/ray/issues/7946
+# And https://github.com/ray-project/ray/pull/8491
+. ray_uint8_patch.sh 
 cd run_scripts
 ```
 
@@ -48,9 +41,9 @@ After the setup, you can run experiments like so:
 - To train the MOA with 5 agents:
 `python3 train.py --model moa --num_agents 5`
 
-Many more options are available which can be found in [default_args.py](config/default_args.py). A collection preconfigured training scripts can be found in [run_scripts](run_scripts). 
+Many more options are available which can be found in [default_args.py](config/default_args.py). A collection of preconfigured training scripts can be found in [run_scripts](run_scripts). 
 
-Note that the initialization time is rather high (up to 12 minutes) the more agents you use, possibly due to a [Ray bug](https://github.com/ray-project/ray/issues/5982#issuecomment-629217172).
+Note that the initialization time can be rather high (up to 5 minutes) the more agents you use, and the more complex your used model is.
 
 # CUDA, cuDNN and tensorflow-gpu
 
@@ -85,7 +78,28 @@ Every environment that subclasses MapEnv probably needs to implement the followi
         """Construct all the agents for the environment"""
         raise NotImplementedError
 ```
+
+## PPO Results
+
+The below graphs display results for cleanup/harvest using un-tuned PPO. As of yet, A3C remains untested.
+
+**Collective cleanup reward**:
+
+<img src="images/cleanup_collective_reward.svg" alt="Collective reward plot of cleanup" width="460.8" height="345.6"/>
+
+**Collective harvest reward**:
+
+<img src="images/harvest_collective_reward.svg" alt="Collective reward plot of harvest" width="460.8" height="345.6"/>
+
+
+## Relevant papers
+
+1. Leibo, J. Z., Zambaldi, V., Lanctot, M., Marecki, J., & Graepel, T. (2017). [Multi-agent reinforcement learning in sequential social dilemmas](https://arxiv.org/abs/1702.03037). In Proceedings of the 16th Conference on Autonomous Agents and MultiAgent Systems (pp. 464-473).
+
+2.  Hughes, E., Leibo, J. Z., Phillips, M., Tuyls, K., Dueñez-Guzman, E., Castañeda, A. G., Dunning, I., Zhu, T., McKee, K., Koster, R., Tina Zhu, Roff, H., Graepel, T. (2018). [Inequity aversion improves cooperation in intertemporal social dilemmas](https://arxiv.org/abs/1803.08884). In Advances in Neural Information Processing Systems (pp. 3330-3340).
+
+3. Jaques, N., Lazaridou, A., Hughes, E., Gulcehre, C., Ortega, P. A., Strouse, D. J., Leibo, J. Z. & de Freitas, N. (2018). [Intrinsic Social Motivation via Causal Influence in Multi-Agent RL](https://arxiv.org/abs/1810.08647). arXiv preprint arXiv:1810.08647.
         
 # Contributors
 
-This code base was developed by Eugene Vinitsky and Natasha Jaques; help with reproduction was provided by Joel Leibo, Antonio Castenada, and Edward Hughes. Additional development was done by Hugo Heemskerk. 
+This code base was initially developed by Eugene Vinitsky and Natasha Jaques; help with reproduction was provided by Joel Leibo, Antonio Castenada, and Edward Hughes. Additional development was done by Hugo Heemskerk. 
