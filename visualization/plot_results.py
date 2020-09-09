@@ -332,6 +332,7 @@ def change_color_luminosity(color, amount=0.5):
 def plot_separate_results():
     # Plot separate experiment results
     for category_folder in get_all_subdirs(ray_results_path):
+        print("Plotting category folder: " + category_folder.split("/")[-1])
         csvs = []
         experiment_folders = get_all_subdirs(category_folder)
         for experiment_folder in experiment_folders:
@@ -368,5 +369,7 @@ def plot_combined_results():
 
 
 if __name__ == "__main__":
+    print("Plotting separate results..")
     plot_separate_results()
+    print("Plotting combined results..")
     plot_combined_results()
