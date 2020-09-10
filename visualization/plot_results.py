@@ -1,8 +1,10 @@
 import os.path
+from math import sqrt
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.stats import t
 
 from utility_funcs import get_all_subdirs
 
@@ -73,12 +75,12 @@ def plot_single_category_result(
     x_min = np.nanmin(list(map(np.nanmin, x_lists)))
     x_max = np.nanmax(list(map(np.nanmax, x_lists)))
     y_max = np.nanmax(list(map(np.nanmax, y_lists)))
-    interp_x = np.linspace(x_min, x_max, most_timesteps)
-    interpolated = []
+    interpolated_time = np.linspace(x_min, x_max, most_timesteps)
+    interpolated_scores = []
     individual_experiment_label_added = False
     for x, y in zip(x_lists, y_lists):
-        interp_y = np.interp(interp_x, x, y, left=np.nan, right=np.nan)
-        interpolated.append(interp_y)
+        interpolated_score = np.interp(interpolated_time, x, y, left=np.nan, right=np.nan)
+        interpolated_scores.append(interpolated_score)
         light_color = change_color_luminosity(color, 0.5)
         if with_label:
             label_name = legend_name
@@ -88,28 +90,35 @@ def plot_single_category_result(
         else:
             label_name = None
         if with_individual_experiments:
-            plt.plot(interp_x, interp_y, color=light_color, label=label_name, alpha=0.5)
+            plt.plot(
+                interpolated_time, interpolated_score, color=light_color, label=label_name, alpha=0.7
+            )
 
     # Plot the mean and confidence intervals
-    window_size = 10
-    interpolated = np.array(interpolated)
+    # Calculate t-value for p<0.05 CI
+    interpolated_scores = np.array(interpolated_scores)
+    num_experiments = interpolated_scores.shape[0]
+    significance_level = 0.05
+    t_value = t.ppf(1 - significance_level / 2, num_experiments - 1)
+    sqrt_n = sqrt(num_experiments)
     means = []
-    std_devs = []
-    for std_dev_index in range(interpolated.shape[-1] - window_size):
-        std_dev = np.std(interpolated[:, std_dev_index : std_dev_index + window_size])
-        std_devs.append(std_dev)
-        mean = np.mean(interpolated[:, std_dev_index : std_dev_index + window_size])
+    confidence_limits = []
+
+    for std_dev_index in range(interpolated_scores.shape[-1]):
+        std_dev = np.std(interpolated_scores[:, std_dev_index])
+        mean_confidence_limit = std_dev * t_value / sqrt_n
+        confidence_limits.append(mean_confidence_limit)
+        mean = np.mean(interpolated_scores[:, std_dev_index])
         means.append(mean)
 
-    lower_confidence_bound = means - 2 * np.array(std_devs)
-    upper_confidence_bound = means + 2 * np.array(std_devs)
-    # Remove initial timesteps to accommodate for rolling average
-    time_x = interp_x[window_size:]
-    plt.plot(time_x, means, color=color, label=legend_name)
+    lower_confidence_bound = means - np.array(confidence_limits)
+    upper_confidence_bound = means + np.array(confidence_limits)
+
+    plt.plot(interpolated_time, means, color=color, label=legend_name)
     fill_color = change_color_luminosity(color, 0.2)
-    fill_label_name = "2σ confidence interval"
+    fill_label_name = str(1 - significance_level) + "% confidence interval"
     plt.fill_between(
-        time_x,
+        interpolated_time,
         lower_confidence_bound,
         upper_confidence_bound,
         label=fill_label_name,
@@ -344,7 +353,7 @@ def plot_separate_results():
 
 def plot_combined_results():
     # Plot combined experiment rewards per environment, for means per model
-    env_means = {}
+    env_rewards = {}
     for category_folder in get_all_subdirs(ray_results_path):
         csvs = []
         experiment_folders = get_all_subdirs(category_folder)
@@ -354,11 +363,12 @@ def plot_combined_results():
                 csvs.append(csv_path)
 
         experiment_rewards, env = get_experiment_rewards(csvs)
-        if env not in env_means:
-            env_means[env] = []
-        env_means[env].append(experiment_rewards)
+        if env not in env_rewards:
+            env_rewards[env] = []
+        env_rewards[env].append(experiment_rewards)
 
-    for env, experiment_rewards in env_means.items():
+    for env, experiment_rewards in env_rewards.items():
+        print("Plotting collective plot for environment: " + env)
 
         def plot_fn():
             plot_multiple_category_result(experiment_rewards)
