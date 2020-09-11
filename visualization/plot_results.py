@@ -105,7 +105,7 @@ def plot_single_category_result(
     confidence_limits = []
 
     for std_dev_index in range(interpolated_scores.shape[-1]):
-        std_dev = np.std(interpolated_scores[:, std_dev_index])
+        std_dev = np.std(interpolated_scores[:, std_dev_index], ddof=1)
         mean_confidence_limit = std_dev * t_value / sqrt_n
         confidence_limits.append(mean_confidence_limit)
         mean = np.mean(interpolated_scores[:, std_dev_index])
