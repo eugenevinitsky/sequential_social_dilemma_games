@@ -116,12 +116,10 @@ def plot_single_category_result(
 
     plt.plot(interpolated_time, means, color=color, label=legend_name)
     fill_color = change_color_luminosity(color, 0.2)
-    fill_label_name = str(1 - significance_level) + "% confidence interval"
     plt.fill_between(
         interpolated_time,
         lower_confidence_bound,
         upper_confidence_bound,
-        label=fill_label_name,
         color=fill_color,
         alpha=0.5,
     )
@@ -311,11 +309,7 @@ def get_experiment_rewards(paths):
         interp_y = np.interp(interp_x, x, y, left=np.nan, right=np.nan)
         interpolated.append(interp_y)
     reward_plotdata = PlotData(
-        [interp_x] * 5,
-        interpolated,
-        "Mean collective reward",
-        model_name + " experiment mean",
-        color,
+        [interp_x] * 5, interpolated, "Mean collective reward", model_name, color,
     )
     return reward_plotdata, env
 
