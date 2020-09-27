@@ -165,8 +165,7 @@ def extract_stats(dfs, requested_keys):
 # Plot the results for a given generated progress.csv file, found in your ray_results folder.
 def plot_csvs_results(paths):
     path = paths[0]
-    env = path.split("/")[-3].split("_")[0]
-    model = path.split("/")[-3].split("_")[1]
+    env, model_name = get_env_and_model_name_from_path(path)
 
     dfs = []
     for path in paths:
@@ -183,7 +182,7 @@ def plot_csvs_results(paths):
         [timestep / 1e8 for timestep in timesteps_total] for timesteps_total in timesteps_totals
     ]
 
-    reward_color = get_color_from_model_name(model)
+    reward_color = get_color_from_model_name(model_name)
     reward_means = [df.episode_reward_mean for df in dfs]
     plots.append(
         PlotData(
@@ -246,7 +245,9 @@ def plot_csvs_results(paths):
             )
 
         try:
-            plot_and_save(plot_fn, path, plot.plot_graphics.column_name + "_" + env + "_" + model)
+            plot_and_save(
+                plot_fn, path, plot.plot_graphics.column_name + "_" + env + "_" + model_name
+            )
         except ZeroDivisionError:
             pass
 
@@ -256,6 +257,7 @@ def get_color_from_model_name(model_name):
         "baseline": "blue",
         "moa": "red",
         "scm": "orange",
+        "scm no influence reward": "green",
     }
     name_lower = model_name.lower()
     if name_lower in name_to_color.keys():
@@ -271,6 +273,23 @@ def get_color_from_model_name(model_name):
         return default_color
 
 
+def get_env_and_model_name_from_path(path):
+    category_path = path.split("/")[-3]
+    if "baseline" in category_path:
+        model_name = "baseline"
+    elif "moa" in category_path:
+        model_name = "MOA"
+    elif "scm" in category_path:
+        if "no_influence" in category_path:
+            model_name = "SCM no influence reward"
+        else:
+            model_name = "SCM"
+    else:
+        raise NotImplementedError
+    env = category_path.split("_")[0]
+    return env, model_name
+
+
 def get_experiment_rewards(paths):
     dfs = []
     for path in paths:
@@ -279,18 +298,8 @@ def get_experiment_rewards(paths):
         df = df.fillna(0)
         dfs.append(df)
 
-    category_path = paths[0].split("/")[-3]
-    if "baseline" in category_path:
-        model_name = "baseline"
-    elif "moa" in category_path:
-        model_name = "MOA"
-    elif "scm" in category_path:
-        model_name = "SCM"
-    else:
-        raise NotImplementedError
+    env, model_name = get_env_and_model_name_from_path(paths[0])
     color = get_color_from_model_name(model_name)
-
-    env = category_path.split("_")[0]
 
     # Convert environment steps to 1e8 representation
     timesteps_totals = [df.timesteps_total for df in dfs]
