@@ -66,3 +66,16 @@ Every environment that subclasses MapEnv probably needs to implement the followi
 # Contributors
 
 This code base was developed by Eugene Vinitsky and Natasha Jaques; help with reproduction was provided by Joel Leibo, Antonio Castenada, and Edward Hughes. 
+
+# Citation
+
+If you want to cite this repository accademic work, please use the following citation:
+
+@misc{SSDOpenSource,
+author = {[Vinitsky, Eugene and Jaques, Natasha and Leibo, Joel and Castenada, Antonio and Hughes, Edward]},
+title = {An Open Source Implementation of Sequential Social Dilemma Games},
+year = {2019},
+publisher = {GitHub},
+note = {GitHub repository},
+howpublished = {\url{https://github.com/eugenevinitsky/sequential_social_dilemma_games/issues/182}}
+}
