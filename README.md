@@ -103,3 +103,16 @@ The below graphs display results for cleanup/harvest using un-tuned PPO. As of y
 # Contributors
 
 This code base was initially developed by Eugene Vinitsky and Natasha Jaques; help with reproduction was provided by Joel Leibo, Antonio Castenada, and Edward Hughes. Additional development was done by Hugo Heemskerk. 
+
+# Citation
+
+If you want to cite this repository accademic work, please use the following citation:
+
+@misc{SSDOpenSource,
+author = {[Vinitsky, Eugene and Jaques, Natasha and Leibo, Joel and Castenada, Antonio and Hughes, Edward]},
+title = {An Open Source Implementation of Sequential Social Dilemma Games},
+year = {2019},
+publisher = {GitHub},
+note = {GitHub repository},
+howpublished = {\url{https://github.com/eugenevinitsky/sequential_social_dilemma_games/issues/182}}
+}
