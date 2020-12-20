@@ -17,7 +17,8 @@ BASE_ACTIONS = {0: 'MOVE_LEFT',  # Move left
 
 class Agent(object):
 
-    def __init__(self, agent_id, start_pos, start_orientation, grid, row_size, col_size):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, row_size, col_size,
+                 global_ref_point=None):
         """Superclass for all agents.
 
         Parameters
@@ -42,6 +43,7 @@ class Agent(object):
         self.grid = grid
         self.row_size = row_size
         self.col_size = col_size
+        self.global_ref_point = global_ref_point
         self.reward_this_turn = 0
 
     @property
@@ -76,7 +78,8 @@ class Agent(object):
         raise NotImplementedError
 
     def get_state(self):
-        return util.return_view(self.grid, self.get_pos(),
+        pos = self.global_ref_point if self.global_ref_point else self.get_pos()
+        return util.return_view(self.grid, pos,
                                 self.row_size, self.col_size)
 
     def compute_reward(self):
@@ -204,9 +207,11 @@ CLEANUP_VIEW_SIZE = 7
 
 
 class CleanupAgent(Agent):
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=CLEANUP_VIEW_SIZE):
+    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=CLEANUP_VIEW_SIZE,
+                 global_ref_point=None):
         self.view_len = view_len
-        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len,
+                         global_ref_point)
         # remember what you've stepped on
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)

@@ -7,18 +7,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 from ray.rllib.env import MultiAgentEnv
 
-ACTIONS = {'MOVE_LEFT': [-1, 0],  # Move left
-           'MOVE_RIGHT': [1, 0],  # Move right
-           'MOVE_UP': [0, -1],  # Move up
-           'MOVE_DOWN': [0, 1],  # Move down
+ACTIONS = {'MOVE_LEFT': [0, -1],  # Move left
+           'MOVE_RIGHT': [0, 1],  # Move right
+           'MOVE_UP': [-1, 0],  # Move up
+           'MOVE_DOWN': [1, 0],  # Move down
            'STAY': [0, 0],  # don't move
-           'TURN_CLOCKWISE': [[0, -1], [1, 0]],  # Rotate counter clockwise
-           'TURN_COUNTERCLOCKWISE': [[0, 1], [-1, 0]]}  # Move right
+           'TURN_CLOCKWISE': [[0, 1], [-1, 0]],  # Rotate clockwise
+           'TURN_COUNTERCLOCKWISE': [[0, -1], [1, 0]]}  # Rotate counterclockwise
 
-ORIENTATIONS = {'LEFT': [-1, 0],
-                'RIGHT': [1, 0],
-                'UP': [0, -1],
-                'DOWN': [0, 1]}
+ORIENTATIONS = {'LEFT': [0, -1],
+                'RIGHT': [0, 1],
+                'UP': [-1, 0],
+                'DOWN': [1, 0]}
 
 DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    '0': [0, 0, 0],  # Black background beyond map walls
@@ -39,11 +39,10 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
                    '8': [250, 204, 255],  # Pink
                    '9': [238, 223, 16]}  # Yellow
 
-# the axes look like
-# graphic is here to help me get my head in order
-# WARNING: increasing array position in the direction of down
-# so for example if you move_left when facing left
-# your y position decreases.
+# WARNING: agent.pos[0] increases in the direction of DOWN
+# and agent.pos[1] increases in the direction of RIGHT
+# Movement actions take effect according to the agent's absolute orientation
+# e.g. if an agent is facing UP, actions take effect like this
 #         ^
 #         |
 #         U
@@ -58,7 +57,9 @@ DEFAULT_COLOURS = {' ': [0, 0, 0],  # Black background
 
 class MapEnv(MultiAgentEnv):
 
-    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None):
+    def __init__(self, ascii_map, num_agents=1, render=True, color_map=None,
+                 shuffle_spawn=True, random_orientation=True,
+                 beam_width=3):
         """
 
         Parameters
@@ -78,6 +79,11 @@ class MapEnv(MultiAgentEnv):
         # map without agents or beams
         self.world_map = np.full((len(self.base_map), len(self.base_map[0])), ' ')
         self.beam_pos = []
+        self.shuffle_spawn = shuffle_spawn
+        self.random_orientation = random_orientation
+        assert beam_width % 2 == 1  # must be odd
+        # e.g., beam_width = 3 has 1-pixel beams on both sides of the agent
+        self.beam_shift = int((beam_width - 1)/2)
 
         self.agents = {}
 
@@ -175,7 +181,7 @@ class MapEnv(MultiAgentEnv):
             self.world_map[pos[0], pos[1]] = new_char
 
         # execute custom moves like firing
-        self.update_custom_moves(agent_actions)
+        n_cleaned_each_agent = self.update_custom_moves(agent_actions)
 
         # execute spawning events
         self.custom_map_update()
@@ -194,6 +200,7 @@ class MapEnv(MultiAgentEnv):
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
         dones["__all__"] = np.any(list(dones.values()))
+        info['n_cleaned_each_agent'] = n_cleaned_each_agent
         return observations, rewards, dones, info
 
     def reset(self):
@@ -222,6 +229,7 @@ class MapEnv(MultiAgentEnv):
             # agent.grid = util.return_view(map_with_agents, agent.pos,
             #                               agent.row_size, agent.col_size)
             rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
+            rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
             observations[agent.agent_id] = rgb_arr
         return observations
 
@@ -327,7 +335,8 @@ class MapEnv(MultiAgentEnv):
         rgb_arr = self.map_to_colors(map_with_agents)
         plt.imshow(rgb_arr, interpolation='nearest')
         if filename is None:
-            plt.show()
+            plt.draw()
+            plt.pause(0.1)
         else:
             plt.savefig(filename)
 
@@ -520,13 +529,27 @@ class MapEnv(MultiAgentEnv):
                     break
 
     def update_custom_moves(self, agent_actions):
+        """Handles custom actions such as firing a beam.
+
+        Returns
+        -------
+        n_cleaned_each_agent: list(int)
+            number of waste cleaned by each agent
+        """
+        n_cleaned_each_agent = []
         for agent_id, action in agent_actions.items():
+            n_cleaned = 0
             # check its not a move based action
             if 'MOVE' not in action and 'STAY' not in action and 'TURN' not in action:
                 agent = self.agents[agent_id]
                 updates = self.custom_action(agent, action)
                 if len(updates) > 0:
                     self.update_map(updates)
+                    # count the number of cells that got replaced by 'R'
+                    for tup in updates:
+                        n_cleaned += 1 if tup[2] == 'R' else 0
+            n_cleaned_each_agent.append(n_cleaned)
+        return n_cleaned_each_agent
 
     def update_map(self, new_points):
         """For points in new_points, place desired char on the map"""
@@ -582,8 +605,10 @@ class MapEnv(MultiAgentEnv):
         firing_direction = ORIENTATIONS[firing_orientation]
         # compute the other two starting positions
         right_shift = self.rotate_right(firing_direction)
-        firing_pos = [start_pos, start_pos + right_shift - firing_direction,
-                      start_pos - right_shift - firing_direction]
+        if self.beam_shift == 0:
+            firing_pos = [start_pos]
+        else:
+            firing_pos = [start_pos, start_pos + self.beam_shift*right_shift - firing_direction, start_pos - self.beam_shift*right_shift - firing_direction]
         firing_points = []
         updates = []
         for pos in firing_pos:
@@ -630,7 +655,8 @@ class MapEnv(MultiAgentEnv):
         spawn_index = 0
         is_free_cell = False
         curr_agent_pos = [agent.get_pos().tolist() for agent in self.agents.values()]
-        random.shuffle(self.spawn_points)
+        if self.shuffle_spawn:
+            random.shuffle(self.spawn_points)
         for i, spawn_point in enumerate(self.spawn_points):
             if [spawn_point[0], spawn_point[1]] not in curr_agent_pos:
                 spawn_index = i
@@ -640,8 +666,13 @@ class MapEnv(MultiAgentEnv):
 
     def spawn_rotation(self):
         """Return a randomly selected initial rotation for an agent"""
-        rand_int = np.random.randint(len(ORIENTATIONS.keys()))
-        return list(ORIENTATIONS.keys())[rand_int]
+        if self.random_orientation:
+            rand_int = np.random.randint(len(ORIENTATIONS.keys()))
+            orientation = list(ORIENTATIONS.keys())[rand_int]
+        else:
+            orientation = 'UP'
+        # return list(ORIENTATIONS.keys())[rand_int]
+        return orientation
 
     def rotate_view(self, orientation, view):
         """Takes a view of the map and rotates it the agent orientation
@@ -657,11 +688,11 @@ class MapEnv(MultiAgentEnv):
         if orientation == 'UP':
             return view
         elif orientation == 'LEFT':
-            return np.rot90(view, k=1, axes=(0, 1))
+            return np.rot90(view, k=3, axes=(0, 1))
         elif orientation == 'DOWN':
             return np.rot90(view, k=2, axes=(0, 1))
         elif orientation == 'RIGHT':
-            return np.rot90(view, k=3, axes=(0, 1))
+            return np.rot90(view, k=1, axes=(0, 1))
         else:
             raise ValueError('Orientation {} is not valid'.format(orientation))
 
