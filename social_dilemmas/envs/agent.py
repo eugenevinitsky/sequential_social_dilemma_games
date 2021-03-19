@@ -1,23 +1,23 @@
 """Base class for an agent that defines the possible actions. """
 
-from gym.spaces import Box
-from gym.spaces import Discrete
 import numpy as np
+
 import utility_funcs as util
 
 # basic moves every agent should do
-BASE_ACTIONS = {0: 'MOVE_LEFT',  # Move left
-                1: 'MOVE_RIGHT',  # Move right
-                2: 'MOVE_UP',  # Move up
-                3: 'MOVE_DOWN',  # Move down
-                4: 'STAY',  # don't move
-                5: 'TURN_CLOCKWISE',  # Rotate counter clockwise
-                6: 'TURN_COUNTERCLOCKWISE'}  # Rotate clockwise
+BASE_ACTIONS = {
+    0: "MOVE_LEFT",  # Move left
+    1: "MOVE_RIGHT",  # Move right
+    2: "MOVE_UP",  # Move up
+    3: "MOVE_DOWN",  # Move down
+    4: "STAY",  # don't move
+    5: "TURN_CLOCKWISE",  # Rotate counter clockwise
+    6: "TURN_COUNTERCLOCKWISE",
+}  # Rotate clockwise
 
 
 class Agent(object):
-
-    def __init__(self, agent_id, start_pos, start_orientation, grid, row_size, col_size):
+    def __init__(self, agent_id, start_pos, start_orientation, full_map, row_size, col_size):
         """Superclass for all agents.
 
         Parameters
@@ -28,7 +28,7 @@ class Agent(object):
             a 2d array indicating the x-y position of the agents
         start_orientation: (np.ndarray)
             a 2d array containing a unit vector indicating the agent direction
-        grid: (2d array)
+        full_map: (2d array)
             a reference to this agent's view of the environment
         row_size: (int)
             how many rows up and down the agent can look
@@ -38,11 +38,11 @@ class Agent(object):
         self.agent_id = agent_id
         self.pos = np.array(start_pos)
         self.orientation = start_orientation
-        # TODO(ev) change grid to env, this name is not very informative
-        self.grid = grid
+        self.full_map = full_map
         self.row_size = row_size
         self.col_size = col_size
         self.reward_this_turn = 0
+        self.prev_visible_agents = None
 
     @property
     def action_space(self):
@@ -75,9 +75,11 @@ class Agent(object):
         """Maps action_number to a desired action in the map"""
         raise NotImplementedError
 
+    def get_char_id(self):
+        return bytes(str(int(self.agent_id[-1]) + 1), encoding="ascii")
+
     def get_state(self):
-        return util.return_view(self.grid, self.get_pos(),
-                                self.row_size, self.col_size)
+        return util.return_view(self.full_map, self.pos, self.row_size, self.col_size)
 
     def compute_reward(self):
         reward = self.reward_this_turn
@@ -91,7 +93,7 @@ class Agent(object):
         return self.pos
 
     def translate_pos_to_egocentric_coord(self, pos):
-        offset_pos = pos - self.get_pos()
+        offset_pos = pos - self.pos
         ego_centre = [self.row_size, self.col_size]
         return ego_centre + offset_pos
 
@@ -101,18 +103,15 @@ class Agent(object):
     def get_orientation(self):
         return self.orientation
 
-    def get_map(self):
-        return self.grid
-
     def return_valid_pos(self, new_pos):
         """Checks that the next pos is legal, if not return current pos"""
         ego_new_pos = new_pos  # self.translate_pos_to_egocentric_coord(new_pos)
         new_row, new_col = ego_new_pos
-        # you can't walk through walls
-        temp_pos = new_pos.copy()
-        if self.grid[new_row, new_col] == '@':
-            temp_pos = self.get_pos()
-        return temp_pos
+        # You can't walk through walls, closed doors or switches
+        if self.is_tile_walkable(new_row, new_col):
+            return new_pos
+        else:
+            return self.pos
 
     def update_agent_pos(self, new_pos):
         """Updates the agents internal positions
@@ -124,16 +123,24 @@ class Agent(object):
         new_pos: (np.ndarray)
             2 element array describing the agent positions
         """
-        old_pos = self.get_pos()
+        old_pos = self.pos
         ego_new_pos = new_pos  # self.translate_pos_to_egocentric_coord(new_pos)
         new_row, new_col = ego_new_pos
-        # you can't walk through walls
-        temp_pos = new_pos.copy()
-        if self.grid[new_row, new_col] == '@':
-            temp_pos = self.get_pos()
-        self.set_pos(temp_pos)
+        if self.is_tile_walkable(new_row, new_col):
+            validated_new_pos = new_pos
+        else:
+            validated_new_pos = self.pos
+        self.set_pos(validated_new_pos)
         # TODO(ev) list array consistency
-        return self.get_pos(), np.array(old_pos)
+        return self.pos, np.array(old_pos)
+
+    def is_tile_walkable(self, row, column):
+        return (
+            0 <= row < self.full_map.shape[0]
+            and 0 <= column < self.full_map.shape[1]
+            # You can't walk through walls, closed doors or switches
+            and self.full_map[row, column] not in [b"@", b"D", b"w", b"W"]
+        )
 
     def update_agent_rot(self, new_rot):
         self.set_orientation(new_rot)
@@ -148,22 +155,15 @@ class Agent(object):
 
 
 HARVEST_ACTIONS = BASE_ACTIONS.copy()
-HARVEST_ACTIONS.update({7: 'FIRE'})  # Fire a penalty beam
-
-HARVEST_VIEW_SIZE = 7
+HARVEST_ACTIONS.update({7: "FIRE"})  # Fire a penalty beam
 
 
 class HarvestAgent(Agent):
-
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=HARVEST_VIEW_SIZE):
+    def __init__(self, agent_id, start_pos, start_orientation, full_map, view_len):
         self.view_len = view_len
-        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        super().__init__(agent_id, start_pos, start_orientation, full_map, view_len, view_len)
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
-
-    @property
-    def action_space(self):
-        return Discrete(8)
 
     # Ugh, this is gross, this leads to the actions basically being
     # defined in two places
@@ -171,17 +171,12 @@ class HarvestAgent(Agent):
         """Maps action_number to a desired action in the map"""
         return HARVEST_ACTIONS[action_number]
 
-    @property
-    def observation_space(self):
-        return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
-                                             2 * self.view_len + 1, 3), dtype=np.float32)
-
     def hit(self, char):
-        if char == 'F':
+        if char == b"F":
             self.reward_this_turn -= 50
 
     def fire_beam(self, char):
-        if char == 'F':
+        if char == b"F":
             self.reward_this_turn -= 1
 
     def get_done(self):
@@ -189,36 +184,24 @@ class HarvestAgent(Agent):
 
     def consume(self, char):
         """Defines how an agent interacts with the char it is standing on"""
-        if char == 'A':
+        if char == b"A":
             self.reward_this_turn += 1
-            return ' '
+            return b" "
         else:
             return char
 
 
 CLEANUP_ACTIONS = BASE_ACTIONS.copy()
-CLEANUP_ACTIONS.update({7: 'FIRE',  # Fire a penalty beam
-                        8: 'CLEAN'})  # Fire a cleaning beam
-
-CLEANUP_VIEW_SIZE = 7
+CLEANUP_ACTIONS.update({7: "FIRE", 8: "CLEAN"})  # Fire a penalty beam  # Fire a cleaning beam
 
 
 class CleanupAgent(Agent):
-    def __init__(self, agent_id, start_pos, start_orientation, grid, view_len=CLEANUP_VIEW_SIZE):
+    def __init__(self, agent_id, start_pos, start_orientation, full_map, view_len):
         self.view_len = view_len
-        super().__init__(agent_id, start_pos, start_orientation, grid, view_len, view_len)
+        super().__init__(agent_id, start_pos, start_orientation, full_map, view_len, view_len)
         # remember what you've stepped on
         self.update_agent_pos(start_pos)
         self.update_agent_rot(start_orientation)
-
-    @property
-    def action_space(self):
-        return Discrete(9)
-
-    @property
-    def observation_space(self):
-        return Box(low=0.0, high=0.0, shape=(2 * self.view_len + 1,
-                                             2 * self.view_len + 1, 3), dtype=np.float32)
 
     # Ugh, this is gross, this leads to the actions basically being
     # defined in two places
@@ -227,20 +210,58 @@ class CleanupAgent(Agent):
         return CLEANUP_ACTIONS[action_number]
 
     def fire_beam(self, char):
-        if char == 'F':
+        if char == b"F":
             self.reward_this_turn -= 1
 
     def get_done(self):
         return False
 
     def hit(self, char):
-        if char == 'F':
+        if char == b"F":
             self.reward_this_turn -= 50
 
     def consume(self, char):
         """Defines how an agent interacts with the char it is standing on"""
-        if char == 'A':
+        if char == b"A":
             self.reward_this_turn += 1
-            return ' '
+            return b" "
+        else:
+            return char
+
+
+SWITCH_ACTIONS = BASE_ACTIONS.copy()
+SWITCH_ACTIONS.update({7: "TOGGLE_SWITCH"})  # Fire a switch beam
+
+
+class SwitchAgent(Agent):
+    def __init__(self, agent_id, start_pos, start_orientation, full_map, view_len):
+        self.view_len = view_len
+        super().__init__(agent_id, start_pos, start_orientation, full_map, view_len, view_len)
+        # remember what you've stepped on
+        self.update_agent_pos(start_pos)
+        self.update_agent_rot(start_orientation)
+        self.is_done = False
+
+    # Ugh, this is gross, this leads to the actions basically being
+    # defined in two places
+    def action_map(self, action_number):
+        """Maps action_number to a desired action in the map"""
+        return SWITCH_ACTIONS[action_number]
+
+    def fire_beam(self, char):
+        # Cost of firing a switch beam
+        # Nothing for now.
+        if char == b"F":
+            self.reward_this_turn += 0
+
+    def get_done(self):
+        return self.is_done
+
+    def consume(self, char):
+        """Defines how an agent interacts with the char it is standing on"""
+        if char == b"d":
+            self.reward_this_turn += 1
+            self.is_done = True
+            return b" "
         else:
             return char
