@@ -28,7 +28,7 @@ pluggy==0.13.1
 pre-commit==2.2.0
 protobuf==3.11.3
 psutil==5.7.0
-py==1.8.1
+py==1.10.0
 pyparsing==2.4.6
 pytest==5.4.1
 pytz==2019.3
