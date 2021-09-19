@@ -1,8 +1,6 @@
 """Base map class that defines the rendering process
 """
 
-import random
-
 import matplotlib.pyplot as plt
 import numpy as np
 from gym.spaces import Box, Dict
@@ -83,7 +81,7 @@ class MapEnv(MultiAgentEnv):
         color_map: dict
             Specifies how to convert between ascii chars and colors
         return_agent_actions: bool
-            If true, we the action space will include the actions of other agents
+            If true, we the observation space will include the actions of other agents
         """
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
@@ -137,11 +135,22 @@ class MapEnv(MultiAgentEnv):
             obs_space = {
                 **obs_space,
                 "other_agent_actions": Box(
-                    low=0, high=len(self.all_actions), shape=(self.num_agents - 1,), dtype=np.uint8,
+                    low=0,
+                    high=len(self.all_actions),
+                    shape=(self.num_agents - 1,),
+                    dtype=np.uint8,
                 ),
-                "visible_agents": Box(low=0, high=1, shape=(self.num_agents - 1,), dtype=np.uint8,),
+                "visible_agents": Box(
+                    low=0,
+                    high=1,
+                    shape=(self.num_agents - 1,),
+                    dtype=np.uint8,
+                ),
                 "prev_visible_agents": Box(
-                    low=0, high=1, shape=(self.num_agents - 1,), dtype=np.uint8,
+                    low=0,
+                    high=1,
+                    shape=(self.num_agents - 1,),
+                    dtype=np.uint8,
                 ),
             }
         obs_space = Dict(obs_space)
@@ -321,6 +330,12 @@ class MapEnv(MultiAgentEnv):
                 observations[agent.agent_id] = {"curr_obs": rgb_arr}
         return observations
 
+    def seed(self, seed=None):
+        np.random.seed(seed)
+
+    def close(self):
+        plt.close()
+
     @property
     def agent_pos(self):
         return [agent.pos.tolist() for agent in self.agents.values()]
@@ -429,40 +444,43 @@ class MapEnv(MultiAgentEnv):
 
         return rgb_arr
 
-    def render(self, filename=None):
-        """ Creates an image of the map to plot or save.
+    def render(self, filename=None, mode="human"):
+        """Creates an image of the map to plot or save.
 
         Args:
             filename: If a string is passed, will save the image
                       to disk at this location.
         """
         rgb_arr = self.full_map_to_colors()
-        plt.cla()
-        plt.imshow(rgb_arr, interpolation="nearest")
-        if filename is None:
-            plt.show()
-        else:
-            plt.savefig(filename)
+        if mode == "human":
+            plt.cla()
+            plt.imshow(rgb_arr, interpolation="nearest")
+            if filename is None:
+                plt.show(block=False)
+            else:
+                plt.savefig(filename)
+            return None
+        return rgb_arr
 
     def update_moves(self, agent_actions):
         """Converts agent action tuples into a new map and new agent positions.
-        Also resolves conflicts over multiple agents wanting a cell.
+         Also resolves conflicts over multiple agents wanting a cell.
 
-        This method works by finding all conflicts over a cell and randomly assigning them
-       to one of the agents that desires the slot. It then sets all of the other agents
-       that wanted the cell to have a move of staying. For moves that do not directly
-       conflict with another agent for a cell, but may not be temporarily resolvable
-       due to an agent currently being in the desired cell, we continually loop through
-       the actions until all moves have been satisfied or deemed impossible.
-       For example, agent 1 may want to move from [1,2] to [2,2] but agent 2 is in [2,2].
-       Agent 2, however, is moving into [3,2]. Agent-1's action is first in the order so at the
-       first pass it is skipped but agent-2 moves to [3,2]. In the second pass, agent-1 will
-       then be able to move into [2,2].
+         This method works by finding all conflicts over a cell and randomly assigning them
+        to one of the agents that desires the slot. It then sets all of the other agents
+        that wanted the cell to have a move of staying. For moves that do not directly
+        conflict with another agent for a cell, but may not be temporarily resolvable
+        due to an agent currently being in the desired cell, we continually loop through
+        the actions until all moves have been satisfied or deemed impossible.
+        For example, agent 1 may want to move from [1,2] to [2,2] but agent 2 is in [2,2].
+        Agent 2, however, is moving into [3,2]. Agent-1's action is first in the order so at the
+        first pass it is skipped but agent-2 moves to [3,2]. In the second pass, agent-1 will
+        then be able to move into [2,2].
 
-        Parameters
-        ----------
-        agent_actions: dict
-            dict with agent_id as key and action as value
+         Parameters
+         ----------
+         agent_actions: dict
+             dict with agent_id as key and action as value
         """
 
         reserved_slots = []
@@ -652,7 +670,7 @@ class MapEnv(MultiAgentEnv):
 
     def update_map(self, new_points):
         """For points in new_points, place desired char on the map
-            Update the color map as well"""
+        Update the color map as well"""
         for point in new_points:
             self.single_update_map(*point)
 
@@ -778,7 +796,7 @@ class MapEnv(MultiAgentEnv):
         spawn_index = 0
         is_free_cell = False
         curr_agent_pos = [agent.pos.tolist() for agent in self.agents.values()]
-        random.shuffle(self.spawn_points)
+        np.random.shuffle(self.spawn_points)
         for i, spawn_point in enumerate(self.spawn_points):
             if [spawn_point[0], spawn_point[1]] not in curr_agent_pos:
                 spawn_index = i

@@ -25,7 +25,10 @@ def add_default_args(parser):
         help="Name of the model to use. Can be baseline, moa, or scm",
     )
     parser.add_argument(
-        "--resume", action="store_true", default=False, help="Resume previous experiment.",
+        "--resume",
+        action="store_true",
+        default=False,
+        help="Resume previous experiment.",
     )
     parser.add_argument("--num_agents", type=int, default=2, help="Number of agent policies")
     parser.add_argument(
@@ -61,7 +64,10 @@ def add_default_args(parser):
         help="Experiment stops when this is the minimum episode reward within 1 iteration",
     )
     parser.add_argument(
-        "--num_samples", type=int, default=1, help="Amount of times to repeat all experiments",
+        "--num_samples",
+        type=int,
+        default=1,
+        help="Amount of times to repeat all experiments",
     )
     parser.add_argument("--memory", type=int, default=None, help="Amount of total usable memory")
     parser.add_argument(
@@ -113,7 +119,10 @@ def add_default_args(parser):
         help="Perform eager execution. Useful for debugging.",
     )
     parser.add_argument(
-        "--address", type=str, default=None, help="The address of the Ray cluster to connect to.",
+        "--address",
+        type=str,
+        default=None,
+        help="The address of the Ray cluster to connect to.",
     )
     parser.add_argument("--use_s3", action="store_true", default=False, help="If true upload to s3")
     parser.add_argument(
@@ -163,11 +172,17 @@ def add_default_args(parser):
 
     # MOA Parameters
     parser.add_argument(
-        "--moa_loss_weight", type=float, default=1.0, help="Loss weight of the moa network",
+        "--moa_loss_weight",
+        type=float,
+        default=1.0,
+        help="Loss weight of the moa network",
     )
 
     parser.add_argument(
-        "--influence_reward_weight", type=float, default=0.001, help="The moa reward weight.",
+        "--influence_reward_weight",
+        type=float,
+        default=0.001,
+        help="The moa reward weight.",
     )
     parser.add_argument(
         "--influence_reward_schedule_steps",
@@ -189,11 +204,17 @@ def add_default_args(parser):
 
     # SCM parameters
     parser.add_argument(
-        "--scm_loss_weight", type=float, default=1.0, help="Loss weight of the scm network",
+        "--scm_loss_weight",
+        type=float,
+        default=1.0,
+        help="Loss weight of the scm network",
     )
 
     parser.add_argument(
-        "--curiosity_reward_weight", type=float, default=0.001, help="The scm reward weight.",
+        "--curiosity_reward_weight",
+        type=float,
+        default=0.001,
+        help="The scm reward weight.",
     )
     parser.add_argument(
         "--curiosity_reward_schedule_steps",
@@ -233,5 +254,8 @@ def add_default_args(parser):
 
     # Env-specific parameters
     parser.add_argument(
-        "--num_switches", type=int, default=6, help="Amount of switches in a switch map environment",
+        "--num_switches",
+        type=int,
+        default=6,
+        help="Amount of switches in a switch map environment",
     )

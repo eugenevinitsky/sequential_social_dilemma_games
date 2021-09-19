@@ -1,0 +1,70 @@
+from social_dilemmas.envs.env_creator import get_env_creator
+from gym.utils import EzPickle
+from gym.utils import seeding
+from gym import spaces
+from pettingzoo.utils.env import ParallelEnv
+from pettingzoo.utils.conversions import from_parallel_wrapper
+from pettingzoo.utils import wrappers
+import numpy as np
+
+MAX_CYCLES = 1000
+
+
+def parallel_env(max_cycles=MAX_CYCLES, **ssd_args):
+    return _parallel_env(max_cycles, **ssd_args)
+
+
+def raw_env(max_cycles=MAX_CYCLES, **ssd_args):
+    return from_parallel_wrapper(parallel_env(max_cycles, **ssd_args))
+
+
+def env(max_cycles=MAX_CYCLES, **ssd_args):
+    aec_env = raw_env(max_cycles, **ssd_args)
+    aec_env = wrappers.CaptureStdoutWrapper(env)
+    aec_env = wrappers.AssertOutOfBoundsWrapper(env)
+    aec_env = wrappers.OrderEnforcingWrapper(env)
+    return aec_env
+
+
+class ssd_parallel_env(ParallelEnv):
+    def __init__(self, env, max_cycles):
+        self.env = env
+        self.max_cycles = max_cycles
+        self.possible_agents = list(self.env.agents.keys())
+        self.env.reset()
+        observation_space = env.observation_space
+        action_space = env.action_space
+        self.observation_spaces = {name: observation_space for name in self.possible_agents}
+        self.action_spaces = {name: action_space for name in self.possible_agents}
+
+    def reset(self):
+        self.dones = {agent: False for agent in self.possible_agents}
+        self.agents = self.possible_agents[:]
+        return self.env.reset()
+
+    def seed(self, seed=None):
+        return self.env.seed(seed)
+
+    def render(self, mode="human"):
+        return self.env.render(mode=mode)
+
+    def close(self):
+        self.env.close()
+
+    def step(self, actions):
+        obss, rews, self.all_dones, infos = self.env.step(actions)
+        del self.all_dones["__all__"]
+        self.agents = [agent for agent in self.agents if not self.all_dones[agent]]
+        return obss, rews, self.all_dones, infos
+
+
+class _parallel_env(ssd_parallel_env, EzPickle):
+    metadata = {"render.modes": ["human", "rgb_array"]}
+
+    def __init__(self, max_cycles, **ssd_args):
+        EzPickle.__init__(self, max_cycles, **ssd_args)
+        env_name = ssd_args["ssd_args"].env
+        num_agents = ssd_args["ssd_args"].num_agents
+        ssd_args = ssd_args["ssd_args"]
+        env = get_env_creator(env_name, num_agents, ssd_args)(num_agents)
+        super().__init__(env, max_cycles)
