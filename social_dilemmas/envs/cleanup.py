@@ -181,3 +181,118 @@ class CleanupEnv(MapEnv):
         current_area = counts_dict.get('H', 0)
         free_area = self.potential_waste_area - current_area
         return free_area
+
+
+class CleanupEnvWithPlanner(CleanupEnv):
+    """Wrapper around CleanupEnv with extra planner global observation."""
+    def __init__(self, ascii_map=CLEANUP_MAP, num_agents=1, render=False,
+                 shuffle_spawn=True, global_ref_point=None,
+                 view_size=7, random_orientation=True,
+                 cleanup_params=cleanup_params_default,
+                 beam_width=3, planner_ref_point=None):
+        super().__init__(ascii_map, num_agents, render,
+                         shuffle_spawn, global_ref_point, view_size,
+                         random_orientation, cleanup_params, beam_width)
+        self.planner_ref_point = planner_ref_point
+
+    def reset(self):
+        """Reset the environment.
+
+        This method is performed in between rollouts. It resets the state of
+        the environment.
+
+        Returns
+        -------
+        observation: dict of numpy ndarray
+            the initial observation of the space. The initial reward is assumed
+            to be zero.
+        """
+        self.beam_pos = []
+        self.agents = {}
+        self.setup_agents()
+        self.reset_map()
+        self.custom_map_update()
+
+        map_with_agents = self.get_map_with_agents()
+
+        observations = {}
+        for agent in self.agents.values():
+            agent.grid = map_with_agents
+            # agent.grid = util.return_view(map_with_agents, agent.pos,
+            #                               agent.row_size, agent.col_size)
+            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
+            rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
+            observations[agent.agent_id] = rgb_arr
+
+        # Planner
+        agent = list(self.agents.values())[0] # take any agent
+        agent.grid = map_with_agents
+        rgb_arr = self.map_to_colors(agent.get_state_global(
+            self.planner_ref_point), self.color_map)
+        rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
+        observations['p'] = rgb_arr
+        
+        return observations
+
+    def step(self, actions):
+        """Takes in a dict of actions and converts them to a map update
+
+        Parameters
+        ----------
+        actions: dict {agent-id: int}
+            dict of actions, keyed by agent-id that are passed to the agent. The agent
+            interprets the int and converts it to a command
+
+        Returns
+        -------
+        observations: dict of arrays representing agent observations
+        rewards: dict of rewards for each agent
+        dones: dict indicating whether each agent is done
+        info: dict to pass extra info to gym
+        """
+
+        self.beam_pos = []
+        agent_actions = {}
+        for agent_id, action in actions.items():
+            agent_action = self.agents[agent_id].action_map(action)
+            agent_actions[agent_id] = agent_action
+
+        # move
+        self.update_moves(agent_actions)
+
+        for agent in self.agents.values():
+            pos = agent.get_pos()
+            new_char = agent.consume(self.world_map[pos[0], pos[1]])
+            self.world_map[pos[0], pos[1]] = new_char
+
+        # execute custom moves like firing
+        n_cleaned_each_agent = self.update_custom_moves(agent_actions)
+
+        # execute spawning events
+        self.custom_map_update()
+
+        map_with_agents = self.get_map_with_agents()
+
+        observations = {}
+        rewards = {}
+        dones = {}
+        info = {}
+        for agent in self.agents.values():
+            agent.grid = map_with_agents
+            rgb_arr = self.map_to_colors(agent.get_state(), self.color_map)
+            rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
+            observations[agent.agent_id] = rgb_arr
+            rewards[agent.agent_id] = agent.compute_reward()
+            dones[agent.agent_id] = agent.get_done()
+        dones["__all__"] = np.any(list(dones.values()))
+        info['n_cleaned_each_agent'] = n_cleaned_each_agent
+
+        # Planner
+        agent = list(self.agents.values())[0] # take any agent
+        agent.grid = map_with_agents
+        rgb_arr = self.map_to_colors(agent.get_state_global(
+            self.planner_ref_point), self.color_map)
+        rgb_arr = self.rotate_view(agent.orientation, rgb_arr)
+        observations['p'] = rgb_arr
+        
+        return observations, rewards, dones, info        

@@ -82,6 +82,10 @@ class Agent(object):
         return util.return_view(self.grid, pos,
                                 self.row_size, self.col_size)
 
+    def get_state_global(self, global_ref_point):
+        return util.return_view(self.grid, global_ref_point,
+                                self.row_size, self.col_size)
+
     def compute_reward(self):
         reward = self.reward_this_turn
         self.reward_this_turn = 0
