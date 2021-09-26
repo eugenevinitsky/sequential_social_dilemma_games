@@ -52,7 +52,7 @@ class InfluenceScheduleMixIn(object):
         )
 
     def compute_influence_reward_weight(self):
-        """ Computes multiplier for influence reward based on training steps
+        """Computes multiplier for influence reward based on training steps
         taken and schedule parameters.
         """
         weight = np.interp(
@@ -254,7 +254,12 @@ def build_model(policy, obs_space, action_space, config):
     _, logit_dim = ModelCatalog.get_action_dist(action_space, config["model"])
 
     policy.model = ModelCatalog.get_model_v2(
-        obs_space, action_space, logit_dim, config["model"], name=POLICY_SCOPE, framework="tf",
+        obs_space,
+        action_space,
+        logit_dim,
+        config["model"],
+        name=POLICY_SCOPE,
+        framework="tf",
     )
 
     return policy.model

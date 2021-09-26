@@ -9,7 +9,13 @@ tf = try_import_tf()
 
 class MoaLSTM(RecurrentTFModelV2):
     def __init__(
-        self, obs_space, action_space, num_outputs, model_config, name, cell_size=64,
+        self,
+        obs_space,
+        action_space,
+        num_outputs,
+        model_config,
+        name,
+        cell_size=64,
     ):
         """
         The LSTM in the Model of Other Agents head.

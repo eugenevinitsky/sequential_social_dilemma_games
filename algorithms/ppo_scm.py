@@ -94,8 +94,8 @@ def postprocess_ppo_scm(policy, sample_batch, other_agent_batches=None, episode=
 
 def setup_ppo_scm_mixins(policy, obs_space, action_space, config):
     """
-        Calls init on all PPO+MOA+SCM mixins in the policy
-        """
+    Calls init on all PPO+MOA+SCM mixins in the policy
+    """
     setup_ppo_moa_mixins(policy, obs_space, action_space, config)
     setup_scm_mixins(policy, obs_space, action_space, config)
 

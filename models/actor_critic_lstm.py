@@ -10,7 +10,13 @@ tf = try_import_tf()
 
 class ActorCriticLSTM(RecurrentTFModelV2):
     def __init__(
-        self, obs_space, action_space, num_outputs, model_config, name, cell_size=64,
+        self,
+        obs_space,
+        action_space,
+        num_outputs,
+        model_config,
+        name,
+        cell_size=64,
     ):
         """
         Create a LSTM with an actor-critic output: an output head with size num_outputs for the
@@ -36,7 +42,11 @@ class ActorCriticLSTM(RecurrentTFModelV2):
 
         lstm_out, state_h, state_c = tf.keras.layers.LSTM(
             cell_size, return_sequences=True, return_state=True, name="lstm"
-        )(inputs=input_layer, mask=tf.sequence_mask(seq_in), initial_state=[state_in_h, state_in_c],)
+        )(
+            inputs=input_layer,
+            mask=tf.sequence_mask(seq_in),
+            initial_state=[state_in_h, state_in_c],
+        )
 
         # Postprocess LSTM output with another hidden layer and compute values
         logits = tf.keras.layers.Dense(
@@ -45,7 +55,10 @@ class ActorCriticLSTM(RecurrentTFModelV2):
 
         inputs = [input_layer, seq_in, state_in_h, state_in_c]
         value_out = tf.keras.layers.Dense(
-            1, name="value_out", activation=None, kernel_initializer=normc_initializer(0.01),
+            1,
+            name="value_out",
+            activation=None,
+            kernel_initializer=normc_initializer(0.01),
         )(lstm_out)
         outputs = [logits, value_out, state_h, state_c]
 

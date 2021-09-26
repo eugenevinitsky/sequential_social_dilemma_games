@@ -45,7 +45,7 @@ class SocialCuriosityScheduleMixIn(object):
         )
 
     def compute_curiosity_reward_weight(self):
-        """ Computes multiplier for social_curiosity reward based on training steps
+        """Computes multiplier for social_curiosity reward based on training steps
         taken and schedule parameters.
         """
         weight = np.interp(
@@ -107,8 +107,7 @@ def scm_postprocess_trajectory(policy, sample_batch, other_agent_batches=None, e
 
 
 def weigh_and_add_curiosity_reward(policy, sample_batch):
-    """Compute curiosity of this agent and add to rewards.
-    """
+    """Compute curiosity of this agent and add to rewards."""
     cur_curiosity_reward_weight = policy.compute_curiosity_reward_weight()
     # Align the reward, as the reward for timestep n is calculated at timestep n+1.
     curiosity_reward = np.concatenate((sample_batch[SOCIAL_CURIOSITY_REWARD][1:], [0]))

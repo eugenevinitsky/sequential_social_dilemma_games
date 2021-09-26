@@ -30,6 +30,11 @@ def add_default_args(parser):
         default=False,
         help="Resume previous experiment.",
     )
+    parser.add_argument(
+        "--restore",
+        default=None,
+        help="path to checkpoint",
+    )
     parser.add_argument("--num_agents", type=int, default=2, help="Number of agent policies")
     parser.add_argument(
         "--rollout_fragment_length",
@@ -80,7 +85,7 @@ def add_default_args(parser):
         "--redis_max_memory", type=int, default=None, help="Amount of memory for redis"
     )
 
-    parser.add_argument("--num_workers", type=int, default=2, help="Total number of workers")
+    parser.add_argument("--num_workers", type=int, default=4, help="Total number of workers")
     parser.add_argument(
         "--cpus_for_driver", type=int, default=0, help="Number of CPUs used by the driver"
     )

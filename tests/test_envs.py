@@ -1,6 +1,5 @@
 """Unit tests for all of the envs"""
 
-import random
 import unittest
 
 import numpy as np
@@ -1318,14 +1317,14 @@ class TestCleanupEnv(unittest.TestCase):
         self.move_agent("agent-1", [2, 2])
         self.move_agent("agent-0", [1, 3])
         self.rotate_agent("agent-0", "DOWN")
-        random.seed(6)
+        np.random.seed(6)
         self.env.step({"agent-0": CLEANUP_ACTION_MAP["CLEAN"]})
         self.assertTrue(self.env.world_map[2, 2] == b"R")
 
         # check that the beams add constructively, i.e. that if one beam clears
         # some waste then the next agents beam is not blocked by it and can hit
         # formerly blocked cells
-        random.seed(7)
+        np.random.seed(7)
         self.move_agent("agent-1", [2, 3])
         self.move_agent("agent-0", [4, 3])
         # put some waste back where it's needed
@@ -1450,10 +1449,10 @@ class TestCleanupEnv(unittest.TestCase):
         self.assertTrue(np.isclose(self.env.current_apple_spawn_prob, 0.025))
 
         # test that you can spawn waste under an agent
-        self.move_agent("agent-0", [2, 1])
-        random.seed(5)
+        self.move_agent("agent-0", [2, 2])
+        np.random.seed(2)
         self.env.step({})
-        self.assertTrue(self.env.world_map[2, 1] == b"H")
+        self.assertTrue(self.env.world_map[2, 2] == b"H")
 
     def test_past_bugs(self):
         """This function is used to check that previous bugs do not regress"""

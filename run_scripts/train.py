@@ -1,8 +1,8 @@
 import argparse
 import copy
-import random
 import sys
 from datetime import datetime
+import numpy as np
 
 import pytz
 import ray
@@ -315,19 +315,19 @@ def create_hparam_tune_dict(model, is_config=False):
     model_options = {}
     if model == "baseline":
         baseline_options = {
-            "entropy_coeff": wrapper(random.expovariate(1000)),
-            "lr": wrapper(random.uniform(0.00001, 0.01)),
+            "entropy_coeff": wrapper(np.random.exponential(1 / 1000)),
+            "lr": wrapper(np.random.uniform(0.00001, 0.01)),
         }
     if model == "moa":
         model_options = {
-            "moa_loss_weight": wrapper(random.expovariate(15)),
-            "influence_reward_weight": wrapper(random.expovariate(1)),
+            "moa_loss_weight": wrapper(np.random.exponential(1 / 15)),
+            "influence_reward_weight": wrapper(np.random.exponential(1)),
         }
     elif model == "scm":
         model_options = {
-            "scm_loss_weight": wrapper(random.expovariate(2)),
-            "curiosity_reward_weight": wrapper(random.expovariate(1)),
-            "scm_forward_vs_inverse_loss_weight": wrapper(random.uniform(0, 1)),
+            "scm_loss_weight": wrapper(np.random.exponential(1 / 2)),
+            "curiosity_reward_weight": wrapper(np.random.exponential(1)),
+            "scm_forward_vs_inverse_loss_weight": wrapper(np.random.uniform(0, 1)),
         }
 
     hparam_dict = {
