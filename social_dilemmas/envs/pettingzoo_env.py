@@ -20,18 +20,18 @@ def raw_env(max_cycles=MAX_CYCLES, **ssd_args):
 
 def env(max_cycles=MAX_CYCLES, **ssd_args):
     aec_env = raw_env(max_cycles, **ssd_args)
-    aec_env = wrappers.CaptureStdoutWrapper(env)
-    aec_env = wrappers.AssertOutOfBoundsWrapper(env)
-    aec_env = wrappers.OrderEnforcingWrapper(env)
+    aec_env = wrappers.CaptureStdoutWrapper(aec_env)
+    aec_env = wrappers.AssertOutOfBoundsWrapper(aec_env)
+    aec_env = wrappers.OrderEnforcingWrapper(aec_env)
     return aec_env
 
 
 class ssd_parallel_env(ParallelEnv):
     def __init__(self, env, max_cycles):
-        self.env = env
+        self.ssd_env = env
         self.max_cycles = max_cycles
-        self.possible_agents = list(self.env.agents.keys())
-        self.env.reset()
+        self.possible_agents = list(self.ssd_env.agents.keys())
+        self.ssd_env.reset()
         observation_space = env.observation_space
         action_space = env.action_space
         self.observation_spaces = {name: observation_space for name in self.possible_agents}
@@ -40,19 +40,19 @@ class ssd_parallel_env(ParallelEnv):
     def reset(self):
         self.dones = {agent: False for agent in self.possible_agents}
         self.agents = self.possible_agents[:]
-        return self.env.reset()
+        return self.ssd_env.reset()
 
     def seed(self, seed=None):
-        return self.env.seed(seed)
+        return self.ssd_env.seed(seed)
 
     def render(self, mode="human"):
-        return self.env.render(mode=mode)
+        return self.ssd_env.render(mode=mode)
 
     def close(self):
-        self.env.close()
+        self.ssd_env.close()
 
     def step(self, actions):
-        obss, rews, self.all_dones, infos = self.env.step(actions)
+        obss, rews, self.all_dones, infos = self.ssd_env.step(actions)
         del self.all_dones["__all__"]
         self.agents = [agent for agent in self.agents if not self.all_dones[agent]]
         return obss, rews, self.all_dones, infos
