@@ -315,17 +315,17 @@ def create_hparam_tune_dict(model, is_config=False):
     model_options = {}
     if model == "baseline":
         baseline_options = {
-            "entropy_coeff": wrapper(np.random.exponential(1/1000)),
+            "entropy_coeff": wrapper(np.random.exponential(1 / 1000)),
             "lr": wrapper(np.random.uniform(0.00001, 0.01)),
         }
     if model == "moa":
         model_options = {
-            "moa_loss_weight": wrapper(np.random.exponential(1/15)),
+            "moa_loss_weight": wrapper(np.random.exponential(1 / 15)),
             "influence_reward_weight": wrapper(np.random.exponential(1)),
         }
     elif model == "scm":
         model_options = {
-            "scm_loss_weight": wrapper(np.random.exponential(1/2)),
+            "scm_loss_weight": wrapper(np.random.exponential(1 / 2)),
             "curiosity_reward_weight": wrapper(np.random.exponential(1)),
             "scm_forward_vs_inverse_loss_weight": wrapper(np.random.uniform(0, 1)),
         }

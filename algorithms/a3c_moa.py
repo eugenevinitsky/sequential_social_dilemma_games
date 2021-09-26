@@ -28,7 +28,14 @@ tf = try_import_tf()
 
 class A3CLoss(object):
     def __init__(
-        self, action_dist, actions, advantages, v_target, vf, vf_loss_coeff=0.5, entropy_coeff=0.01,
+        self,
+        action_dist,
+        actions,
+        advantages,
+        v_target,
+        vf,
+        vf_loss_coeff=0.5,
+        entropy_coeff=0.01,
     ):
         log_prob = action_dist.logp(actions)
 
