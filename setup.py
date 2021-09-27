@@ -29,7 +29,6 @@ setup(
     packages=["social_dilemmas"],
     install_requires=requirements,
     extras_require=extras,
-    tests_require=["pylint<2.11"],
     python_requires=">=3.6, <3.10",
     classifiers=[
         "Programming Language :: Python :: 3",
