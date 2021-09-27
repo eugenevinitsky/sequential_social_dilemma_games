@@ -52,10 +52,11 @@ class ssd_parallel_env(ParallelEnv):
         self.ssd_env.close()
 
     def step(self, actions):
-        obss, rews, self.all_dones, infos = self.ssd_env.step(actions)
-        del self.all_dones["__all__"]
-        self.agents = [agent for agent in self.agents if not self.all_dones[agent]]
-        return obss, rews, self.all_dones, infos
+        obss, rews, self.dones, infos = self.ssd_env.step(actions)
+        del self.dones["__all__"]
+        self.agents = [agent for agent in self.agents if not self.dones[agent]]
+        infos = {agent: infos[agent] for agent in self.agents}
+        return obss, rews, self.dones, infos
 
 
 class _parallel_env(ssd_parallel_env, EzPickle):

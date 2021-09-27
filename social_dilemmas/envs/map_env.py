@@ -260,7 +260,7 @@ class MapEnv(MultiAgentEnv):
         observations = {}
         rewards = {}
         dones = {}
-        info = {}
+        infos = {}
         for agent in self.agents.values():
             agent.full_map = map_with_agents
             rgb_arr = self.color_view(agent)
@@ -281,6 +281,7 @@ class MapEnv(MultiAgentEnv):
                 observations[agent.agent_id] = {"curr_obs": rgb_arr}
             rewards[agent.agent_id] = agent.compute_reward()
             dones[agent.agent_id] = agent.get_done()
+            infos[agent.agent_id] = {}
 
         if self.use_collective_reward:
             collective_reward = sum(rewards.values())
@@ -288,7 +289,7 @@ class MapEnv(MultiAgentEnv):
                 rewards[agent] = collective_reward
 
         dones["__all__"] = np.any(list(dones.values()))
-        return observations, rewards, dones, info
+        return observations, rewards, dones, infos
 
     def reset(self):
         """Reset the environment.

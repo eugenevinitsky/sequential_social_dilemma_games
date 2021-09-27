@@ -27,21 +27,20 @@ class PettingZooTest(unittest.TestCase):
             obss, rewss, dones, infos = env.step(actions)
             if not env.agents:
                 env.reset()
-        # parallel_api_test(env, MAX_CYCLES)
+        parallel_api_test(env, MAX_CYCLES)
 
-    # def test_aec(self):
-    #     env = aec_env(max_cycles=MAX_CYCLES, ssd_args=args)
-    #     env.seed(0)
-    #     env.reset()
-    #     n_act = env.action_spaces["agent-0"].n
-    #     for _ in range(MAX_CYCLES):
-    #         for agent in env.agent_iter():
-    #             observation, reward, done, info = env.last()
-    #             action = np.random.randint(n_act)
-    #             env.step(action)
-    #             if not env.agents:
-    #                 env.reset()
-    #     # api_test(env, MAX_CYCLES)
+    def test_aec(self):
+        env = aec_env(max_cycles=MAX_CYCLES, ssd_args=args)
+        env.seed(0)
+        env.reset()
+        n_act = env.action_spaces["agent-0"].n
+        for agent in env.agent_iter(max_iter=MAX_CYCLES * env.num_agents):
+            observation, reward, done, info = env.last()
+            action = np.random.randint(n_act)
+            env.step(action)
+            if not env.agents:
+                env.reset()
+        api_test(env, MAX_CYCLES)
 
 
 if __name__ == "__main__":
