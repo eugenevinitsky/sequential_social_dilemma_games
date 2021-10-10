@@ -661,7 +661,15 @@ class MapEnv(MultiAgentEnv):
                     break
 
     def update_custom_moves(self, agent_actions):
-        for agent_id, action in agent_actions.items():
+        """
+        This function executes non-movement actions like firing, cleaning etc.
+        The order in which agent actions are resolved is random to ensure homogeneity, similar to
+        update_moves, otherwise a race condition occurs which prioritizes lower-numbered agents
+        """
+        agent_ids = list(agent_actions.keys())
+        np.random.shuffle(agent_ids)
+        for agent_id in agent_ids:
+            action = agent_actions[agent_id]
             # check its not a move based action
             if "MOVE" not in action and "STAY" not in action and "TURN" not in action:
                 agent = self.agents[agent_id]

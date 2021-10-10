@@ -549,7 +549,7 @@ class TestMapEnv(unittest.TestCase):
             equal_2 = np.array_equal(get_env_test_map(self.env), expect_2)
             self.assertTrue(equal_1 or equal_2)
         agent_1_percent = num_agent_1 / (num_agent_1 + num_agent_2)
-        with_expected_val = (0.53 == agent_1_percent) or (0.47 == agent_1_percent)
+        with_expected_val = (0.54 == agent_1_percent) or (0.46 == agent_1_percent)
         self.assertTrue(with_expected_val)
 
         # check that this works correctly with three agents
