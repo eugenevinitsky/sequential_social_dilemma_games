@@ -32,9 +32,9 @@ class ssd_parallel_env(ParallelEnv):
         self.max_cycles = max_cycles
         self.possible_agents = list(self.ssd_env.agents.keys())
         self.ssd_env.reset()
-        observation_space = env.observation_space
+        self.observation_space = env.observation_space
         action_space = env.action_space
-        self.observation_spaces = {name: observation_space for name in self.possible_agents}
+        self.observation_spaces = {name: self.observation_space for name in self.possible_agents}
         self.action_spaces = {name: action_space for name in self.possible_agents}
 
     def reset(self):
