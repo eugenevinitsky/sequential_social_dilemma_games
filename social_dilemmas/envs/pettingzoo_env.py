@@ -1,11 +1,8 @@
 from social_dilemmas.envs.env_creator import get_env_creator
 from gym.utils import EzPickle
-from gym.utils import seeding
-from gym import spaces
 from pettingzoo.utils.env import ParallelEnv
 from pettingzoo.utils.conversions import from_parallel_wrapper
 from pettingzoo.utils import wrappers
-import numpy as np
 
 MAX_CYCLES = 1000
 
@@ -38,8 +35,9 @@ class ssd_parallel_env(ParallelEnv):
         self.action_spaces = {name: action_space for name in self.possible_agents}
 
     def reset(self):
-        self.dones = {agent: False for agent in self.possible_agents}
         self.agents = self.possible_agents[:]
+        self.num_cycles = 0
+        self.dones = {agent: False for agent in self.agents}
         return self.ssd_env.reset()
 
     def seed(self, seed=None):
@@ -52,10 +50,15 @@ class ssd_parallel_env(ParallelEnv):
         self.ssd_env.close()
 
     def step(self, actions):
+        if not actions or all(self.dones.values()):
+            self.agents = []
+            return {}, {}, {}, {}
+
         obss, rews, self.dones, infos = self.ssd_env.step(actions)
         del self.dones["__all__"]
-        self.agents = [agent for agent in self.agents if not self.dones[agent]]
-        infos = {agent: infos[agent] for agent in self.agents}
+        self.num_cycles += 1
+        if self.num_cycles >= MAX_CYCLES:
+            self.dones = {agent: True for agent in self.agents}
         return obss, rews, self.dones, infos
 
 
