@@ -4,9 +4,10 @@ from pettingzoo.utils.conversions import from_parallel_wrapper
 from pettingzoo.utils.env import ParallelEnv
 
 from social_dilemmas.envs.env_creator import get_env_creator
+import argparse
+from config.default_args import add_default_args
 
 MAX_CYCLES = 1000
-
 
 def parallel_env(max_cycles=MAX_CYCLES, **ssd_args):
     return _parallel_env(max_cycles, **ssd_args)
@@ -54,7 +55,7 @@ class ssd_parallel_env(ParallelEnv):
         obss, rews, self.dones, infos = self.ssd_env.step(actions)
         del self.dones["__all__"]
         self.num_cycles += 1
-        if self.num_cycles >= MAX_CYCLES:
+        if self.num_cycles >= self.max_cycles:
             self.dones = {agent: True for agent in self.agents}
         self.agents = [agent for agent in self.agents if not self.dones[agent]]
         return obss, rews, self.dones, infos
@@ -65,6 +66,11 @@ class _parallel_env(ssd_parallel_env, EzPickle):
 
     def __init__(self, max_cycles, **ssd_args):
         EzPickle.__init__(self, max_cycles, **ssd_args)
+        if not "ssd_args" in ssd_args:
+            parser = argparse.ArgumentParser()
+            add_default_args(parser)
+            args = parser.parse_args()
+            ssd_args["ssd_args"] = args
         env_name = ssd_args["ssd_args"].env
         num_agents = ssd_args["ssd_args"].num_agents
         ssd_args = ssd_args["ssd_args"]

@@ -2,12 +2,13 @@ import argparse
 import unittest
 
 import numpy as np
-from pettingzoo.test import api_test, parallel_api_test
+from pettingzoo.test import api_test, parallel_api_test, max_cycles_test
 
 from config.default_args import add_default_args
 from social_dilemmas.envs.pettingzoo_env import MAX_CYCLES
 from social_dilemmas.envs.pettingzoo_env import env as aec_env
 from social_dilemmas.envs.pettingzoo_env import parallel_env
+from social_dilemmas.envs import pettingzoo_env
 
 parser = argparse.ArgumentParser()
 add_default_args(parser)
@@ -28,6 +29,7 @@ class PettingZooTest(unittest.TestCase):
             if not env.agents:
                 _ = env.reset()
         parallel_api_test(env, MAX_CYCLES)
+        max_cycles_test(pettingzoo_env)
 
     def test_aec(self):
         env = aec_env(max_cycles=MAX_CYCLES, ssd_args=args)
