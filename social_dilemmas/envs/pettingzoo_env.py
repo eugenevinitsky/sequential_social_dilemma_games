@@ -9,6 +9,7 @@ from config.default_args import add_default_args
 
 MAX_CYCLES = 1000
 
+
 def parallel_env(max_cycles=MAX_CYCLES, **ssd_args):
     return _parallel_env(max_cycles, **ssd_args)
 
@@ -66,7 +67,7 @@ class _parallel_env(ssd_parallel_env, EzPickle):
 
     def __init__(self, max_cycles, **ssd_args):
         EzPickle.__init__(self, max_cycles, **ssd_args)
-        if not "ssd_args" in ssd_args:
+        if "ssd_args" not in ssd_args:
             parser = argparse.ArgumentParser()
             add_default_args(parser)
             args = parser.parse_args()
