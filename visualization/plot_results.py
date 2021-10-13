@@ -344,8 +344,9 @@ def change_color_luminosity(color, amount=0.5):
     >> lighten_color('#F034A3', 0.6)
     >> lighten_color((.3,.55,.1), 0.5)
     """
-    import matplotlib.colors as mc
     import colorsys
+
+    import matplotlib.colors as mc
 
     c = mc.cnames[color] if color in mc.cnames else color
     c = colorsys.rgb_to_hls(*mc.to_rgb(c))

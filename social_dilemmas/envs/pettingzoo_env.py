@@ -1,8 +1,9 @@
-from social_dilemmas.envs.env_creator import get_env_creator
 from gym.utils import EzPickle
-from pettingzoo.utils.env import ParallelEnv
-from pettingzoo.utils.conversions import from_parallel_wrapper
 from pettingzoo.utils import wrappers
+from pettingzoo.utils.conversions import from_parallel_wrapper
+from pettingzoo.utils.env import ParallelEnv
+
+from social_dilemmas.envs.env_creator import get_env_creator
 
 MAX_CYCLES = 1000
 

@@ -2,8 +2,8 @@ import argparse
 import copy
 import sys
 from datetime import datetime
-import numpy as np
 
+import numpy as np
 import pytz
 import ray
 from ray import tune

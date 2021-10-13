@@ -1,16 +1,18 @@
+import argparse
 import unittest
 
-from config.default_args import add_default_args
-import argparse
 import numpy as np
-from social_dilemmas.envs.pettingzoo_env import MAX_CYCLES, parallel_env, env as aec_env
+from pettingzoo.test import api_test, parallel_api_test
+
+from config.default_args import add_default_args
+from social_dilemmas.envs.pettingzoo_env import MAX_CYCLES
+from social_dilemmas.envs.pettingzoo_env import env as aec_env
+from social_dilemmas.envs.pettingzoo_env import parallel_env
 
 parser = argparse.ArgumentParser()
 add_default_args(parser)
 args = parser.parse_args()
 # env = get_env_creator(args.env, args.num_agents, args)(args.num_agents)
-
-from pettingzoo.test import api_test, parallel_api_test
 
 
 class PettingZooTest(unittest.TestCase):
@@ -22,9 +24,9 @@ class PettingZooTest(unittest.TestCase):
         dones = [False] * env.num_agents
         for _ in range(MAX_CYCLES * env.num_agents):
             actions = {agent: np.random.randint(n_act) for agent in env.agents}
-            obss, rewss, dones, infos = env.step(actions)
+            _, _, dones, _ = env.step(actions)
             if all(dones.values()):
-                obss = env.reset()
+                _ = env.reset()
         parallel_api_test(env, MAX_CYCLES)
 
     def test_aec(self):
