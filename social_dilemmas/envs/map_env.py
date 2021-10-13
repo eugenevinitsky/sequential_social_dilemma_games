@@ -81,7 +81,7 @@ class MapEnv(MultiAgentEnv):
         color_map: dict
             Specifies how to convert between ascii chars and colors
         return_agent_actions: bool
-            If true, we the observation space will include the actions of other agents
+            If true, the observation space will include the actions of other agents
         """
         self.num_agents = num_agents
         self.base_map = self.ascii_to_numpy(ascii_map)
