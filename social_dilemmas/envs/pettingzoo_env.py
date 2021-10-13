@@ -30,10 +30,10 @@ class ssd_parallel_env(ParallelEnv):
         self.max_cycles = max_cycles
         self.possible_agents = list(self.ssd_env.agents.keys())
         self.ssd_env.reset()
-        self.observation_space = env.observation_space
-        action_space = env.action_space
-        self.observation_spaces = {name: self.observation_space for name in self.possible_agents}
-        self.action_spaces = {name: action_space for name in self.possible_agents}
+        self.observation_space = lambda agent_id: env.observation_space
+        self.observation_spaces = {agent: env.observation_space for agent in self.possible_agents}
+        self.action_space = lambda agent_id: env.action_space
+        self.action_spaces = {agent: env.action_space for agent in self.possible_agents}
 
     def reset(self):
         self.agents = self.possible_agents[:]
@@ -51,15 +51,12 @@ class ssd_parallel_env(ParallelEnv):
         self.ssd_env.close()
 
     def step(self, actions):
-        if not actions or all(self.dones.values()):
-            self.agents = []
-            return {}, {}, {}, {}
-
         obss, rews, self.dones, infos = self.ssd_env.step(actions)
         del self.dones["__all__"]
         self.num_cycles += 1
         if self.num_cycles >= MAX_CYCLES:
             self.dones = {agent: True for agent in self.agents}
+        self.agents = [agent for agent in self.agents if not self.dones[agent]]
         return obss, rews, self.dones, infos
 
 

@@ -20,12 +20,12 @@ class PettingZooTest(unittest.TestCase):
         env = parallel_env(max_cycles=MAX_CYCLES, ssd_args=args)
         env.seed(0)
         env.reset()
-        n_act = env.action_spaces["agent-0"].n
+        n_act = env.action_space("agent-0").n
         dones = [False] * env.num_agents
         for _ in range(MAX_CYCLES * env.num_agents):
             actions = {agent: np.random.randint(n_act) for agent in env.agents}
             _, _, dones, _ = env.step(actions)
-            if all(dones.values()):
+            if not env.agents:
                 _ = env.reset()
         parallel_api_test(env, MAX_CYCLES)
 
@@ -33,7 +33,7 @@ class PettingZooTest(unittest.TestCase):
         env = aec_env(max_cycles=MAX_CYCLES, ssd_args=args)
         env.seed(0)
         env.reset()
-        n_act = env.action_spaces["agent-0"].n
+        n_act = env.action_space("agent-0").n
         for agent in env.agent_iter(max_iter=MAX_CYCLES * env.num_agents):
             observation, reward, done, info = env.last()
             action = np.random.randint(n_act)

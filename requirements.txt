@@ -1,5 +1,5 @@
 gym>=0.19.2
-pettingzoo==1.11.2
+pettingzoo>=1.12.0
 opencv-python>=3.0
 ray[rllib]==0.8.5
 tensorflow>=2.4.0
