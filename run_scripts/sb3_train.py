@@ -54,15 +54,15 @@ class CustomCNN(BaseFeaturesExtractor):
 
     def forward(self, observations) -> torch.Tensor:
         # Convert to tensor, rescale to [0, 1], and convert from B x H x W x C to B x C x H x W
-        observations = torch.div(observations.to(device), 255)
+        observations = torch.div(observations, 255)
         return self.cnn(observations)
 
 
 def main(args):
     # Config
     rollout_len = 1000  # length of training rollouts AND length at which env is reset
-    num_cpus = 8  # number of cpus
-    num_envs = 16  # number of parallel multi-agent environments
+    num_cpus = 12  # number of cpus
+    num_envs = 24  # number of parallel multi-agent environments
     num_agents = 2  # number of agents
     num_frames = 4  # number of frames to stack together
     features_dim = (
@@ -84,7 +84,7 @@ def main(args):
     env = ss.frame_stack_v1(env, num_frames)
     env = ss.pettingzoo_env_to_vec_env_v0(env)
     env = ss.concat_vec_envs_v0(
-        env, num_vec_envs=num_envs * num_agents, num_cpus=num_cpus, base_class="stable_baselines3"
+        env, num_vec_envs=num_envs, num_cpus=num_cpus, base_class="stable_baselines3"
     )
     env = VecMonitor(env)
 
