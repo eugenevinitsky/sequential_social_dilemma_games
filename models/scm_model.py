@@ -88,11 +88,16 @@ class SocialCuriosityModule(MOAModel):
         activation = get_activation_fn(model_config.get("fcnet_activation"))
 
         fc_layer = tf.keras.layers.Dense(
-            32, name="fc_forward", activation=activation, kernel_initializer=normc_initializer(1.0),
+            32,
+            name="fc_forward",
+            activation=activation,
+            kernel_initializer=normc_initializer(1.0),
         )(inputs_concatenated)
 
         output_layer = tf.keras.layers.Dense(
-            encoder_output_size, activation="relu", kernel_initializer=normc_initializer(1.0),
+            encoder_output_size,
+            activation="relu",
+            kernel_initializer=normc_initializer(1.0),
         )(fc_layer)
 
         return tf.keras.Model(inputs, output_layer, name="SCM_Forward_Model")
@@ -120,11 +125,16 @@ class SocialCuriosityModule(MOAModel):
         activation = get_activation_fn(model_config.get("fcnet_activation"))
 
         fc_layer = tf.keras.layers.Dense(
-            32, name="fc_forward", activation=activation, kernel_initializer=normc_initializer(1.0),
+            32,
+            name="fc_forward",
+            activation=activation,
+            kernel_initializer=normc_initializer(1.0),
         )(inputs_concatenated)
 
         output_layer = tf.keras.layers.Dense(
-            1, activation="relu", kernel_initializer=normc_initializer(1.0),
+            1,
+            activation="relu",
+            kernel_initializer=normc_initializer(1.0),
         )(fc_layer)
 
         return tf.keras.Model(inputs, output_layer, name="SCM_Inverse_Model")

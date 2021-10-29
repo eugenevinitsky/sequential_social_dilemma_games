@@ -36,7 +36,7 @@ class Controller(object):
         # TODO: initialize agents here
 
     def rollout(self, horizon=50, save_path=None):
-        """ Rollout several timesteps of an episode of the environment.
+        """Rollout several timesteps of an episode of the environment.
 
         Args:
             horizon: The number of timesteps to roll out.
@@ -55,7 +55,12 @@ class Controller(object):
             for agent in agents:
                 rand_action = np.random.randint(action_dim)
                 agent_action_dict[agent.agent_id] = rand_action
-            obs, rew, dones, info, = self.env.step(agent_action_dict)
+            (
+                obs,
+                rew,
+                dones,
+                info,
+            ) = self.env.step(agent_action_dict)
 
             sys.stdout.flush()
 
@@ -76,7 +81,7 @@ class Controller(object):
         return rewards, observations, full_obs
 
     def render_rollout(self, horizon=50, path=None, render_type="pretty", fps=8):
-        """ Render a rollout into a video.
+        """Render a rollout into a video.
 
         Args:
             horizon: The number of timesteps to roll out.
@@ -112,5 +117,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     c = Controller(args)
     c.render_rollout(
-        path="rollout", horizon=100, render_type="pretty", fps=60,
+        path="rollout",
+        horizon=100,
+        render_type="pretty",
+        fps=60,
     )

@@ -193,7 +193,11 @@ def plot_csvs_results(paths):
     episode_len_means = [df.episode_len_mean for df in dfs]
     plots.append(
         PlotData(
-            timesteps_totals, episode_len_means, "episode_length", "Mean episode length", "pink",
+            timesteps_totals,
+            episode_len_means,
+            "episode_length",
+            "Mean episode length",
+            "pink",
         )
     )
 
@@ -314,11 +318,18 @@ def get_experiment_rewards(paths):
     x_max = min(x_max, 5.0)
     interp_x = np.linspace(x_min, x_max, most_timesteps)
     interpolated = []
-    for x, y, in zip(timesteps_totals, [df.episode_reward_mean for df in dfs]):
+    for (
+        x,
+        y,
+    ) in zip(timesteps_totals, [df.episode_reward_mean for df in dfs]):
         interp_y = np.interp(interp_x, x, y, left=np.nan, right=np.nan)
         interpolated.append(interp_y)
     reward_plotdata = PlotData(
-        [interp_x] * 5, interpolated, "Mean collective reward", model_name, color,
+        [interp_x] * 5,
+        interpolated,
+        "Mean collective reward",
+        model_name,
+        color,
     )
     return reward_plotdata, env
 
@@ -333,8 +344,9 @@ def change_color_luminosity(color, amount=0.5):
     >> lighten_color('#F034A3', 0.6)
     >> lighten_color((.3,.55,.1), 0.5)
     """
-    import matplotlib.colors as mc
     import colorsys
+
+    import matplotlib.colors as mc
 
     c = mc.cnames[color] if color in mc.cnames else color
     c = colorsys.rgb_to_hls(*mc.to_rgb(c))

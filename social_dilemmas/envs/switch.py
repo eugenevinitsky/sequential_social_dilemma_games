@@ -77,8 +77,13 @@ class SwitchEnv(MapEnv):
         partial_map[middle_row] = partial_map[middle_row][:3] + "P" + partial_map[middle_row][4:]
         return partial_map
 
-    def create_extra_info_dict(self):
-        return {
+    def step(self, actions):
+        observations, rewards, dones, info = super().step(actions)
+        first_agent = next(iter(actions.keys()))
+        if rewards[first_agent] > 0.1:
+            self.total_successes += 1
+
+        extra_info = {
             "switches_on_at_termination": self.switches_on_at_termination,
             "total_pulled_on": self.total_pulled_on,
             "total_pulled_off": self.total_pulled_off,
@@ -86,14 +91,6 @@ class SwitchEnv(MapEnv):
             "timestep_last_switch_pull": self.timestep_last_switch_pull,
             "total_successes": self.total_successes,
         }
-
-    def step(self, actions):
-        observations, rewards, dones, info = super().step(actions)
-        first_agent = next(iter(actions.keys()))
-        if rewards[first_agent] > 0.1:
-            self.total_successes += 1
-
-        extra_info = {first_agent: self.create_extra_info_dict()}
         self.timestep += 1
         return observations, rewards, dones, {**info, **extra_info}
 

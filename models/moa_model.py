@@ -167,9 +167,12 @@ class MOAModel(RecurrentTFModelV2):
         # Evaluate the actor-critic model
         pass_dict = {"curr_obs": input_dict["ac_trunk"]}
         h1, c1, h2, c2, *_ = state
-        (self._model_out, self._value_out, output_h1, output_c1,) = self.actions_model.forward_rnn(
-            pass_dict, [h1, c1], seq_lens
-        )
+        (
+            self._model_out,
+            self._value_out,
+            output_h1,
+            output_c1,
+        ) = self.actions_model.forward_rnn(pass_dict, [h1, c1], seq_lens)
 
         # Evaluate the MOA, and generate counterfactual actions.
         # To do this: cycle through all possible actions and get predictions for what other
@@ -286,7 +289,8 @@ class MOAModel(RecurrentTFModelV2):
         # Indexing is currently [B, Agent actions, num_other_agents * other_agent_logits]
         # Change to [B, Agent actions, num other agents, other agent logits]
         counterfactual_logits = tf.reshape(
-            counterfactual_logits, [-1, self.num_outputs, self.num_other_agents, self.num_outputs],
+            counterfactual_logits,
+            [-1, self.num_outputs, self.num_other_agents, self.num_outputs],
         )
 
         counterfactual_logits = tf.nn.softmax(counterfactual_logits)
@@ -358,11 +362,11 @@ class MOAModel(RecurrentTFModelV2):
         return self._social_influence_reward
 
     def predicted_actions(self):
-        """ :returns Predicted actions. NB: Since the agent's own true action is not known when
-         evaluating this model, the timestep is off by one (too late). Thus, for any index n > 0,
-         the value at n is a prediction made at n-1, about the actions taken at n.
-         predicted_actions[0] contains no sensible value, as this would have to be a prediction made
-         at timestep -1, but we start time at 0."""
+        """:returns Predicted actions. NB: Since the agent's own true action is not known when
+        evaluating this model, the timestep is off by one (too late). Thus, for any index n > 0,
+        the value at n is a prediction made at n-1, about the actions taken at n.
+        predicted_actions[0] contains no sensible value, as this would have to be a prediction made
+        at timestep -1, but we start time at 0."""
         return self._action_pred
 
     def visibility(self):

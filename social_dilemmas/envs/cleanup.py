@@ -1,5 +1,3 @@
-import random
-
 import numpy as np
 from numpy.random import rand
 
@@ -116,7 +114,7 @@ class CleanupEnv(MapEnv):
         return updates
 
     def custom_map_update(self):
-        """"Update the probabilities and then spawn"""
+        """ "Update the probabilities and then spawn"""
         self.compute_probabilities()
         self.update_map(self.spawn_apples_and_waste())
 
@@ -132,7 +130,11 @@ class CleanupEnv(MapEnv):
             #                         CLEANUP_VIEW_SIZE, CLEANUP_VIEW_SIZE)
             # agent = CleanupAgent(agent_id, spawn_point, rotation, grid)
             agent = CleanupAgent(
-                agent_id, spawn_point, rotation, map_with_agents, view_len=CLEANUP_VIEW_SIZE,
+                agent_id,
+                spawn_point,
+                rotation,
+                map_with_agents,
+                view_len=CLEANUP_VIEW_SIZE,
             )
             self.agents[agent_id] = agent
 
@@ -153,7 +155,7 @@ class CleanupEnv(MapEnv):
 
         # spawn one waste point, only one can spawn per step
         if not np.isclose(self.current_waste_spawn_prob, 0):
-            random.shuffle(self.waste_points)
+            np.random.shuffle(self.waste_points)
             for i in range(len(self.waste_points)):
                 row, col = self.waste_points[i]
                 # don't spawn waste where it already is
