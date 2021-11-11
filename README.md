@@ -102,7 +102,7 @@ The below graphs display results for cleanup/harvest using un-tuned PPO. As of y
         
 # Contributors
 
-This code base was initially developed by Eugene Vinitsky and Natasha Jaques; help with reproduction was provided by Joel Leibo, Antonio Castenada, and Edward Hughes. Additional development was done by Hugo Heemskerk. 
+This code base was initially developed by Eugene Vinitsky and Natasha Jaques; help with reproduction was provided by Joel Leibo, Antonio Castenada, and Edward Hughes. Additional development was done by Hugo Heemskerk. Support for PettingZoo was provided by Rohan Potdar.
 
 # Citation
 
