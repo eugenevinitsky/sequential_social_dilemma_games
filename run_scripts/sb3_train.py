@@ -37,12 +37,12 @@ class CustomCNN(BaseFeaturesExtractor):
 
         flat_out = num_frames * 6 * (view_len * 2 - 1) ** 2
         self.conv = nn.Conv2d(
-                in_channels=num_frames * 3,  # Input: (3 * 4) x 15 x 15
-                out_channels=num_frames * 6, # Output: 24 x 13 x 13
-                kernel_size=3,
-                stride=1,
-                padding="valid",
-            )
+            in_channels=num_frames * 3,  # Input: (3 * 4) x 15 x 15
+            out_channels=num_frames * 6,  # Output: 24 x 13 x 13
+            kernel_size=3,
+            stride=1,
+            padding="valid",
+        )
         self.fc1 = nn.Linear(in_features=flat_out, out_features=fcnet_hiddens[0])
         self.fc2 = nn.Linear(in_features=fcnet_hiddens[0], out_features=fcnet_hiddens[1])
 

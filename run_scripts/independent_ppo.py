@@ -20,7 +20,7 @@ from stable_baselines3 import PPO
 class IndependentGymEnv(gym.Env):
     def __init__(self, idx, observation_space, action_space):
         self.idx = idx
-        self.observation_space = observation_space # SB3 is wrapping this in TransposeVecEnv
+        self.observation_space = observation_space  # SB3 is wrapping this in TransposeVecEnv
         self.action_space = action_space
         self.num_envs = 1
 
@@ -193,7 +193,9 @@ class IndependentPPO:
                             clipped_actions, self.action_space.low, self.action_space.high
                         )
                     elif isinstance(self.action_space, Discrete):
-                        clipped_actions = clipped_actions.item() # get action as int from numpy array
+                        clipped_actions = (
+                            clipped_actions.item()
+                        )  # get action as int from numpy array
                     all_clipped_actions[agent] = clipped_actions
                     all_last_episode_starts[agent] = policy._last_episode_starts
 
@@ -221,7 +223,9 @@ class IndependentPPO:
             for index, policy in enumerate(self.policies):
                 agent = self.agents[index]
                 all_actions[agent] = all_actions[agent].cpu().numpy()
-                all_last_obs[agent] = np.transpose(np.expand_dims(all_last_obs[agent], 0), axes=(0, 3, 1, 2))
+                all_last_obs[agent] = np.transpose(
+                    np.expand_dims(all_last_obs[agent], 0), axes=(0, 3, 1, 2)
+                )
                 policy.rollout_buffer.add(
                     all_last_obs[agent],
                     all_actions[agent],
