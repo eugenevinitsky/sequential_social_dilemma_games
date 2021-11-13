@@ -1,3 +1,4 @@
+from functools import lru_cache
 from gym.utils import EzPickle
 from pettingzoo.utils import wrappers
 from pettingzoo.utils.conversions import from_parallel_wrapper
@@ -32,9 +33,9 @@ class ssd_parallel_env(ParallelEnv):
         self.max_cycles = max_cycles
         self.possible_agents = list(self.ssd_env.agents.keys())
         self.ssd_env.reset()
-        self.observation_space = lambda agent_id: env.observation_space
+        self.observation_space = lru_cache(maxsize=None)(lambda agent_id: env.observation_space)
         self.observation_spaces = {agent: env.observation_space for agent in self.possible_agents}
-        self.action_space = lambda agent_id: env.action_space
+        self.action_space = lru_cache(maxsize=None)(lambda agent_id: env.action_space)
         self.action_spaces = {agent: env.action_space for agent in self.possible_agents}
 
     def reset(self):
