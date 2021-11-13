@@ -1,12 +1,13 @@
+import argparse
 from functools import lru_cache
+
 from gym.utils import EzPickle
 from pettingzoo.utils import wrappers
 from pettingzoo.utils.conversions import from_parallel_wrapper
 from pettingzoo.utils.env import ParallelEnv
 
+from social_dilemmas.config.default_args import add_default_args
 from social_dilemmas.envs.env_creator import get_env_creator
-import argparse
-from config.default_args import add_default_args
 
 MAX_CYCLES = 1000
 

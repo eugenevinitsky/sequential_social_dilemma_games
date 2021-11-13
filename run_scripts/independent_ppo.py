@@ -1,19 +1,17 @@
 import time
-import time
 from collections import deque
 from typing import Any, Dict, List, Optional, Type, Union
 
 import gym
-from gym.spaces import Discrete, Box
 import numpy as np
-from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
-from stable_baselines3.common.vec_env import DummyVecEnv
 import torch as th
-
+from gym.spaces import Box, Discrete
+from stable_baselines3 import PPO
+from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
-from stable_baselines3.common.utils import obs_as_tensor, safe_mean, configure_logger
-from stable_baselines3 import PPO
+from stable_baselines3.common.utils import configure_logger, obs_as_tensor, safe_mean
+from stable_baselines3.common.vec_env import DummyVecEnv
 
 
 class DummyGymEnv(gym.Env):
