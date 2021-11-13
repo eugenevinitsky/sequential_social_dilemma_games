@@ -51,6 +51,7 @@ class CustomCNN(BaseFeaturesExtractor):
 
     def forward(self, observations) -> torch.Tensor:
         # Convert to tensor, rescale to [0, 1], and convert from B x H x W x C to B x C x H x W
+        observations = observations.permute(0, 3, 1, 2)
         features = torch.flatten(F.relu(self.conv(observations)), start_dim=1)
         if torch.any(torch.isnan(features)):
             breakpoint()
@@ -63,9 +64,9 @@ def main(args):
     # Config
     rollout_len = 1000  # length of training rollouts AND length at which env is reset
     num_cpus = 12  # number of cpus
-    num_envs = 2  # number of parallel multi-agent environments
+    num_envs = 12  # number of parallel multi-agent environments
     num_agents = 2  # number of agents
-    num_frames = 4  # number of frames to stack together
+    num_frames = 6  # number of frames to stack together, use >4 to avoid automatic VecTransposeImage
     features_dim = (
         128  # output layer of cnn extractor AND shared layer for policy and value functions
     )
@@ -73,7 +74,7 @@ def main(args):
     ent_coef = 0.001  # entropy coefficient in loss
     clip_range = 0.2
     vf_coef = 0.5
-    batch_size = rollout_len * num_envs // num_agents  # This is from rllib baseline implementation
+    batch_size = rollout_len * num_envs // 2  # This is from the rllib baseline implementation
     lr = 0.0001
     n_epochs = 30
     gae_lambda = 1.0
@@ -85,6 +86,11 @@ def main(args):
     env = parallel_env(max_cycles=rollout_len, ssd_args=args)
     env = ss.observation_lambda_v0(env, lambda x, _: x["curr_obs"], lambda s: s["curr_obs"])
     env = ss.frame_stack_v1(env, num_frames)
+    env = ss.pettingzoo_env_to_vec_env_v1(env)
+    env = ss.concat_vec_envs_v1(
+        env, num_vec_envs=num_envs, num_cpus=num_cpus, base_class="stable_baselines3"
+    )
+    env = VecMonitor(env)
 
     policy_kwargs = dict(
         features_extractor_class=CustomCNN,
@@ -98,7 +104,8 @@ def main(args):
 
     model = IndependentPPO(
         "CnnPolicy",
-        par_env=env,
+        num_agents=2,
+        env=env,
         learning_rate=lr,
         n_steps=rollout_len,
         batch_size=batch_size,
