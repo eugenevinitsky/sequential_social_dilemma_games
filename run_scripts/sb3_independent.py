@@ -3,16 +3,14 @@ import argparse
 import gym
 import supersuit as ss
 import torch
-from stable_baselines3 import PPO
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
-from stable_baselines3.common.vec_env.vec_transpose import VecTransposeImage
-from stable_baselines3.common.vec_env.vec_check_nan import VecCheckNan
 from torch import nn
-from torch.nn import functional as F
+import torch.nn.functional as F
 
 from config.default_args import add_default_args
 from social_dilemmas.envs.pettingzoo_env import parallel_env
+
 from independent_ppo import IndependentPPO
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
