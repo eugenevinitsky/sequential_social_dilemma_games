@@ -1,8 +1,7 @@
 import time
 import time
 from collections import deque
-from typing import Any, Dict, List, Optional, Tuple, Type, Union
-from boto3.docs import action
+from typing import Any, Dict, List, Optional, Type, Union
 
 import gym
 from gym.spaces import Discrete, Box
