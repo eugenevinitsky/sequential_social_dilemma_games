@@ -43,7 +43,6 @@ class CustomCNN(BaseFeaturesExtractor):
             stride=1,
             padding="valid",
         )
-        torch.nn.init.xavier_uniform_(self.conv.weight)
         self.fc1 = nn.Linear(in_features=flat_out, out_features=fcnet_hiddens[0])
         self.fc2 = nn.Linear(in_features=fcnet_hiddens[0], out_features=fcnet_hiddens[1])
 
@@ -94,7 +93,7 @@ def main(args):
         net_arch=[features_dim],
     )
 
-    log = "./results/sb3/cleanup_ppo_baseline"
+    logdir = "./results/sb3/cleanup_ppo_paramsharing"
 
     model = PPO(
         "CnnPolicy",
@@ -110,10 +109,14 @@ def main(args):
         target_kl=target_kl,
         ent_coef=ent_coeff,
         max_grad_norm=grad_clip,
-        tensorboard_log=log,
+        tensorboard_log=logdir,
     )
-    model.learn(total_timesteps=5e6)
-    model.save(log + "/model")
+    model.learn(total_timesteps=5e8)
+
+    logdir = model.logger.dir
+    model.save(logdir + "/model")
+    del model
+    model.load(logdir + "/model")
 
 
 if __name__ == "__main__":

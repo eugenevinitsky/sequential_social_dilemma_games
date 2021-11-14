@@ -7,7 +7,6 @@ import numpy as np
 import torch as th
 from gym.spaces import Box, Discrete
 from stable_baselines3 import PPO
-from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
 from stable_baselines3.common.utils import configure_logger, obs_as_tensor, safe_mean
@@ -20,23 +19,23 @@ class DummyGymEnv(gym.Env):
         self.action_space = action_space
 
 
-class IndependentPPO(OnPolicyAlgorithm):
+class IndependentPPO:
     def __init__(
         self,
         policy: Union[str, Type[ActorCriticPolicy]],
         num_agents: int,
         env: GymEnv,
-        learning_rate: Union[float, Schedule] = 3e-4,
-        n_steps: int = 2048,
-        batch_size: int = 64,
+        learning_rate: Union[float, Schedule] = 1e-4,
+        n_steps: int = 1000,
+        batch_size: int = 6000,
         n_epochs: int = 10,
         gamma: float = 0.99,
-        gae_lambda: float = 0.95,
+        gae_lambda: float = 1.0,
         clip_range: Union[float, Schedule] = 0.2,
         clip_range_vf: Union[None, float, Schedule] = None,
         ent_coef: float = 0.0,
         vf_coef: float = 0.5,
-        max_grad_norm: float = 0.5,
+        max_grad_norm: float = 40,
         use_sde: bool = False,
         sde_sample_freq: int = -1,
         target_kl: Optional[float] = None,
@@ -51,6 +50,9 @@ class IndependentPPO(OnPolicyAlgorithm):
         self.observation_space = env.observation_space
         self.action_space = env.action_space
         self.n_steps = n_steps
+        self.tensorboard_log = tensorboard_log
+        self.verbose = verbose
+        self.logger = None
         env_fn = lambda: DummyGymEnv(self.observation_space, self.action_space)
         dummy_env = DummyVecEnv([env_fn] * self.num_envs)
         self.policies = [
@@ -71,7 +73,6 @@ class IndependentPPO(OnPolicyAlgorithm):
                 target_kl=target_kl,
                 use_sde=use_sde,
                 sde_sample_freq=sde_sample_freq,
-                tensorboard_log=tensorboard_log,
                 policy_kwargs=policy_kwargs,
                 verbose=verbose,
                 device=device,
@@ -92,6 +93,13 @@ class IndependentPPO(OnPolicyAlgorithm):
         all_total_timesteps = []
         if not callbacks:
             callbacks = [None] * self.num_agents
+        self.logger = configure_logger(
+            self.verbose,
+            self.tensorboard_log,
+            tb_log_name,
+            reset_num_timesteps,
+        )
+        logdir = self.logger.dir
 
         # Setup for each policy
         for polid, policy in enumerate(self.policies):
@@ -115,8 +123,8 @@ class IndependentPPO(OnPolicyAlgorithm):
 
             policy._logger = configure_logger(
                 policy.verbose,
-                policy.tensorboard_log,
-                tb_log_name + f"_{polid}",
+                logdir,
+                "policy",
                 reset_num_timesteps,
             )
 
@@ -131,11 +139,12 @@ class IndependentPPO(OnPolicyAlgorithm):
 
         while num_timesteps < total_timesteps:
             last_obs = self.collect_rollouts(last_obs, callbacks)
-            num_timesteps += self.num_envs
-            for policy in self.policies:
-                policy._update_current_progress_remaining(num_timesteps, total_timesteps)
+            num_timesteps += self.num_envs * self.n_steps
+            for polid, policy in enumerate(self.policies):
+                policy._update_current_progress_remaining(policy.num_timesteps, total_timesteps)
                 if log_interval is not None and num_timesteps % log_interval == 0:
                     fps = int(policy.num_timesteps / (time.time() - policy.start_time))
+                    policy.logger.record("policy_id", polid, exclude="tensorboard")
                     policy.logger.record("time/iterations", num_timesteps, exclude="tensorboard")
                     if len(policy.ep_info_buffer) > 0 and len(policy.ep_info_buffer[0]) > 0:
                         policy.logger.record(
@@ -153,7 +162,9 @@ class IndependentPPO(OnPolicyAlgorithm):
                         exclude="tensorboard",
                     )
                     policy.logger.record(
-                        "time/total_timesteps", policy.num_timesteps, exclude="tensorboard"
+                        "time/total_timesteps",
+                        policy.num_timesteps,
+                        exclude="tensorboard",
                     )
                     policy.logger.dump(step=policy.num_timesteps)
 
@@ -201,7 +212,9 @@ class IndependentPPO(OnPolicyAlgorithm):
                     clipped_actions = all_actions[polid].cpu().numpy()
                     if isinstance(self.action_space, Box):
                         clipped_actions = np.clip(
-                            clipped_actions, self.action_space.low, self.action_space.high
+                            clipped_actions,
+                            self.action_space.low,
+                            self.action_space.high,
                         )
                     elif isinstance(self.action_space, Discrete):
                         # get integer from numpy array
@@ -246,7 +259,7 @@ class IndependentPPO(OnPolicyAlgorithm):
                     all_actions[polid] = all_actions[polid].reshape(-1, 1)
                 all_actions[polid] = all_actions[polid].cpu().numpy()
                 policy.rollout_buffer.add(
-                    all_obs[polid],
+                    all_last_obs[polid],
                     all_actions[polid],
                     all_rewards[polid],
                     all_last_episode_starts[polid],
@@ -271,3 +284,38 @@ class IndependentPPO(OnPolicyAlgorithm):
             policy._last_episode_starts = all_last_episode_starts[polid]
 
         return obs
+
+    @classmethod
+    def load(
+        cls,
+        path: str,
+        policy: Union[str, Type[ActorCriticPolicy]],
+        num_agents: int,
+        env: GymEnv,
+        n_steps: int,
+        policy_kwargs: Optional[Dict[str, Any]] = None,
+        tensorboard_log: Optional[str] = None,
+        verbose: int = 0,
+        **kwargs,
+    ) -> "IndependentPPO":
+        model = cls(
+            policy=policy,
+            num_agents=num_agents,
+            env=env,
+            n_steps=n_steps,
+            policy_kwargs=policy_kwargs,
+            tensorboard_log=tensorboard_log,
+            verbose=verbose,
+            **kwargs,
+        )
+        env_fn = lambda: DummyGymEnv(env.observation_space, env.action_space)
+        dummy_env = DummyVecEnv([env_fn] * (env.num_envs // num_agents))
+        for polid in range(num_agents):
+            model.policies[polid] = PPO.load(
+                path=path + f"/policy_{polid + 1}/model", env=dummy_env, **kwargs
+            )
+        return model
+
+    def save(self, path: str) -> None:
+        for polid in range(self.num_agents):
+            self.policies[polid].save(path=path + f"/policy_{polid + 1}/model")

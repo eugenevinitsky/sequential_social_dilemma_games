@@ -42,7 +42,6 @@ class CustomCNN(BaseFeaturesExtractor):
             stride=1,
             padding="valid",
         )
-        torch.nn.init.xavier_uniform_(self.conv.weight)
         self.fc1 = nn.Linear(in_features=flat_out, out_features=fcnet_hiddens[0])
         self.fc2 = nn.Linear(in_features=fcnet_hiddens[0], out_features=fcnet_hiddens[1])
 
@@ -50,8 +49,6 @@ class CustomCNN(BaseFeaturesExtractor):
         # Convert to tensor, rescale to [0, 1], and convert from B x H x W x C to B x C x H x W
         observations = observations.permute(0, 3, 1, 2)
         features = torch.flatten(F.relu(self.conv(observations)), start_dim=1)
-        if torch.any(torch.isnan(features)):
-            breakpoint()
         features = F.relu(self.fc1(features))
         features = F.relu(self.fc2(features))
         return features
@@ -78,6 +75,7 @@ def main(args):
     gamma = 0.99
     target_kl = 0.01
     grad_clip = 40
+    verbose = 3
 
     args.num_agents = num_agents
     env = parallel_env(max_cycles=rollout_len, ssd_args=args)
@@ -97,11 +95,11 @@ def main(args):
         net_arch=[features_dim],
     )
 
-    log = "./results/sb3/cleanup_ppo_baseline"
+    tensorboard_log = "./results/sb3/cleanup_ppo_independent"
 
     model = IndependentPPO(
         "CnnPolicy",
-        num_agents=2,
+        num_agents=num_agents,
         env=env,
         learning_rate=lr,
         n_steps=rollout_len,
@@ -115,10 +113,17 @@ def main(args):
         max_grad_norm=grad_clip,
         target_kl=target_kl,
         policy_kwargs=policy_kwargs,
-        verbose=3,
-        tensorboard_log=log,
+        tensorboard_log=tensorboard_log,
+        verbose=verbose,
     )
-    model.learn(total_timesteps=5e6)
+    model.learn(total_timesteps=5e8)
+
+    logdir = model.logger.dir
+    model.save(logdir)
+    del model
+    model = IndependentPPO.load(
+        logdir, "CnnPolicy", num_agents, env, rollout_len, policy_kwargs, tensorboard_log, verbose
+    )
 
 
 if __name__ == "__main__":
