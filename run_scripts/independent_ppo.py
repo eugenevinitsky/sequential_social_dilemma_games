@@ -7,6 +7,7 @@ import numpy as np
 import torch as th
 from gym.spaces import Box, Discrete
 from stable_baselines3 import PPO
+from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.policies import ActorCriticPolicy
 from stable_baselines3.common.type_aliases import GymEnv, MaybeCallback, Schedule
 from stable_baselines3.common.utils import configure_logger, obs_as_tensor, safe_mean
@@ -19,7 +20,7 @@ class DummyGymEnv(gym.Env):
         self.action_space = action_space
 
 
-class IndependentPPO:
+class IndependentPPO(OnPolicyAlgorithm):
     def __init__(
         self,
         policy: Union[str, Type[ActorCriticPolicy]],
@@ -52,7 +53,7 @@ class IndependentPPO:
         self.n_steps = n_steps
         self.tensorboard_log = tensorboard_log
         self.verbose = verbose
-        self.logger = None
+        self._logger = None
         env_fn = lambda: DummyGymEnv(self.observation_space, self.action_space)
         dummy_env = DummyVecEnv([env_fn] * self.num_envs)
         self.policies = [
@@ -93,7 +94,7 @@ class IndependentPPO:
         all_total_timesteps = []
         if not callbacks:
             callbacks = [None] * self.num_agents
-        self.logger = configure_logger(
+        self._logger = configure_logger(
             self.verbose,
             self.tensorboard_log,
             tb_log_name,
