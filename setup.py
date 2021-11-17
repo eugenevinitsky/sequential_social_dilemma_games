@@ -15,7 +15,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = fh.readlines()
 
 setup(
-    name="social-influence",
+    name="social-dilemmas",
     version=VERSION,
     description="Sequential Social Dilemma Environments",
     url="https://github.com/eugenevinitsky/sequential_social_dilemma_games",

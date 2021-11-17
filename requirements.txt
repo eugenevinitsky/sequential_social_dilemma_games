@@ -1,9 +1,9 @@
-gym>=0.19.2
+gym
 pettingzoo>=1.12.0
 opencv-python>=3.0
 ray[rllib]==0.8.5
 tensorflow>=2.4.0
-numpy==1.19.2
+numpy
 scipy
 pandas
 matplotlib
