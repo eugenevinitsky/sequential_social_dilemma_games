@@ -5,7 +5,7 @@ import supersuit as ss
 import torch
 import torch.nn.functional as F
 # pip install git+https://github.com/Rohan138/marl-baselines3
-from marl_baselines3.independent_ppo import IndependentPPO
+from marl_baselines3 import IndependentPPO
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
 from torch import nn

@@ -72,7 +72,7 @@ class _parallel_env(ssd_parallel_env, EzPickle):
         if "ssd_args" not in ssd_args:
             parser = argparse.ArgumentParser()
             add_default_args(parser)
-            args = parser.parse_args()
+            args, _ = parser.parse_known_args()
             ssd_args["ssd_args"] = args
         env_name = ssd_args["ssd_args"].env
         num_agents = ssd_args["ssd_args"].num_agents
