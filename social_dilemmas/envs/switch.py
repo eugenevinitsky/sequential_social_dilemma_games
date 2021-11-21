@@ -25,8 +25,8 @@ SWITCH_VIEW_SIZE = 3
 
 
 class SwitchEnv(MapEnv):
-    def __init__(self, args, num_agents=1, return_agent_actions=False):
-        constructed_map = self.construct_map(args.num_switches)
+    def __init__(self, num_switches=6, num_agents=1, return_agent_actions=False):
+        constructed_map = self.construct_map(num_switches)
         super().__init__(constructed_map, _SWITCH_ACTIONS, SWITCH_VIEW_SIZE, num_agents)
         self.return_agent_actions = return_agent_actions
         self.initial_map_state = dict()

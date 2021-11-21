@@ -1,7 +1,7 @@
 import argparse
 
-from config.default_args import add_default_args
 from run_scripts.train import create_experiment, run
+from social_dilemmas.config.default_args import add_default_args
 
 
 def evaluate_bash_expression(line):

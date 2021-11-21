@@ -20,10 +20,10 @@ from algorithms.impala_moa import build_impala_moa_trainer
 from algorithms.ppo_baseline import build_ppo_baseline_trainer
 from algorithms.ppo_moa import build_ppo_moa_trainer
 from algorithms.ppo_scm import build_ppo_scm_trainer
-from config.default_args import add_default_args
 from models.baseline_model import BaselineModel
 from models.moa_model import MOAModel
 from models.scm_model import SocialCuriosityModule
+from social_dilemmas.config.default_args import add_default_args
 from social_dilemmas.envs.env_creator import get_env_creator
 from utility_funcs import update_nested_dict
 
@@ -37,7 +37,9 @@ def build_experiment_config_dict(args):
     :param args: The parsed arguments.
     :return: An Experiment config dict.
     """
-    env_creator = get_env_creator(args.env, args.num_agents, args)
+    env_creator = get_env_creator(
+        args.env, args.num_agents, args.use_collective_reward, args.num_switches
+    )
     env_name = args.env + "_env"
     register_env(env_name, env_creator)
 
