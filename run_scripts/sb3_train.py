@@ -25,7 +25,7 @@ class CustomCNN(BaseFeaturesExtractor):
         observation_space: gym.spaces.Box,
         features_dim=128,
         view_len=7,
-        num_frames=4,
+        num_frames=6,
         fcnet_hiddens=[1024, 128],
     ):
         super(CustomCNN, self).__init__(observation_space, features_dim)
