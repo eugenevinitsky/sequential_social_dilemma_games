@@ -1,5 +1,3 @@
-import argparse
-
 import gym
 import supersuit as ss
 import torch
@@ -9,7 +7,6 @@ from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 from stable_baselines3.common.vec_env.vec_monitor import VecMonitor
 from torch import nn
 
-from social_dilemmas.config.default_args import add_default_args
 from social_dilemmas.envs.pettingzoo_env import parallel_env
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
@@ -55,18 +52,23 @@ class CustomCNN(BaseFeaturesExtractor):
         return features
 
 
-def main(args):
+def main():
     # Config
+    env_name = "harvest"
     rollout_len = 1000  # length of training rollouts AND length at which env is reset
+    num_agents = 2  # number of agents
+    use_collective_reward = False
+    total_timesteps = 5e8
+
+    # Training
     num_cpus = 12  # number of cpus
     num_envs = 12  # number of parallel multi-agent environments
-    num_agents = 2  # number of agents
     num_frames = 6  # number of frames to stack together; use >4 to avoid automatic VecTransposeImage
     features_dim = (
         128  # output layer of cnn extractor AND shared layer for policy and value functions
     )
     fcnet_hiddens = [1024, 128]  # Two hidden layers for cnn extractor
-    ent_coeff = 0.001  # entropy coefficient in loss
+    ent_coef = 0.001  # entropy coefficient in loss
     batch_size = rollout_len * num_envs // 2  # This is from the rllib baseline implementation
     lr = 0.0001
     n_epochs = 30
@@ -74,9 +76,14 @@ def main(args):
     gamma = 0.99
     target_kl = 0.01
     grad_clip = 40
+    verbose = 3
 
-    args.num_agents = num_agents
-    env = parallel_env(max_cycles=rollout_len, ssd_args=args)
+    env = parallel_env(
+        max_cycles=rollout_len,
+        env=env_name,
+        num_agents=num_agents,
+        use_collective_reward=use_collective_reward,
+    )
     env = ss.observation_lambda_v0(env, lambda x, _: x["curr_obs"], lambda s: s["curr_obs"])
     env = ss.frame_stack_v1(env, num_frames)
     env = ss.pettingzoo_env_to_vec_env_v1(env)
@@ -93,34 +100,31 @@ def main(args):
         net_arch=[features_dim],
     )
 
-    logdir = "./results/sb3/cleanup_ppo_paramsharing"
+    tensorboard_log = "./results/sb3/cleanup_ppo_paramsharing"
 
     model = PPO(
         "CnnPolicy",
         env=env,
-        policy_kwargs=policy_kwargs,
-        verbose=3,
         learning_rate=lr,
         n_steps=rollout_len,
         batch_size=batch_size,
         n_epochs=n_epochs,
         gamma=gamma,
         gae_lambda=gae_lambda,
-        target_kl=target_kl,
-        ent_coef=ent_coeff,
+        ent_coef=ent_coef,
         max_grad_norm=grad_clip,
-        tensorboard_log=logdir,
+        target_kl=target_kl,
+        policy_kwargs=policy_kwargs,
+        tensorboard_log=tensorboard_log,
+        verbose=verbose,
     )
-    model.learn(total_timesteps=5e8)
+    model.learn(total_timesteps=total_timesteps)
 
     logdir = model.logger.dir
     model.save(logdir + "/model")
     del model
-    model.load(logdir + "/model")
+    model = PPO.load(logdir + "/model")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    add_default_args(parser)
-    args = parser.parse_args()
-    main(args)
+    main()

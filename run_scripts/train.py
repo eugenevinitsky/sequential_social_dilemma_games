@@ -37,7 +37,9 @@ def build_experiment_config_dict(args):
     :param args: The parsed arguments.
     :return: An Experiment config dict.
     """
-    env_creator = get_env_creator(args.env, args.num_agents, args)
+    env_creator = get_env_creator(
+        args.env, args.num_agents, args.use_collective_reward, args.num_switches
+    )
     env_name = args.env + "_env"
     register_env(env_name, env_creator)
 
