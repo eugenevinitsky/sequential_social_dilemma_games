@@ -53,12 +53,15 @@ class CustomCNN(BaseFeaturesExtractor):
         return features
 
 
-def main(args):
+def main():
     # Config
     env_name = "harvest"
     rollout_len = 1000  # length of training rollouts AND length at which env is reset
     num_agents = 2  # number of agents
     use_collective_reward = False
+    inequity_averse_reward = True
+    alpha = 0.0
+    beta = 0.0
     total_timesteps = 5e8
 
     # Training
@@ -84,6 +87,9 @@ def main(args):
         env=env_name,
         num_agents=num_agents,
         use_collective_reward=use_collective_reward,
+        inequity_averse_reward=inequity_averse_reward,
+        alpha=alpha,
+        beta=beta,
     )
     env = ss.observation_lambda_v0(env, lambda x, _: x["curr_obs"], lambda s: s["curr_obs"])
     env = ss.frame_stack_v1(env, num_frames)
