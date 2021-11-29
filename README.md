@@ -108,6 +108,7 @@ This code base was initially developed by Eugene Vinitsky and Natasha Jaques; he
 
 If you want to cite this repository accademic work, please use the following citation:
 
+```
 @misc{SSDOpenSource,
 author = {[Vinitsky, Eugene and Jaques, Natasha and Leibo, Joel and Castenada, Antonio and Hughes, Edward]},
 title = {An Open Source Implementation of Sequential Social Dilemma Games},
@@ -116,3 +117,4 @@ publisher = {GitHub},
 note = {GitHub repository},
 howpublished = {\url{https://github.com/eugenevinitsky/sequential_social_dilemma_games/issues/182}}
 }
+```
