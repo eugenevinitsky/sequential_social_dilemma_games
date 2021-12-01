@@ -1,8 +1,9 @@
+import argparse
+
 import gym
 import supersuit as ss
 import torch
 import torch.nn.functional as F
-
 # pip install git+https://github.com/Rohan138/marl-baselines3
 from marl_baselines3 import IndependentPPO
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
@@ -12,6 +13,63 @@ from torch import nn
 from social_dilemmas.envs.pettingzoo_env import parallel_env
 
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser("Stable-Baselines3 PPO with Parameter Sharing")
+    parser.add_argument(
+        "--env",
+        type=str,
+        default="harvest",
+        choices=["harvest", "cleanup"],
+        help="The SSD environment to use",
+    )
+    parser.add_argument(
+        "--num-agents",
+        type=int,
+        default=5,
+        help="The number of agents",
+    )
+    parser.add_argument(
+        "--rollout-len",
+        type=int,
+        default=1000,
+        help="length of training rollouts AND length at which env is reset",
+    )
+    parser.add_argument(
+        "--total-timesteps",
+        type=int,
+        default=5e8,
+        help="Number of environment timesteps",
+    )
+    parser.add_argument(
+        "--use-collective-reward",
+        type=bool,
+        default=False,
+        help="Give each agent the collective reward across all agents",
+    )
+    parser.add_argument(
+        "--inequity-averse-reward",
+        type=bool,
+        default=False,
+        help="Use inequity averse rewards from 'Inequity aversion \
+            improves cooperation in intertemporal social dilemmas'",
+    )
+    parser.add_argument(
+        "--alpha",
+        type=float,
+        default=0.0,
+        help="Advantageous inequity aversion factor",
+    )
+    parser.add_argument(
+        "--beta",
+        type=float,
+        default=0.0,
+        help="Disadvantageous inequity aversion factor",
+    )
+    args = parser.parse_args()
+    return args
+
 
 # Use this with lambda wrapper returning observations only
 class CustomCNN(BaseFeaturesExtractor):
@@ -53,19 +111,19 @@ class CustomCNN(BaseFeaturesExtractor):
         return features
 
 
-def main():
+def main(args):
     # Config
-    env_name = "harvest"
-    rollout_len = 1000  # length of training rollouts AND length at which env is reset
-    num_agents = 2  # number of agents
-    use_collective_reward = False
-    inequity_averse_reward = False
-    alpha = 0
-    beta = 0
-    total_timesteps = 5e8
+    env_name = args.env_name
+    num_agents = args.num_agents
+    rollout_len = args.rollout_len
+    total_timesteps = args.total_timesteps
+    use_collective_reward = args.use_collective_reward
+    inequity_averse_reward = args.inequity_averse_reward
+    alpha = args.alpha
+    beta = args.beta
 
     # Training
-    num_cpus = 12  # number of cpus
+    num_cpus = 4  # number of cpus
     num_envs = 12  # number of parallel multi-agent environments
     num_frames = 6  # number of frames to stack together; use >4 to avoid automatic VecTransposeImage
     features_dim = (
@@ -137,4 +195,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(args)
