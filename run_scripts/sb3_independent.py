@@ -189,7 +189,7 @@ def main(args):
     logdir = model.logger.dir
     model.save(logdir)
     del model
-    model = IndependentPPO.load(
+    model = IndependentPPO.load(  # noqa: F841
         logdir, "CnnPolicy", num_agents, env, rollout_len, policy_kwargs, tensorboard_log, verbose
     )
 

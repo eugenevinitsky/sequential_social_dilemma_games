@@ -187,7 +187,7 @@ def main(args):
     logdir = model.logger.dir
     model.save(logdir + "/model")
     del model
-    model = PPO.load(logdir + "/model")
+    model = PPO.load(logdir + "/model")  # noqa: F841
 
 
 if __name__ == "__main__":

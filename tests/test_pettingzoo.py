@@ -1,14 +1,11 @@
 import unittest
 
 import numpy as np
-from pettingzoo.test import api_test, max_cycles_test, parallel_api_test
+from pettingzoo.test import api_test, parallel_api_test
 
-from social_dilemmas.envs import pettingzoo_env
 from social_dilemmas.envs.pettingzoo_env import MAX_CYCLES
 from social_dilemmas.envs.pettingzoo_env import env as aec_env
 from social_dilemmas.envs.pettingzoo_env import parallel_env
-
-# env = get_env_creator(env, num_agents, use_collective_reward)(num_agents)
 
 
 class PettingZooTest(unittest.TestCase):
