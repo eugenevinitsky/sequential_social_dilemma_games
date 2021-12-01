@@ -18,7 +18,7 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 def parse_args():
     parser = argparse.ArgumentParser("Stable-Baselines3 PPO with Parameter Sharing")
     parser.add_argument(
-        "--env",
+        "--env-name",
         type=str,
         default="harvest",
         choices=["harvest", "cleanup"],
