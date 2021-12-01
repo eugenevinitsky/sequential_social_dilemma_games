@@ -14,6 +14,15 @@ requirements = []
 with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = fh.readlines()
 
+extras = {
+    "sb3": ["stable-baselines3"],
+    "rllib": ["ray[rllib]==0.8.5", "tensorflow>=2.6.0", "pygame==2.0.0"],
+    "dev": ["pytest", "black", "isort"],
+}
+
+extras["all"] = extras["sb3"] + extras["rllib"]
+
+
 setup(
     name="social-dilemmas",
     version=VERSION,
@@ -24,6 +33,7 @@ setup(
     license=license,
     packages=["social_dilemmas"],
     install_requires=requirements,
+    extras_require=extras,
     python_requires=">=3.7, <3.10",
     classifiers=[
         "Programming Language :: Python :: 3.7",
