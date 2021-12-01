@@ -41,7 +41,7 @@ python3 setup.py develop
 pip3 install -r requirements.txt
 # Patch ray due to https://github.com/ray-project/ray/issues/7946
 # And https://github.com/ray-project/ray/pull/8491
-. ray_uint8_patch.sh
+bash venv_uint8_patch.sh
 ```
 
 To install sb3|rllib|all requirements for learning:
