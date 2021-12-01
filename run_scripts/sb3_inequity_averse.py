@@ -59,9 +59,9 @@ def main():
     rollout_len = 1000  # length of training rollouts AND length at which env is reset
     num_agents = 2  # number of agents
     use_collective_reward = False
-    inequity_averse_reward = False
-    alpha = 0
-    beta = 0
+    inequity_averse_reward = True
+    alpha = 5
+    beta = 0.05
     total_timesteps = 5e8
 
     # Training
