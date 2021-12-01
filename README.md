@@ -21,12 +21,38 @@ The above plot shows the empirical Schelling diagrams for both Cleanup (A) and H
 
 # Setup instructions
 To install the SSD environments:
+### Anaconda/miniconda
 ```
-pip install git+https://github.com/eugenevinitsky/sequential_social_dilemma_games
+git clone -b master https://github.com/eugenevinitsky/sequential_social_dilemma_games
+cd sequential_social_dilemma_games
+conda create -n ssd python==3.8.10 # Create a conda virtual environment
+# Patch ray due to https://github.com/ray-project/ray/issues/7946
+# And https://github.com/ray-project/ray/pull/8491
+bash conda_uint8_patch.sh
+```
+###
+```
+git clone -b master https://github.com/eugenevinitsky/sequential_social_dilemma_games
+cd sequential_social_dilemma_games
+python3 -m venv venv # Create a Python virtual environment
+. venv/bin/activate
+pip3 install --upgrade pip setuptools wheel
+python3 setup.py develop
+pip3 install -r requirements.txt
+# Patch ray due to https://github.com/ray-project/ray/issues/7946
+# And https://github.com/ray-project/ray/pull/8491
+. ray_uint8_patch.sh
 ```
 
 To install sb3|rllib|all requirements for learning:
-`pip install social-dilemmas[sb3|rllib|all]`
+```
+pip install social-dilemmas[sb3|rllib|all]
+```
+
+If using RLlib:
+```
+
+```
 
 After the setup, you can run experiments like so:
 - To train with default parameters (baseline model cleanup with 2 agents):

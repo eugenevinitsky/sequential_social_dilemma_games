@@ -15,7 +15,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = fh.readlines()
 
 extras = {
-    "sb3": ["stable-baselines3", "git+https://github.com/Rohan138/marl-baselines3"],
+    "sb3": ["stable-baselines3"],
     "rllib": ["ray[rllib]==0.8.5", "tensorflow>=2.6.0"],
     "dev": ["pytest", "black", "isort"],
 }
