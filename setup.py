@@ -16,7 +16,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 extras = {
     "sb3": ["stable-baselines3"],
-    "rllib": ["ray[rllib]==0.8.5", "tensorflow>=2.6.0"],
+    "rllib": ["tensorflow>=2.6.0"],
     "dev": ["pytest", "black", "isort"],
 }
 
