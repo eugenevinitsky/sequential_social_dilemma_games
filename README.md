@@ -28,7 +28,7 @@ cd sequential_social_dilemma_games
 conda create -n ssd python==3.8.10 # Create a conda virtual environment
 # Patch ray due to https://github.com/ray-project/ray/issues/7946
 # And https://github.com/ray-project/ray/pull/8491
-bash conda_uint8_patch.sh
+. conda_uint8_patch.sh
 ```
 ###
 ```
@@ -41,7 +41,7 @@ python3 setup.py develop
 pip3 install -r requirements.txt
 # Patch ray due to https://github.com/ray-project/ray/issues/7946
 # And https://github.com/ray-project/ray/pull/8491
-bash venv_uint8_patch.sh
+. venv_uint8_patch.sh
 ```
 
 To install sb3|rllib|all requirements for learning:
