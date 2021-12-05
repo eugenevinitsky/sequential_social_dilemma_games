@@ -20,7 +20,6 @@ def raw_env(max_cycles=MAX_CYCLES, **ssd_args):
 
 def env(max_cycles=MAX_CYCLES, **ssd_args):
     aec_env = raw_env(max_cycles, **ssd_args)
-    aec_env = wrappers.CaptureStdoutWrapper(aec_env)
     aec_env = wrappers.AssertOutOfBoundsWrapper(aec_env)
     aec_env = wrappers.OrderEnforcingWrapper(aec_env)
     return aec_env
