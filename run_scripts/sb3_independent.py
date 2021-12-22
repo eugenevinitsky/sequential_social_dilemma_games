@@ -16,7 +16,7 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cp
 
 
 def parse_args():
-    parser = argparse.ArgumentParser("Stable-Baselines3 PPO with Parameter Sharing")
+    parser = argparse.ArgumentParser("MARL-Baselines3 PPO with Independent Learning")
     parser.add_argument(
         "--env-name",
         type=str,
@@ -58,13 +58,13 @@ def parse_args():
     parser.add_argument(
         "--alpha",
         type=float,
-        default=0.0,
+        default=5,
         help="Advantageous inequity aversion factor",
     )
     parser.add_argument(
         "--beta",
         type=float,
-        default=0.0,
+        default=0.05,
         help="Disadvantageous inequity aversion factor",
     )
     args = parser.parse_args()

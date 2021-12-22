@@ -57,13 +57,13 @@ def parse_args():
     parser.add_argument(
         "--alpha",
         type=float,
-        default=0.0,
+        default=5,
         help="Advantageous inequity aversion factor",
     )
     parser.add_argument(
         "--beta",
         type=float,
-        default=0.0,
+        default=0.05,
         help="Disadvantageous inequity aversion factor",
     )
     args = parser.parse_args()
