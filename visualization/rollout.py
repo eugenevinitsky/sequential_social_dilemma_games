@@ -9,7 +9,7 @@ import sys
 import numpy as np
 
 import utility_funcs
-from config.default_args import add_default_args
+from social_dilemmas.config.default_args import add_default_args
 from social_dilemmas.envs.cleanup import CleanupEnv
 from social_dilemmas.envs.harvest import HarvestEnv
 from social_dilemmas.envs.switch import SwitchEnv

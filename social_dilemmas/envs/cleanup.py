@@ -34,6 +34,9 @@ class CleanupEnv(MapEnv):
         num_agents=1,
         return_agent_actions=False,
         use_collective_reward=False,
+        inequity_averse_reward=False,
+        alpha=0.0,
+        beta=0.0,
     ):
         super().__init__(
             ascii_map,
@@ -42,6 +45,9 @@ class CleanupEnv(MapEnv):
             num_agents,
             return_agent_actions=return_agent_actions,
             use_collective_reward=use_collective_reward,
+            inequity_averse_reward=inequity_averse_reward,
+            alpha=alpha,
+            beta=beta,
         )
 
         # compute potential waste area

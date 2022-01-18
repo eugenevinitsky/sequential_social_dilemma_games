@@ -3,7 +3,7 @@
 # Sequential Social Dilemma Games
 This repo is an open-source implementation of DeepMind's Sequential Social Dilemma (SSD) multi-agent game-theoretic environments [[1]](https://arxiv.org/abs/1702.03037). SSDs can be thought of as analogous to spatially and temporally extended Prisoner's Dilemma-like games. The reward structure poses a dilemma because individual short-term optimal strategies lead to poor long-term outcomes for the group.
 
-The implemented environments are structured to be compatible with [OpenAIs gym environments](https://github.com/openai/gym) as well as [RLlib's Multiagent Environment](https://github.com/ray-project/ray/blob/master/rllib/env/multi_agent_env.pyhttps://github.com/ray-project/ray/blob/master/python/ray/rllib/env/multi_agent_env.py)
+The implemented environments are structured to be compatible with [OpenAIs gym environments](https://github.com/openai/gym) as well as [RLlib's Multiagent Environment](https://github.com/ray-project/ray/blob/master/rllib/env/multi_agent_env.py)
 
 ## Implemented Games
 
@@ -20,6 +20,17 @@ The implemented environments are structured to be compatible with [OpenAIs gym e
 The above plot shows the empirical Schelling diagrams for both Cleanup (A) and Harvest (B) (from [[2]](https://arxiv.org/abs/1803.08884)). These diagrams show the payoff that an individual agent can expect if it follows a defecting/exploitative strategy (red) vs a cooperative strategy (blue), given the number of other agents that are cooperating.  We can see that an individual agent can almost always greedily benefit from detecting, but the more agents that defect, the worse the outcomes for all agents.  
 
 # Setup instructions
+To install the SSD environments:
+### Anaconda/miniconda
+```
+git clone -b master https://github.com/eugenevinitsky/sequential_social_dilemma_games
+cd sequential_social_dilemma_games
+conda create -n ssd python==3.8.10 # Create a conda virtual environment
+# Patch ray due to https://github.com/ray-project/ray/issues/7946
+# And https://github.com/ray-project/ray/pull/8491
+. conda_uint8_patch.sh
+```
+###
 ```
 git clone -b master https://github.com/eugenevinitsky/sequential_social_dilemma_games
 cd sequential_social_dilemma_games
@@ -30,30 +41,44 @@ python3 setup.py develop
 pip3 install -r requirements.txt
 # Patch ray due to https://github.com/ray-project/ray/issues/7946
 # And https://github.com/ray-project/ray/pull/8491
-. ray_uint8_patch.sh 
-cd run_scripts
+. venv_uint8_patch.sh
+```
+
+To install sb3|rllib|all requirements for learning:
+```
+pip install social-dilemmas[sb3|rllib|all]
+```
+
+If using RLlib:
+```
+
 ```
 
 After the setup, you can run experiments like so:
 - To train with default parameters (baseline model cleanup with 2 agents):
-`python3 train.py`
+`python3 run_scripts/train.py`
 
 - To train the MOA with 5 agents:
-`python3 train.py --model moa --num_agents 5`
+`python3 run_scripts/train.py --model moa --num_agents 5`
 
 Many more options are available which can be found in [default_args.py](config/default_args.py). A collection of preconfigured training scripts can be found in [run_scripts](run_scripts). 
 
-Note that the initialization time can be rather high (up to 5 minutes) the more agents you use, and the more complex your used model is.
+Note that the RLlib initialization time can be rather high (up to 5 minutes) the more agents you use, and the more complex your used model is.
+
+- To train using [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3) and parameter shared PPO:
+`python3 run_scripts/sb3_train.py --env harvest --num_agents 5`
+
+- To train using [MARL-Baselines3](https://github.com/Rohan138/marl-baselines3) and independent PPO:
+`python3 run_scripts/sb3_independent.py --env harvest --num_agents 5`
+
+- To train using [MARL-Baselines3](https://github.com/Rohan138/marl-baselines3) and independent PPO with inequity aversion:
+- 
+`python3 run_scripts/sb3_independent.py --env harvest --num_agents 5 --inequity-averse-reward=True --alpha=5.0 --beta=0.05`
 
 # CUDA, cuDNN and tensorflow-gpu
 
 If you run into any cuda errors, make sure you've got a [compatible set](https://www.tensorflow.org/install/source#tested_build_configurations) of cuda/cudnn/tensorflow versions installed. However, beware of the following:
 >The compatibility table given in the tensorflow site does not contain specific minor versions for cuda and cuDNN. However, if the specific versions are not met, there will be an error when you try to use tensorflow. [source](https://stackoverflow.com/a/53727997)
-
-A configuration that works for me is:
-- CUDA 10.1.105
-- cuDNN 7.6.5
-- tensorflow-gpu 2.1.0 (this is automatically installed during with the above script, see [requirements.txt](requirements.txt))
 
 # Tests
 Tests are located in the test folder and can be run individually or run by running `python -m pytest`. Many of the less obviously defined rules for the games can be understood by reading the tests, each of which outline some aspect of the game. 
@@ -81,7 +106,7 @@ Every environment that subclasses MapEnv probably needs to implement the followi
 
 ## PPO Results
 
-The below graphs display results for cleanup/harvest using un-tuned PPO. As of yet, A3C remains untested.
+The below graphs display results for cleanup/harvest using un-tuned PPO in RLlib. As of yet, A3C remains untested.
 
 **Collective cleanup reward**:
 

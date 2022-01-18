@@ -14,8 +14,17 @@ requirements = []
 with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = fh.readlines()
 
+extras = {
+    "sb3": ["stable-baselines3"],
+    "rllib": ["tensorflow>=2.6.0"],
+    "dev": ["pytest", "black", "isort"],
+}
+
+extras["all"] = extras["sb3"] + extras["rllib"]
+
+
 setup(
-    name="social-influence",
+    name="social-dilemmas",
     version=VERSION,
     description="Sequential Social Dilemma Environments",
     url="https://github.com/eugenevinitsky/sequential_social_dilemma_games",
@@ -24,6 +33,7 @@ setup(
     license=license,
     packages=["social_dilemmas"],
     install_requires=requirements,
+    extras_require=extras,
     python_requires=">=3.7, <3.10",
     classifiers=[
         "Programming Language :: Python :: 3.7",
