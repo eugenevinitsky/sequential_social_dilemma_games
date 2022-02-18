@@ -2,7 +2,7 @@ from functools import lru_cache
 
 from gym.utils import EzPickle
 from pettingzoo.utils import wrappers
-from pettingzoo.utils.conversions import from_parallel_wrapper
+from pettingzoo.utils.conversions import parallel_to_aec_wrapper
 from pettingzoo.utils.env import ParallelEnv
 
 from social_dilemmas.envs.env_creator import get_env_creator
@@ -15,7 +15,7 @@ def parallel_env(max_cycles=MAX_CYCLES, **ssd_args):
 
 
 def raw_env(max_cycles=MAX_CYCLES, **ssd_args):
-    return from_parallel_wrapper(parallel_env(max_cycles, **ssd_args))
+    return parallel_to_aec_wrapper(parallel_env(max_cycles, **ssd_args))
 
 
 def env(max_cycles=MAX_CYCLES, **ssd_args):
