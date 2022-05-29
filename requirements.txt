@@ -3,6 +3,7 @@ ray[rllib]==0.8.5
 pettingzoo>=1.18.1
 opencv-python>=3.4
 numpy>=1.21.0
+protobuf<3.20
 scipy
 pandas
 matplotlib
