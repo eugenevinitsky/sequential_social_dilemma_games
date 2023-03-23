@@ -22,7 +22,7 @@ The above plot shows the empirical Schelling diagrams for both Cleanup (A) and H
 # Setup instructions
 To install the SSD environments:
 ### Anaconda/miniconda
-```
+```bash
 git clone -b master https://github.com/eugenevinitsky/sequential_social_dilemma_games
 cd sequential_social_dilemma_games
 conda create -n ssd python==3.8.10 # Create a conda virtual environment
@@ -31,7 +31,7 @@ conda create -n ssd python==3.8.10 # Create a conda virtual environment
 . conda_uint8_patch.sh
 ```
 ###
-```
+```bash
 git clone -b master https://github.com/eugenevinitsky/sequential_social_dilemma_games
 cd sequential_social_dilemma_games
 python3 -m venv venv # Create a Python virtual environment
@@ -45,8 +45,8 @@ pip3 install -r requirements.txt
 ```
 
 To install sb3|rllib|all requirements for learning:
-```
-pip install social-dilemmas[sb3|rllib|all]
+```bash
+pip3 install social-dilemmas[sb3|rllib|all]
 ```
 
 If using RLlib:
@@ -56,24 +56,33 @@ If using RLlib:
 
 After the setup, you can run experiments like so:
 - To train with default parameters (baseline model cleanup with 2 agents):
-`python3 run_scripts/train.py`
+```bash
+python3 run_scripts/train.py
+```
 
 - To train the MOA with 5 agents:
-`python3 run_scripts/train.py --model moa --num_agents 5`
+```bash
+python3 run_scripts/train.py --model moa --num_agents 5
+```
 
 Many more options are available which can be found in [default_args.py](config/default_args.py). A collection of preconfigured training scripts can be found in [run_scripts](run_scripts). 
 
 Note that the RLlib initialization time can be rather high (up to 5 minutes) the more agents you use, and the more complex your used model is.
 
 - To train using [Stable-Baselines3](https://github.com/DLR-RM/stable-baselines3) and parameter shared PPO:
-`python3 run_scripts/sb3_train.py --env harvest --num_agents 5`
+```bash
+python3 run_scripts/sb3_train.py --env harvest --num_agents 5
+```
 
 - To train using [MARL-Baselines3](https://github.com/Rohan138/marl-baselines3) and independent PPO:
-`python3 run_scripts/sb3_independent.py --env harvest --num_agents 5`
+```bash
+python3 run_scripts/sb3_independent.py --env harvest --num_agents 5
+```
 
 - To train using [MARL-Baselines3](https://github.com/Rohan138/marl-baselines3) and independent PPO with inequity aversion:
-- 
-`python3 run_scripts/sb3_independent.py --env harvest --num_agents 5 --inequity-averse-reward=True --alpha=5.0 --beta=0.05`
+```bash
+python3 run_scripts/sb3_independent.py --env harvest --num_agents 5 --inequity-averse-reward=True --alpha=5.0 --beta=0.05
+```
 
 # CUDA, cuDNN and tensorflow-gpu
 
@@ -86,7 +95,7 @@ Tests are located in the test folder and can be run individually or run by runni
 # Constructing new environments
 Every environment that subclasses MapEnv probably needs to implement the following methods
 
-```
+```python
     def custom_reset(self):
         """Reset custom elements of the map. For example, spawn apples"""
         pass
