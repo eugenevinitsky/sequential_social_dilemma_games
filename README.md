@@ -96,7 +96,7 @@ Tests are located in the test folder and can be run individually or run by runni
 Every environment that subclasses MapEnv probably needs to implement the following methods:
 
 ```python
-class SubClass(MapEnv):
+class NewMapEnv(MapEnv):
     ...
     
     def custom_reset(self):
