@@ -93,7 +93,7 @@ If you run into any cuda errors, make sure you've got a [compatible set](https:/
 Tests are located in the test folder and can be run individually or run by running `python -m pytest`. Many of the less obviously defined rules for the games can be understood by reading the tests, each of which outline some aspect of the game. 
 
 # Constructing new environments
-Every environment that subclasses MapEnv probably needs to implement the following methods
+Every environment that subclasses MapEnv probably needs to implement the following methods:
 
 ```python
 class SubClass(MapEnv):
