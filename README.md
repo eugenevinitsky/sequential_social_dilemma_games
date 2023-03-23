@@ -96,6 +96,9 @@ Tests are located in the test folder and can be run individually or run by runni
 Every environment that subclasses MapEnv probably needs to implement the following methods
 
 ```python
+class SubClass(MapEnv):
+    ...
+    
     def custom_reset(self):
         """Reset custom elements of the map. For example, spawn apples"""
         pass
