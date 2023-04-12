@@ -306,7 +306,7 @@ class MapEnv(MultiAgentEnv):
         dones["__all__"] = np.any(list(dones.values()))
         return observations, rewards, dones, infos
 
-    def reset(self):
+    def reset(self, seed=None):
         """Reset the environment.
 
         This method is performed in between rollouts. It resets the state of
@@ -318,6 +318,9 @@ class MapEnv(MultiAgentEnv):
             the initial observation of the space. The initial reward is assumed
             to be zero.
         """
+        if seed is not None:
+            np.random.seed(seed)
+
         self.beam_pos = []
         self.agents = {}
         self.setup_agents()
@@ -345,9 +348,6 @@ class MapEnv(MultiAgentEnv):
             else:
                 observations[agent.agent_id] = {"curr_obs": rgb_arr}
         return observations
-
-    def seed(self, seed=None):
-        np.random.seed(seed)
 
     def close(self):
         plt.close()
