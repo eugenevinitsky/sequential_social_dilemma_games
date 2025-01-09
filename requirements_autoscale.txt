@@ -1,7 +1,7 @@
 gym>=0.19.0
 matplotlib>=3.0.2
 opencv-python
-ray==0.8.5
+ray==2.8.1
 tensorflow
 setproctitle
 psutil
